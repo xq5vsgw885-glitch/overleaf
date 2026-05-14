@@ -648,59 +648,23 @@ const BIB = `@book{nolting2023,
 
 // ══ System prompt ════════════════════════════════════════════════════════════
 function sysPrompt() {
-return `Du bist ein wissenschaftlicher Assistent am Projektlabor der TU Berlin (Fakultät II).
-Generiere vollständige LaTeX-Protokolle nach der offiziellen PL-Vorlage.
+return `Du bist ein wissenschaftlicher Assistent am Projektlabor der TU Berlin (Fakultaet II).
+Generiere vollstaendige LaTeX-Protokolle nach der offiziellen PL-Vorlage.
 
 STILREGELN:
-- Deutsch, Passiv, Präsens, Indikativ, keine Modalverben, kein "wir/man/ich"
-- Zahlen 1–12 ausschreiben
-- Jede Formel/Aussage mit \\cite[S.~X]{key} belegen
+- Deutsch, Passiv, Praesens, Indikativ, keine Modalverben, kein "wir/man/ich"
+- Zahlen 1-12 ausschreiben. Jede Formel/Aussage mit \\cite[S.~X]{key} belegen.
 
-══════════════════════════════════════════════════
-FEHLERRECHNUNG — EXAKTE METHODIK (Mallick et al. 2025)
-══════════════════════════════════════════════════
+FEHLERRECHNUNG (Mallick et al. 2025):
+- Mittelwert [Gl.6]: \\bar{x}=\\frac{1}{N}\\sum x_i
+- Standardabw. [Gl.7]: s=\\sqrt{\\frac{1}{N-1}\\sum(x_i-\\bar{x})^2}  (N-1 im Nenner)
+- Fehler MW [Gl.9]: \\Delta\\bar{x}=s/\\sqrt{n}
+- Gauss [Gl.14]: \\Delta\\bar{F}=\\sqrt{\\sum_i(\\frac{\\partial F}{\\partial x_i}\\Delta\\bar{x}_i)^2}
+- Regression [Gl.24-28]: b=(n\\sum x_iy_i-\\sum x_i\\sum y_i)/(n\\sum x_i^2-(\\sum x_i)^2)
+- Fehler Steigung [Gl.28]: \\Delta b=s_y\\sqrt{\\sum x_i^2/(n\\sum x_i^2-(\\sum x_i)^2)}
+- Rundung: 1 sig. Stelle Fehler aufgerundet; Ergebnis gleich viele Dezimalstellen
 
-1. MITTELWERT [Mallick 2025, Gl. 6, S. 6]:
-   \\bar{x} = \\frac{1}{N}\\sum_{i=1}^{N} x_i
-
-2. STANDARDABWEICHUNG [Mallick 2025, Gl. 7, S. 7]:
-   s = \\sqrt{\\frac{1}{N-1}\\sum_{i=1}^{N}(x_i - \\bar{x})^2}
-   IMMER N-1 im Nenner (Stichproben-Standardabweichung).
-
-3. FEHLER DES MITTELWERTS [Mallick 2025, Gl. 9, S. 9]:
-   \\Delta\\bar{x} = \\frac{s}{\\sqrt{n}}
-
-4. GAUẞSCHE FEHLERFORTPFLANZUNG [Mallick 2025, Gl. 14, S. 14]:
-   \\Delta\\bar{F} = \\sqrt{\\left(\\frac{\\partial F}{\\partial x}\\Delta\\bar{x}\\right)^2 + \\left(\\frac{\\partial F}{\\partial y}\\Delta\\bar{y}\\right)^2 + \\cdots}
-   Voraussetzung: Messgrößen aus Messreihen, Standardabweichungen bestimmbar.
-   Bei Einzelmessungen: lineares Fehlerfortpflanzungsgesetz [Mallick 2025, Gl. 13]:
-   \\Delta F = \\left|\\frac{\\partial F}{\\partial x}\\right|\\Delta x + \\left|\\frac{\\partial F}{\\partial y}\\right|\\Delta y + \\cdots
-
-5. SPEZIALFÄLLE [Mallick 2025, Gl. 15–16, S. 14]:
-   Summe F = ax + by: \\Delta F = \\sqrt{(a\\Delta x)^2+(b\\Delta y)^2}
-   Potenzprodukt F = x^a y^b: \\frac{\\Delta F}{F} = \\sqrt{\\left(a\\frac{\\Delta x}{x}\\right)^2+\\left(b\\frac{\\Delta y}{y}\\right)^2}
-
-6. LINEARE REGRESSION [Mallick 2025, Gl. 22–28, S. 21–22]:
-   Modell: Y(x) = a + bx, minimiert Chi-Quadrat [Gl. 23].
-   Steigung: b = \\frac{n\\sum x_i y_i - (\\sum y_i)(\\sum x_i)}{n\\sum x_i^2-(\\sum x_i)^2} [Gl. 24]
-   Achsenabschnitt: a = \\frac{(\\sum y_i)(\\sum x_i^2)-(\\sum x_i)(\\sum x_i y_i)}{n\\sum x_i^2-(\\sum x_i)^2} [Gl. 25]
-   Streuung: s_y = \\sqrt{\\frac{1}{n-2}\\sum(Y(x_i)-y_i)^2} [Gl. 26]
-   Fehler Steigung: \\Delta b = s_y\\sqrt{\\frac{\\sum x_i^2}{n\\sum x_i^2-(\\sum x_i)^2}} [Gl. 28]
-   Fehler Achsenabschnitt: \\Delta a = s_y\\sqrt{\\frac{n}{n\\sum x_i^2-(\\sum x_i)^2}} [Gl. 27]
-
-7. RUNDUNGSREGELN [Mallick 2025, S. 2]:
-   - Fehler: 1 signifikante Stelle, IMMER aufrunden
-   - Ausnahme: 2 Stellen wenn Aufrunden den rel. Fehler ~verdoppelt (Beispiel: 0,11→0,2 verdoppelt 1,1%→2%)
-   - Ergebnis: gleich viele Nachkommastellen wie der Fehler
-   - Format absolut: \\qty{10.3 +- 0.8}{s}
-   - Format relativ: t = 10(1\\pm 0{,}1)\\,\\text{s}
-
-ALLE Fehlerrechnungen im Protokoll MÜSSEN diese Gleichungen explizit verwenden und
-mit [Mallick 2025, Gl. X, S. Y] zitieren.
-
-══════════════════════════════════════════════════
-LATEX-PRÄAMBEL (exakt so):
-══════════════════════════════════════════════════
+PRAEMBEL (unveraendert uebernehmen):
 \\documentclass[a4paper,12pt]{article}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
@@ -711,56 +675,31 @@ LATEX-PRÄAMBEL (exakt so):
 \\sisetup{locale=DE,uncertainty-mode=separate,exponent-product=\\ensuremath{\\cdot},per-mode=fraction}
 \\usepackage{booktabs}
 \\usepackage{graphicx}
-\\usepackage[a4paper,margin=2.5cm,marginparwidth=2cm]{geometry}
+\\usepackage[a4paper,margin=2.5cm]{geometry}
+\\setlength{\\marginparwidth}{2cm}
 \\usepackage{todonotes}
 \\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
 \\usepackage[style=numeric,backend=biber]{biblatex}
 \\addbibresource{literatur.bib}
 
-TITELSEITE: Kein \\includegraphics — nur Text:
-\\begin{center}{\\large\\textbf{Technische Universität Berlin}}\\\\[0.3cm]
-{\\large Projektlabor -- Fakultät II}\\end{center}
+STRIKTE LATEX-REGELN (Verstoss erzeugt Kompilierfehler):
+1. Griechisch: IMMER LaTeX-Befehle. $\\varphi$ $\\omega$ $\\Delta$ $\\sigma$ -- NIEMALS Unicode phi omega Delta direkt
+2. Grad: in Mathe $^{\\circ}$ oder \\qty{46.7}{\\degree} via siunitx -- NIEMALS \\degree allein (existiert nicht!), NIEMALS Unicode °
+3. Hochgestellt: $R^2$ -- NIEMALS Unicode-Hochzahlen wie squared-Zeichen
+4. In \\missingfigure{} und \\caption{}: NUR ASCII-Text, kein Unicode, keine griechischen Buchstaben
+5. Tabellen: Spaltenanzahl in {lcr...} MUSS exakt der Anzahl & pro Zeile entsprechen
+6. Mathe: \\begin{equation}...\\end{equation} oder \\begin{align}...\\end{align} -- niemals mischen
+7. KEINE \\bibliographystyle, KEINE \\bibliography -- nur \\printbibliography
 
-TABELLEN — STRIKTE REGELN:
-- NUR l, c, r Spalten — KEINE S-Spalten, KEINE Mehrspaltentabellen mit zu vielen &
-- Spaltenanzahl in \\begin{tabular}{lll} MUSS exakt der Anzahl der & pro Zeile entsprechen
-- Tabelle mit 2 Spalten: {ll}, mit 3 Spalten: {lll} — niemals mehr & als Spalten
-- Die Segmenttabelle (t_mid, phi) hat GENAU 2 Spalten: {lr} mit einer Kopfzeile $t_\\text{mid}$ [s] & $\\varphi$ [°]
-- KEINE mehrspaltige Darstellung (kein 3×2 Layout für eine 2-Spalten-Tabelle)
+ABBILDUNGEN (mind. 3, alle referenziert):
+\\missingfigure{Versuchsaufbau: Pendel, Kamera, Aufhaengung [selbst zeichnen]}
+\\missingfigure{Winkel phi(t) in Grad vs. Zeit t in s, Fehlerbalken, linearer Fit}
+\\missingfigure{Trajektorie x(t) vs y(t) in Pixeln}
 
-LATEX-ZEICHENREGELN — KRITISCH:
-- Grad-Symbol: IMMER $^\\circ$ in Mathe, \\textdegree{} im Text — NIEMALS ° als Unicode
-- Griechische Buchstaben: IMMER als LaTeX-Befehl: $\\varphi$, $\\omega$, $\\phi$, $\\Delta$ — NIEMALS φ, ω, Δ als Unicode-Zeichen direkt im Code
-- Umlaute: ä ö ü ß sind OK im Fließtext (UTF-8), aber NICHT in Mathe-Umgebungen
-- In \\missingfigure{}: NUR ASCII und LaTeX-Befehle, keine Unicode-Sonderzeichen
-- $R^2$ nicht R² — niemals hochgestellte Ziffern als Unicode
+ZITIERWEISE: rubensrohr_wiki nur beim Rubensrohr. Breitengrad Berlin: demtroeder2021.
+Keys: nolting2023 meschede2015 papula2018 landau1987 pfeiler2020 demtroeder2018 demtroeder2021 mallick2025 rubensrohr_wiki
 
-MATHE-UMGEBUNGEN — STRIKTE REGELN:
-- equation: eine einzelne Gleichung, endet mit \\end{equation}
-- align: mehrere Zeilen mit &=, endet mit \\end{align} — NIEMALS \\end{equation}
-- NIEMALS \\begin{align} mit \\end{equation} mischen
-
-ABBILDUNGEN — PFLICHT (mind. 3):
-1. \\missingfigure{Selbst angefertigte Skizze: [konkreter Inhalt]}
-2. \\missingfigure{[Hauptergebnis-Plot]: x-Achse = [...], y-Achse = [...], mit Fehlerbalken und Fit}
-3. Weitere versuchsspezifisch
-Alle mit \\label{fig:x} und im Text referenziert: "...in Abbildung~\\ref{fig:x}..."
-Caption: \\caption{\\textbf{Name:} Beschreibung.}
-
-ZITIERWEISE:
-- rubensrohr_wiki: NUR beim Rubensrohr
-- Breitengrad Berlin: demtroeder2021 oder meschede2015 (NICHT rubensrohr_wiki)
-- Erdrotation/Corioliskraft/Mechanik: nolting2023, landau1987, demtroeder2018
-- Regression/Hauptachse: papula2018
-- Fehlerrechnung: mallick2025 mit Gleichungsnummer
-
-AUSGABE — KRITISCH:
-- Beginne DIREKT mit \\documentclass — KEINE Markdown-Fences, KEIN \`\`\`latex, KEIN \`\`\`
-- Erste Zeile MUSS sein: \\documentclass[a4paper,12pt]{article}
-- Mathe-Umgebungen: equation für einzelne Gleichungen, align für mehrzeilige — NIEMALS mischen
-- align endet mit \\end{align}, equation mit \\end{equation} — nie verwechseln
-- Ende: %%BIB%% dann .bib-Inhalt
-BibTeX-Keys: nolting2023, meschede2015, papula2018, landau1987, pfeiler2020, demtroeder2018, demtroeder2021, mallick2025, rubensrohr_wiki`;
+AUSGABE: Beginne mit \\documentclass. Kein Markdown. Ende: %%BIB%% dann .bib`;
 }
 
 function userPrompt(meta, csvText, notizen) {
@@ -985,6 +924,34 @@ async function generate() {
     const dcIdx = cleaned.indexOf('\\documentclass');
     if (dcIdx > 0) cleaned = cleaned.slice(dcIdx);
     cleaned = cleaned.trim();
+
+    // ── Post-process: fix common LaTeX errors Claude makes ──
+    // Replace Unicode Greek/special chars with LaTeX equivalents
+    const unicodeFixes = [
+      [/φ/g, '$\\varphi$'], [/ω/g, '$\\omega$'], [/Ω/g, '$\\Omega$'],
+      [/α/g, '$\\alpha$'],  [/β/g, '$\\beta$'],   [/γ/g, '$\\gamma$'],
+      [/δ/g, '$\\delta$'],  [/Δ/g, '$\\Delta$'],  [/θ/g, '$\\theta$'],
+      [/λ/g, '$\\lambda$'], [/μ/g, '$\\mu$'],      [/π/g, '$\\pi$'],
+      [/σ/g, '$\\sigma$'],  [/τ/g, '$\\tau$'],     [/ε/g, '$\\varepsilon$'],
+      [/η/g, '$\\eta$'],    [/ρ/g, '$\\rho$'],     [/κ/g, '$\\kappa$'],
+      [/ν/g, '$\\nu$'],
+      // Degree symbol outside math — use \textdegree or ^\circ
+      // Only replace bare ° not already inside $ $
+      [/°\/h/g, '^{\\circ}/\\text{h}'],
+      [/°\/s/g, '^{\\circ}/\\text{s}'],
+      [/([0-9])\s*°/g, '$1^{\\circ}'],
+      // ² ³ superscripts
+      [/²/g, '$^2$'], [/³/g, '$^3$'],
+      // \degree command doesn't exist in standard LaTeX
+      [/\\degree/g, '^{\\circ}'],
+      // ± outside math
+      [/±/g, '$\\pm$'],
+      // · middle dot outside math
+      [/·/g, '$\\cdot$'],
+    ];
+    for (const [pattern, replacement] of unicodeFixes) {
+      cleaned = cleaned.replace(pattern, replacement);
+    }
 
     const bibIdx = cleaned.indexOf('%%BIB%%');
     if (bibIdx !== -1) {
