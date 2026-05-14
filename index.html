@@ -492,7 +492,24 @@ function readFile(f) {
   return new Promise(res => {
     if (f.type.startsWith('image/')) {
       const r = new FileReader();
-      r.onload = e => res({type:'image', data:e.target.result.split(',')[1], mime:f.type, name:f.name});
+      r.onload = e => {
+        // Resize large images to max 1200px to stay within token limits
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 1200;
+          let w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const data = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+          res({type:'image', data, mime:'image/jpeg', name:f.name});
+        };
+        img.src = e.target.result;
+      };
       r.readAsDataURL(f);
     } else {
       const r = new FileReader();
@@ -579,57 +596,40 @@ const BIB = `@book{nolting2023,
 // ══ System prompt ════════════════════════════════════════════════════════════
 function sysPrompt() {
 return `Du bist ein wissenschaftlicher Assistent am Projektlabor der TU Berlin (Fakultät II).
-Deine einzige Aufgabe: vollständige LaTeX-Protokolle nach der offiziellen PL-Vorlage generieren.
+Generiere vollständige LaTeX-Protokolle nach der offiziellen PL-Vorlage.
 
-ABSOLUTE STILREGELN:
-- Sprache: Deutsch, wissenschaftlich
-- Tempus: Präsens (Ausnahmen nur in Einleitung/Fazit)
-- Diathese: Passiv ("Es wird gemessen", NICHT "Wir messen")
-- Modus: Indikativ, KEINE Modalverben
-- KEIN "man", "wir", "ich"
-- Zahlen 1–12 im Fließtext ausschreiben
-- Jede Formel und jede physikalische Aussage mit \\cite[S.~X]{key} belegen
+STILREGELN:
+- Deutsch, Passiv, Präsens, Indikativ, keine Modalverben, kein "wir/man/ich"
+- Zahlen 1–12 ausschreiben
+- Jede Formel/Aussage mit \\cite[S.~X]{key} belegen
 
-FEHLERRECHNUNG (nach Mallick et al. 2025):
-- Gaußsche Fehlerfortpflanzung: \\Delta\\bar{F} = \\sqrt{\\sum_i \\left(\\frac{\\partial F}{\\partial x_i}\\Delta\\bar{x}_i\\right)^2}
-- Fehler auf 1 signifikante Stelle aufrunden (2 Stellen wenn Aufrunden den rel. Fehler ~verdoppeln würde)
-- Ergebnis hat gleich viele Nachkommastellen wie der Fehler
-- Format immer: \\qty{Wert +- Fehler}{Einheit}
+FEHLERRECHNUNG (Mallick et al. 2025):
+- Gauß: \\Delta\\bar{F}=\\sqrt{\\sum_i(\\frac{\\partial F}{\\partial x_i}\\Delta\\bar{x}_i)^2}
+- Fehler auf 1 sig. Stelle aufrunden, Ergebnis entsprechend runden
+- Format: \\qty{Wert +- Fehler}{Einheit}
 
-LATEX-REGELN:
-- Einheiten IMMER \\qty{}{} oder \\unit{}, NIE Rohtext
-- Dezimalkomma via ngerman, Tausender via \\num{}
-- Alle Gleichungen nummeriert
-- Tabellen mit S-Spalten (siunitx), Ausrichtung am Dezimalkomma
-- \\label und \\ref für alle Gleichungen, Abbildungen, Tabellen
+LATEX:
+- Einheiten immer \\qty{}{} oder \\unit{}, nie Rohtext
+- \\sisetup{locale=DE,separate-uncertainty,exponent-product=\\ensuremath{\\cdot},per-mode=fraction}
+- Alle Gleichungen nummeriert, alle Abb./Tab. referenziert
+- Tabellen mit S-Spalten (siunitx)
 
-VORLAGE-STRUKTUR (exakt):
-\\documentclass[a4paper,12pt]{article}
-% Präambel mit: inputenc, fontenc, babel(ngerman), amsmath, siunitx, biblatex(style=numeric), booktabs, graphicx, geometry, hyperref, minted
-\\sisetup{locale=DE, separate-uncertainty, exponent-product=\\ensuremath{\\cdot}, per-mode=fraction}
-
-Abschnitte:
-1. Titelseite: TU+PL Logo-Placeholder, alle Metadaten
-2. Abstract (6–8 Sätze: Ziel, Methode, Ergebnis mit Wert und Fehler, Literaturvergleich)
+STRUKTUR:
+\\documentclass[a4paper,12pt]{article} mit inputenc,fontenc,babel(ngerman),amsmath,siunitx,biblatex(style=numeric),booktabs,graphicx,geometry,hyperref
+1. Titelseite (alle Metadaten)
+2. Abstract (6–8 Sätze: Ziel, Methode, Ergebnis mit Fehler, Literaturvergleich)
 3. \\tableofcontents
 4. Einleitung
-5. Theorie (vollständige Herleitung, alle relevanten Formeln mit Zitaten)
-6. Experimenteller Aufbau (Geräteliste als booktabs-Tabelle, Skizze als \\missingfigure{})
+5. Theorie (vollständige Herleitung mit Zitaten)
+6. Experimenteller Aufbau (booktabs-Geräteliste, \\missingfigure{} für Skizze)
 7. Durchführung
-8. Ergebnisse
-   8.1 Fehlerrechnung (explizite Herleitung ALLER Fehler, schrittweise)
-   8.2 Angabe der Ergebnisse (korrekt gerundet)
-   8.3 Diskussion (Abweichung in σ vom Literaturwert)
-9. Fazit (Endergebnisse mit abs. UND rel. Fehler)
+8. Ergebnisse: 8.1 Fehlerrechnung (schrittweise) · 8.2 Ergebnisangabe · 8.3 Diskussion (Abweichung in σ)
+9. Fazit (abs. UND rel. Fehler)
 10. \\printbibliography
+Anhang: Eigenkorrektur-Checkliste als % Kommentar
 
-Am Ende: Eigenkorrektur-Checkliste als LaTeX-Kommentar (% ...)
-
-AUSGABE:
-Nur valider LaTeX-Code, beginnend mit \\documentclass.
-Kein Markdown außerhalb. Am absoluten Ende mit %%BIB%% die .bib-Inhalte abtrennen.
-
-Verfügbare BibTeX-Keys: nolting2023, meschede2015, papula2018, landau1987, pfeiler2020, demtroeder2018, demtroeder2021, mallick2025, rubensrohr_wiki`;
+Ausgabe: nur LaTeX beginnend mit \\documentclass, am Ende %%BIB%% dann .bib-Inhalt.
+BibTeX-Keys: nolting2023, meschede2015, papula2018, landau1987, pfeiler2020, demtroeder2018, demtroeder2021, mallick2025, rubensrohr_wiki`;
 }
 
 function userPrompt(meta, csvText, notizen) {
