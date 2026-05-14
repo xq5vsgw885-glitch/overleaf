@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PL Protokoll Generator · TU Berlin</title>
+<style>
+:root {
+  --bg: #f8f7f4;
+  --surface: #ffffff;
+  --border: #e0ddd6;
+  --border-strong: #b8b4aa;
+  --text: #1a1917;
+  --muted: #6b6860;
+  --hint: #a09e98;
+  --red: #cc0000;
+  --red-bg: #fff2f2;
+  --green: #1a6e3c;
+  --green-bg: #eef8f2;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --mono: 'JetBrains Mono','Fira Code','Consolas',monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131211;
+    --surface: #1c1b19;
+    --border: #2a2926;
+    --border-strong: #3a3835;
+    --text: #eeebe6;
+    --muted: #908e88;
+    --hint: #504e4a;
+    --red: #ff5555;
+    --red-bg: #2a1010;
+    --green: #4ade80;
+    --green-bg: #0a2018;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.6;min-height:100vh}
+.shell{max-width:740px;margin:0 auto;padding:2rem 1.5rem 5rem}
+
+/* Header */
+.hdr{display:flex;align-items:center;gap:10px;margin-bottom:2rem;padding-bottom:1rem;border-bottom:.5px solid var(--border)}
+.tu{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.5px}
+.hdr-title{font-size:14px;font-weight:600;flex:1}
+.hdr-sep{color:var(--border-strong)}
+.hdr-sub{font-size:10px;color:var(--hint)}
+.settings-btn{background:none;border:.5px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;font-size:10px;color:var(--muted);cursor:pointer;font-family:var(--mono);white-space:nowrap}
+.settings-btn:hover{border-color:var(--border-strong);color:var(--text)}
+
+/* Stepper */
+.steps{display:flex;margin-bottom:1.5rem;border:.5px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.stp{flex:1;padding:7px 4px;font-size:10px;color:var(--hint);background:var(--bg);border-right:.5px solid var(--border);text-align:center;cursor:default;transition:all .15s;letter-spacing:.2px}
+.stp:last-child{border-right:none}
+.stp.active{background:var(--surface);color:var(--text);font-weight:600}
+.stp.done{color:var(--green);cursor:pointer}
+.stp.done:hover{background:var(--green-bg)}
+
+/* Cards */
+.card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem}
+.card-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:1rem}
+
+/* Form */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field:last-child{margin-bottom:0}
+label{font-size:11px;color:var(--muted)}
+input,select,textarea{width:100%;padding:7px 10px;background:var(--bg);border:.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--border-strong)}
+textarea{resize:vertical;min-height:110px}
+select{cursor:pointer}
+
+/* Buttons */
+.btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+.btn{padding:8px 16px;border:.5px solid var(--border-strong);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--bg)}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
+.btn.primary:hover{opacity:.85;background:var(--text)}
+.btn.primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn.sm{padding:5px 11px;font-size:11px}
+
+/* Upload */
+.drop{border:.5px dashed var(--border-strong);border-radius:var(--radius-sm);padding:1.5rem;text-align:center;cursor:pointer;background:var(--bg);transition:all .15s}
+.drop:hover,.drop.drag{background:var(--red-bg);border-color:var(--red)}
+.drop svg{display:block;margin:0 auto 8px;opacity:.35}
+.drop p{font-size:12px;color:var(--muted)}
+.drop small{font-size:10px;color:var(--hint)}
+.flist{margin-top:10px;display:flex;flex-direction:column;gap:5px}
+.fitem{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border:.5px solid var(--border);border-radius:var(--radius-sm);font-size:11px}
+.fitem span.n{flex:1}
+.fitem span.s{color:var(--hint);font-size:10px}
+.fitem button{background:none;border:none;color:var(--hint);cursor:pointer;font-size:13px;line-height:1;padding:0 2px}
+.fitem button:hover{color:var(--red)}
+
+/* Generation */
+.gen-list{font-size:11px;color:var(--muted);padding-left:1.2rem;margin:8px 0 1rem;line-height:1.9}
+.gen-meta{font-size:10px;color:var(--hint);margin-top:4px}
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid var(--border-strong);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gen-center{padding:2rem 0;text-align:center}
+.gen-status{font-size:12px;color:var(--muted);margin-top:10px;display:block}
+
+/* Preview */
+.preview-wrap{position:relative}
+pre.code{background:var(--bg);border:.5px solid var(--border);border-radius:var(--radius-sm);padding:1rem;font-size:10.5px;line-height:1.55;overflow:auto;max-height:320px;white-space:pre;color:var(--text);font-family:var(--mono)}
+.copy-wrap{position:absolute;top:6px;right:6px}
+
+/* Export grid */
+.xgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.xbtn{display:flex;align-items:center;gap:8px;padding:10px 14px;border:.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .15s;text-align:left;width:100%}
+.xbtn:hover{border-color:var(--border-strong);background:var(--surface)}
+.xbtn svg{flex-shrink:0;opacity:.5}
+.xbtn span{flex:1}
+.xbtn small{display:block;font-size:10px;color:var(--hint);margin-top:1px}
+
+/* Info / ok / err boxes */
+.box{border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;margin-top:10px;line-height:1.7}
+.box.info{background:var(--bg);border:.5px solid var(--border);color:var(--muted)}
+.box.ok{background:var(--green-bg);border:.5px solid var(--green);color:var(--green)}
+.box.err{background:var(--red-bg);border:.5px solid var(--red);color:var(--red)}
+code{font-family:var(--mono);font-size:10px;background:var(--border);padding:1px 4px;border-radius:3px}
+.hint{font-size:10px;color:var(--hint);margin-top:5px;line-height:1.6}
+a{color:var(--red);text-decoration:none}
+a:hover{text-decoration:underline}
+.divider{height:.5px;background:var(--border);margin:1rem 0}
+.tag{display:inline-block;font-size:10px;padding:1px 7px;border-radius:3px;background:var(--red-bg);color:var(--red);margin-left:6px;border:.5px solid var(--red)}
+
+/* Settings overlay */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:100}
+.ov-card{background:var(--surface);border:.5px solid var(--border-strong);border-radius:var(--radius);padding:1.5rem;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.ov-title{font-size:13px;font-weight:600;margin-bottom:1rem}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- Header -->
+<div class="hdr">
+  <span class="tu">TU</span>
+  <span class="hdr-sep">·</span>
+  <span class="hdr-title">PL Protokoll Generator</span>
+  <button class="settings-btn" onclick="openSettings()">⚙ Einstellungen</button>
+</div>
+<div style="margin-top:-1.5rem;margin-bottom:1.5rem">
+  <span class="hdr-sub">Projektlabor Fakultät II · LaTeX nach Vorlage SoSe 2025 · Fehlerrechnung nach Mallick et al. (2025)</span>
+</div>
+
+<!-- Stepper -->
+<div class="steps">
+  <div class="stp active" id="t0" onclick="tryGoStep(0)">1 Metadaten</div>
+  <div class="stp" id="t1" onclick="tryGoStep(1)">2 Messdaten</div>
+  <div class="stp" id="t2" onclick="tryGoStep(2)">3 Generieren</div>
+  <div class="stp" id="t3" onclick="tryGoStep(3)">4 Export</div>
+</div>
+
+<!-- ════════════════ SCHRITT 0: METADATEN ════════════════ -->
+<div id="s0">
+  <div class="card">
+    <div class="card-title">Versuch</div>
+    <div class="field">
+      <label>Versuch</label>
+      <select id="v-select" onchange="onVersuch()">
+        <option>Rubensrohr</option>
+        <option>Kundtsches Rohr</option>
+        <option>Fadenpendel</option>
+        <option>Freier Fall</option>
+        <option>Luftkissentisch</option>
+        <option>Doppelpendel</option>
+        <option>Optik – Linsen und Spiegel</option>
+        <option>Magnetfeld einer Spule</option>
+        <option>Franck-Hertz-Versuch</option>
+        <option value="custom">Anderer Versuch…</option>
+      </select>
+    </div>
+    <div class="field" id="custom-f" style="display:none">
+      <label>Versuchsname (Freitext)</label>
+      <input type="text" id="v-custom" placeholder="z.B. Michelson-Interferometer">
+    </div>
+    <div class="g2">
+      <div class="field"><label>Datum</label><input type="date" id="m-datum"></div>
+      <div class="field"><label>Semester</label><input type="text" id="m-semester" placeholder="SoSe 2026"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Projektgruppe</div>
+    <div class="g2">
+      <div class="field"><label>Projektgruppe</label><input type="text" id="m-pg" placeholder="PG 517"></div>
+      <div class="field"><label>Version</label><input type="text" id="m-version" value="1" style="width:70px"></div>
+    </div>
+    <div class="field">
+      <label>Alle Mitglieder (kommagetrennt)</label>
+      <input type="text" id="m-members" placeholder="Grobi, Bibo, Bert, Ernie, Kermit, Oscar">
+    </div>
+    <div class="g2">
+      <div class="field"><label>Protokollierende</label><input type="text" id="m-proto" placeholder="Grobi, Bibo"></div>
+      <div class="field"><label>Lektorat</label><input type="text" id="m-lektorat" placeholder="Bert"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Tutor*in</label><input type="text" id="m-tutor" placeholder="Schlemihl"></div>
+      <div class="field"><label>Assistent*in</label><input type="text" id="m-assist" placeholder="Graf Zahl"></div>
+    </div>
+  </div>
+
+  <div class="btn-row"><button class="btn primary" onclick="goStep(1)">Weiter →</button></div>
+</div>
+
+<!-- ════════════════ SCHRITT 1: MESSDATEN ════════════════ -->
+<div id="s1" style="display:none">
+  <div class="card">
+    <div class="card-title">Messdaten hochladen</div>
+    <div class="drop" id="dropzone"
+         onclick="document.getElementById('finput').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="onDrop(event)">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+      </svg>
+      <p>CSV-Dateien oder Fotos des Messbuchs hierher ziehen</p>
+      <small>.csv · .txt · .jpg · .png — mehrere Dateien möglich</small>
+    </div>
+    <input type="file" id="finput" multiple accept=".csv,.txt,.jpg,.jpeg,.png,image/*"
+           style="display:none" onchange="onFileInput(this.files)">
+    <div class="flist" id="flist"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Beobachtungen &amp; Notizen</div>
+    <div class="field">
+      <textarea id="notizen" placeholder="Stichpunkte reichen, z.B.:
+– Frequenz: 320 Hz, Rohrlänge L = 1,48 m
+– Flammenmuster klar bei Resonanz sichtbar
+– Raumtemperatur: 22 °C, Gas: Methan
+– Besonderheiten: Knoten 3 und 7 besonders ausgeprägt
+– Verwendete Geräte: Funktionsgenerator (PL-Nr. 123), Rubensrohr (PL-Nr. 378)"></textarea>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" onclick="goStep(0)">← Zurück</button>
+    <button class="btn primary" onclick="goStep(2)">Weiter →</button>
+  </div>
+</div>
+
+<!-- ════════════════ SCHRITT 2: GENERIEREN ════════════════ -->
+<div id="s2" style="display:none">
+  <div class="card">
+    <div class="card-title">Protokoll generieren</div>
+    <p style="font-size:12px;color:var(--muted)">Claude erstellt ein vollständiges Protokoll für <strong id="gen-name" style="color:var(--text)">—</strong>:</p>
+    <ul class="gen-list">
+      <li>Titelseite nach offizieller TU-Vorlage (SoSe 2025)</li>
+      <li>Vollständige Theorieherleitung mit Zitaten aus deiner Bibliothek</li>
+      <li>Gaußsche Fehlerfortpflanzung (Mallick et al. 2025, Gl. 14)</li>
+      <li>Alle Einheiten via <code>\qty{}{}</code> / <code>\num{}</code> (siunitx)</li>
+      <li>Fehler korrekt gerundet · Ergebnisse mit rel. + abs. Unsicherheit</li>
+      <li>Diskussion inkl. Abweichung vom Literaturwert in σ</li>
+      <li>Eigenkorrektur-Checkliste als LaTeX-Kommentar</li>
+    </ul>
+    <p class="gen-meta">Passiv · Präsens · Indikativ · Keine Modalverben · kein „wir/man/ich"</p>
+
+    <div id="gen-idle" class="btn-row" style="margin-top:1rem">
+      <button class="btn" onclick="goStep(1)">← Zurück</button>
+      <button class="btn primary" onclick="generate()">Protokoll generieren ✦</button>
+    </div>
+    <div id="gen-running" style="display:none" class="gen-center">
+      <span class="spinner"></span><span id="gen-txt" style="font-size:12px;color:var(--muted)">Starte…</span>
+    </div>
+    <div id="gen-err"></div>
+  </div>
+</div>
+
+<!-- ════════════════ SCHRITT 3: EXPORT ════════════════ -->
+<div id="s3" style="display:none">
+
+  <!-- Preview -->
+  <div class="card">
+    <div class="card-title">protokoll.tex — Vorschau</div>
+    <div class="preview-wrap">
+      <pre class="code" id="tex-preview">—</pre>
+      <div class="copy-wrap"><button class="btn sm" id="copy-btn" onclick="copyTex()">Kopieren</button></div>
+    </div>
+    <div class="xgrid">
+      <button class="xbtn" onclick="dl(texContent,'protokoll.tex')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        <span>protokoll.tex<small>LaTeX-Hauptdatei</small></span>
+      </button>
+      <button class="xbtn" onclick="dl(bibContent,'literatur.bib')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        <span>literatur.bib<small>BibTeX-Datenbank</small></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- GitHub Push -->
+  <div class="card">
+    <div class="card-title">Push zu GitHub <span class="tag">→ Overleaf</span></div>
+
+    <div class="box info">
+      Dateien landen in <code>protokolle/DATUM_VERSUCH/</code> im Repo.<br>
+      Danach in Overleaf: <strong>Menu → GitHub → Pull</strong> → fertig.
+    </div>
+
+    <div style="margin-top:1rem">
+      <div class="g2">
+        <div class="field"><label>GitHub Username</label><input type="text" id="gh-owner" placeholder="deinname"></div>
+        <div class="field"><label>Repository</label><input type="text" id="gh-repo" placeholder="overleaf"></div>
+      </div>
+      <div class="g2">
+        <div class="field"><label>Branch</label><input type="text" id="gh-branch" value="main"></div>
+        <div class="field"><label>Personal Access Token</label><input type="password" id="gh-token" placeholder="ghp_…"></div>
+      </div>
+      <p class="hint">Token: GitHub → Settings → Developer settings → Personal access tokens → Classic → Scope: <code>repo</code><br>
+      Wird lokal im Browser gespeichert, verlässt nie dein Gerät.</p>
+      <div class="btn-row">
+        <button class="btn" onclick="saveGh()">Speichern</button>
+        <button class="btn primary" id="push-btn" onclick="pushGitHub()">Push zu GitHub ↗</button>
+      </div>
+      <div id="push-result"></div>
+    </div>
+  </div>
+
+  <!-- Neu -->
+  <div style="text-align:center;margin-top:.5rem">
+    <button class="btn sm" onclick="resetAll()">+ Neues Protokoll</button>
+  </div>
+</div>
+
+</div><!-- /shell -->
+
+<!-- ════════════════ SETTINGS OVERLAY ════════════════ -->
+<div class="ov" id="ov" style="display:none" onclick="if(event.target===this)closeSettings()">
+  <div class="ov-card">
+    <div class="ov-title">⚙ Einstellungen</div>
+
+    <div class="field">
+      <label>Anthropic API Key <span style="color:var(--red)">*</span></label>
+      <input type="password" id="s-key" placeholder="sk-ant-api03-…">
+      <p class="hint">Erhältlich unter <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys.<br>
+      Wird nur lokal im Browser gespeichert (localStorage), nie übertragen.</p>
+    </div>
+
+    <div class="divider"></div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:.75rem">Standardwerte — werden bei jedem neuen Protokoll vorausgefüllt</p>
+
+    <div class="g2">
+      <div class="field"><label>Projektgruppe</label><input type="text" id="s-pg" placeholder="PG 517"></div>
+      <div class="field"><label>Semester</label><input type="text" id="s-sem" placeholder="SoSe 2026"></div>
+    </div>
+    <div class="field"><label>Mitglieder</label><input type="text" id="s-members" placeholder="Grobi, Bibo, Bert, Ernie"></div>
+    <div class="g2">
+      <div class="field"><label>Tutor*in</label><input type="text" id="s-tutor" placeholder="Schlemihl"></div>
+      <div class="field"><label>Assistent*in</label><input type="text" id="s-assist" placeholder="Graf Zahl"></div>
+    </div>
+
+    <div class="divider"></div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:.75rem">GitHub (für Push zu Overleaf)</p>
+
+    <div class="g2">
+      <div class="field"><label>GitHub Username</label><input type="text" id="s-ghowner" placeholder="deinname"></div>
+      <div class="field"><label>Repository</label><input type="text" id="s-ghrepo" placeholder="overleaf"></div>
+    </div>
+    <div class="field"><label>Personal Access Token</label><input type="password" id="s-ghtoken" placeholder="ghp_…"></div>
+    <p class="hint">Scope <code>repo</code> reicht. Token wird nur lokal gespeichert.</p>
+
+    <div class="btn-row">
+      <button class="btn" onclick="closeSettings()">Abbrechen</button>
+      <button class="btn primary" onclick="saveSettings()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ State ══════════════════════════════════════════════════════════════════
+let step = 0;
+let files = [];
+let texContent = '';
+let bibContent = '';
+
+// ══ Init ═══════════════════════════════════════════════════════════════════
+window.onload = () => {
+  document.getElementById('m-datum').value = new Date().toISOString().slice(0,10);
+  loadAll();
+};
+
+function loadAll() {
+  const s = JSON.parse(localStorage.getItem('pl-cfg') || '{}');
+  set('m-pg',      s.pg       || '');
+  set('m-semester',s.semester || 'SoSe 2026');
+  set('m-members', s.members  || '');
+  set('m-tutor',   s.tutor    || '');
+  set('m-assist',  s.assist   || '');
+  set('gh-owner',  s.ghowner  || 'xq5vsgw885-glitch');
+  set('gh-repo',   s.ghrepo   || 'overleaf');
+  set('gh-branch', s.ghbranch || 'main');
+  set('gh-token',  s.ghtoken  || '');
+  // settings panel
+  set('s-key',     s.apikey   || '');
+  set('s-pg',      s.pg       || '');
+  set('s-sem',     s.semester || 'SoSe 2026');
+  set('s-members', s.members  || '');
+  set('s-tutor',   s.tutor    || '');
+  set('s-assist',  s.assist   || '');
+  set('s-ghowner', s.ghowner  || 'xq5vsgw885-glitch');
+  set('s-ghrepo',  s.ghrepo   || 'overleaf');
+  set('s-ghtoken', s.ghtoken  || '');
+}
+function set(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+function get(id) { return document.getElementById(id)?.value?.trim() || ''; }
+
+// ══ Settings ════════════════════════════════════════════════════════════════
+function openSettings()  { document.getElementById('ov').style.display='flex'; }
+function closeSettings() { document.getElementById('ov').style.display='none'; }
+function saveSettings() {
+  const s = {
+    apikey:   get('s-key'),
+    pg:       get('s-pg'),
+    semester: get('s-sem'),
+    members:  get('s-members'),
+    tutor:    get('s-tutor'),
+    assist:   get('s-assist'),
+    ghowner:  get('s-ghowner'),
+    ghrepo:   get('s-ghrepo'),
+    ghtoken:  get('s-ghtoken'),
+  };
+  localStorage.setItem('pl-cfg', JSON.stringify(s));
+  loadAll();
+  closeSettings();
+}
+function saveGh() {
+  const s = JSON.parse(localStorage.getItem('pl-cfg') || '{}');
+  s.ghowner  = get('gh-owner');
+  s.ghrepo   = get('gh-repo');
+  s.ghbranch = get('gh-branch');
+  s.ghtoken  = get('gh-token');
+  localStorage.setItem('pl-cfg', JSON.stringify(s));
+}
+
+// ══ Stepper ═════════════════════════════════════════════════════════════════
+function tryGoStep(n) { if (n <= step) goStep(n); }
+function goStep(n) {
+  document.getElementById('s'+step).style.display = 'none';
+  document.getElementById('t'+step).className = step < n ? 'stp done' : 'stp';
+  step = n;
+  document.getElementById('s'+n).style.display = 'block';
+  document.getElementById('t'+n).className = 'stp active';
+  if (n===2) document.getElementById('gen-name').textContent = versuchName();
+  window.scrollTo(0,0);
+}
+
+// ══ Versuch ══════════════════════════════════════════════════════════════════
+function onVersuch() {
+  const v = get('v-select');
+  document.getElementById('custom-f').style.display = v==='custom' ? 'block' : 'none';
+}
+function versuchName() {
+  const v = get('v-select');
+  return v==='custom' ? (get('v-custom')||'Versuch') : v;
+}
+
+// ══ File Upload ═══════════════════════════════════════════════════════════════
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag');
+  addFiles(e.dataTransfer.files);
+}
+function onFileInput(fl) { addFiles(fl); }
+function addFiles(fl) {
+  Array.from(fl).forEach(f => {
+    if (!files.find(x => x.name===f.name && x.size===f.size)) files.push(f);
+  });
+  renderFiles();
+}
+function removeFile(i) { files.splice(i,1); renderFiles(); }
+function renderFiles() {
+  document.getElementById('flist').innerHTML = files.map((f,i) => {
+    const icon = f.type.startsWith('image/') ? '🖼' : '📄';
+    const sz = f.size < 1024 ? f.size+' B' : (f.size/1024).toFixed(1)+' KB';
+    return `<div class="fitem"><span>${icon}</span><span class="n">${f.name}</span><span class="s">${sz}</span><button onclick="removeFile(${i})">✕</button></div>`;
+  }).join('');
+}
+
+// ══ Read files ════════════════════════════════════════════════════════════════
+function readFile(f) {
+  return new Promise(res => {
+    if (f.type.startsWith('image/')) {
+      const r = new FileReader();
+      r.onload = e => res({type:'image', data:e.target.result.split(',')[1], mime:f.type, name:f.name});
+      r.readAsDataURL(f);
+    } else {
+      const r = new FileReader();
+      r.onload = e => res({type:'text', data:e.target.result, name:f.name});
+      r.readAsText(f);
+    }
+  });
+}
+
+// ══ Bibliography ══════════════════════════════════════════════════════════════
+const BIB = `@book{nolting2023,
+  author    = {Wolfgang Nolting},
+  title     = {Grundkurs Theoretische Physik 1: Klassische Mechanik},
+  edition   = {11},
+  publisher = {Springer Spektrum},
+  address   = {Berlin, Heidelberg},
+  year      = {2023},
+}
+@book{meschede2015,
+  author    = {Dieter Meschede},
+  title     = {Gerthsen Physik},
+  edition   = {25},
+  publisher = {Springer Spektrum},
+  address   = {Berlin, Heidelberg},
+  year      = {2015},
+  isbn      = {978-3-662-45976-8},
+}
+@book{papula2018,
+  author    = {Lothar Papula},
+  title     = {Mathematik f{\"{u}}r Ingenieure und Naturwissenschaftler, Band~1},
+  edition   = {16},
+  publisher = {Springer Vieweg},
+  address   = {Wiesbaden},
+  year      = {2018},
+}
+@book{landau1987,
+  author    = {Lew D. Landau and Jewgeni M. Lifschitz},
+  title     = {Lehrbuch der Theoretischen Physik, Band~{I}: Mechanik},
+  publisher = {Akademie-Verlag},
+  address   = {Berlin},
+  year      = {1987},
+}
+@book{pfeiler2020,
+  author    = {Wolfgang Pfeiler},
+  title     = {Experimentalphysik, Band~1},
+  publisher = {De Gruyter},
+  address   = {Berlin},
+  year      = {2020},
+  isbn      = {978-3-11-067560-3},
+}
+@book{demtroeder2018,
+  author    = {Wolfgang Demtr{\"{o}}der},
+  title     = {Experimentalphysik~2: Elektrizit{\"{a}}t und Optik},
+  edition   = {7},
+  publisher = {Springer Spektrum},
+  address   = {Berlin, Heidelberg},
+  year      = {2018},
+  isbn      = {978-3-662-55789-1},
+}
+@book{demtroeder2021,
+  author    = {Wolfgang Demtr{\"{o}}der},
+  title     = {Experimentalphysik~1: Mechanik und W{\"{a}}rme},
+  edition   = {9},
+  publisher = {Springer Spektrum},
+  address   = {Berlin, Heidelberg},
+  year      = {2021},
+  isbn      = {978-3-662-46414-4},
+}
+@manual{mallick2025,
+  author      = {Spandan Mallick and Sebastian Praetz and Tammo Nie and Efe Deniz Atilgan},
+  title       = {Praktische Fehlerrechnung},
+  institution = {Projektlabor, TU Berlin, Fakult{\"{a}}t II},
+  year        = {2025},
+  month       = {11},
+}
+@manual{rubensrohr_wiki,
+  title       = {Rubensrohr -- Projektlabor Wiki},
+  institution = {Projektlabor, TU Berlin},
+  url         = {https://pl-wiki.physik.tu-berlin.de/index.php/Rubensrohr},
+  year        = {2026},
+  note        = {Abgerufen am 12.05.2026},
+}`;
+
+// ══ System prompt ════════════════════════════════════════════════════════════
+function sysPrompt() {
+return `Du bist ein wissenschaftlicher Assistent am Projektlabor der TU Berlin (Fakultät II).
+Deine einzige Aufgabe: vollständige LaTeX-Protokolle nach der offiziellen PL-Vorlage generieren.
+
+ABSOLUTE STILREGELN:
+- Sprache: Deutsch, wissenschaftlich
+- Tempus: Präsens (Ausnahmen nur in Einleitung/Fazit)
+- Diathese: Passiv ("Es wird gemessen", NICHT "Wir messen")
+- Modus: Indikativ, KEINE Modalverben
+- KEIN "man", "wir", "ich"
+- Zahlen 1–12 im Fließtext ausschreiben
+- Jede Formel und jede physikalische Aussage mit \\cite[S.~X]{key} belegen
+
+FEHLERRECHNUNG (nach Mallick et al. 2025):
+- Gaußsche Fehlerfortpflanzung: \\Delta\\bar{F} = \\sqrt{\\sum_i \\left(\\frac{\\partial F}{\\partial x_i}\\Delta\\bar{x}_i\\right)^2}
+- Fehler auf 1 signifikante Stelle aufrunden (2 Stellen wenn Aufrunden den rel. Fehler ~verdoppeln würde)
+- Ergebnis hat gleich viele Nachkommastellen wie der Fehler
+- Format immer: \\qty{Wert +- Fehler}{Einheit}
+
+LATEX-REGELN:
+- Einheiten IMMER \\qty{}{} oder \\unit{}, NIE Rohtext
+- Dezimalkomma via ngerman, Tausender via \\num{}
+- Alle Gleichungen nummeriert
+- Tabellen mit S-Spalten (siunitx), Ausrichtung am Dezimalkomma
+- \\label und \\ref für alle Gleichungen, Abbildungen, Tabellen
+
+VORLAGE-STRUKTUR (exakt):
+\\documentclass[a4paper,12pt]{article}
+% Präambel mit: inputenc, fontenc, babel(ngerman), amsmath, siunitx, biblatex(style=numeric), booktabs, graphicx, geometry, hyperref, minted
+\\sisetup{locale=DE, separate-uncertainty, exponent-product=\\ensuremath{\\cdot}, per-mode=fraction}
+
+Abschnitte:
+1. Titelseite: TU+PL Logo-Placeholder, alle Metadaten
+2. Abstract (6–8 Sätze: Ziel, Methode, Ergebnis mit Wert und Fehler, Literaturvergleich)
+3. \\tableofcontents
+4. Einleitung
+5. Theorie (vollständige Herleitung, alle relevanten Formeln mit Zitaten)
+6. Experimenteller Aufbau (Geräteliste als booktabs-Tabelle, Skizze als \\missingfigure{})
+7. Durchführung
+8. Ergebnisse
+   8.1 Fehlerrechnung (explizite Herleitung ALLER Fehler, schrittweise)
+   8.2 Angabe der Ergebnisse (korrekt gerundet)
+   8.3 Diskussion (Abweichung in σ vom Literaturwert)
+9. Fazit (Endergebnisse mit abs. UND rel. Fehler)
+10. \\printbibliography
+
+Am Ende: Eigenkorrektur-Checkliste als LaTeX-Kommentar (% ...)
+
+AUSGABE:
+Nur valider LaTeX-Code, beginnend mit \\documentclass.
+Kein Markdown außerhalb. Am absoluten Ende mit %%BIB%% die .bib-Inhalte abtrennen.
+
+Verfügbare BibTeX-Keys: nolting2023, meschede2015, papula2018, landau1987, pfeiler2020, demtroeder2018, demtroeder2021, mallick2025, rubensrohr_wiki`;
+}
+
+function userPrompt(meta, csvText, notizen) {
+  return `Erstelle das vollständige Protokoll:
+
+METADATEN:
+Versuch: ${meta.versuch}
+Datum: ${meta.datum}
+Projektgruppe: ${meta.pg}, Semester: ${meta.semester}
+Mitglieder: ${meta.members}
+Protokollierende: ${meta.proto}
+Lektorat: ${meta.lektorat}
+Tutor*in: ${meta.tutor}
+Assistent*in: ${meta.assist}
+Version: ${meta.version}
+
+MESSDATEN:
+${csvText || '(keine Messdaten — Platzhalter mit %TODO einfügen)'}
+
+NOTIZEN / BEOBACHTUNGEN:
+${notizen || '(keine)'}
+
+Denke schrittweise:
+1. Welche physikalischen Gesetze sind zentral? → korrekt zitieren
+2. Welche Messgrößen tragen zur Unsicherheit bei? → Fehlerfortpflanzung vollständig herleiten
+3. Ergebnis mit Literaturwert vergleichen, Abweichung in σ angeben
+4. Eigenkorrektur-Checkliste als % Kommentar einfügen`;
+}
+
+// ══ Generate ══════════════════════════════════════════════════════════════════
+async function generate() {
+  const apiKey = JSON.parse(localStorage.getItem('pl-cfg')||'{}').apikey || '';
+  if (!apiKey) {
+    document.getElementById('gen-err').innerHTML =
+      '<div class="box err">Kein API Key gespeichert. Bitte unter ⚙ Einstellungen eintragen.</div>';
+    return;
+  }
+
+  document.getElementById('gen-idle').style.display = 'none';
+  document.getElementById('gen-running').style.display = 'block';
+  document.getElementById('gen-err').innerHTML = '';
+
+  const setStatus = t => document.getElementById('gen-txt').textContent = t;
+
+  try {
+    setStatus('Dateien werden gelesen…');
+    const fileData = await Promise.all(files.map(readFile));
+
+    // Build message content
+    const content = [];
+    for (const fd of fileData) {
+      if (fd.type === 'image') {
+        content.push({type:'image', source:{type:'base64', media_type:fd.mime, data:fd.data}});
+        content.push({type:'text', text:`Bild "${fd.name}": Extrahiere alle sichtbaren Messwerte, Achsenbeschriftungen und Einheiten.`});
+      }
+    }
+    const csvText = fileData.filter(f=>f.type==='text').map(f=>`=== ${f.name} ===\n${f.data}`).join('\n\n');
+
+    const meta = {
+      versuch:  versuchName(),
+      datum:    get('m-datum'),
+      pg:       get('m-pg'),
+      semester: get('m-semester'),
+      members:  get('m-members'),
+      proto:    get('m-proto'),
+      lektorat: get('m-lektorat'),
+      tutor:    get('m-tutor'),
+      assist:   get('m-assist'),
+      version:  get('m-version'),
+    };
+
+    content.push({type:'text', text: userPrompt(meta, csvText, get('notizen'))});
+
+    setStatus('Claude generiert das Protokoll (30–90 s) …');
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'x-api-key': apiKey, 'anthropic-version':'2023-06-01'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        system: sysPrompt(),
+        messages: [{role:'user', content}],
+      }),
+    });
+
+    if (!resp.ok) {
+      const e = await resp.json().catch(()=>({}));
+      throw new Error(e.error?.message || `HTTP ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    const raw = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+
+    const bibIdx = raw.indexOf('%%BIB%%');
+    if (bibIdx !== -1) {
+      texContent = raw.slice(0, bibIdx).trim();
+      bibContent = raw.slice(bibIdx+7).trim() || BIB;
+    } else {
+      texContent = raw.trim();
+      bibContent = BIB;
+    }
+
+    setStatus('Fertig.');
+    document.getElementById('tex-preview').textContent =
+      texContent.slice(0,3500) + (texContent.length > 3500 ? '\n\n% … (Vorschau gekürzt, Download für vollständige Datei)' : '');
+
+    // Load saved gh settings into export fields
+    const cfg = JSON.parse(localStorage.getItem('pl-cfg')||'{}');
+    if (cfg.ghowner) set('gh-owner', cfg.ghowner);
+    if (cfg.ghrepo)  set('gh-repo',  cfg.ghrepo);
+    if (cfg.ghtoken) set('gh-token', cfg.ghtoken);
+    if (cfg.ghbranch) set('gh-branch', cfg.ghbranch);
+
+    goStep(3);
+  } catch(err) {
+    document.getElementById('gen-running').style.display = 'none';
+    document.getElementById('gen-idle').style.display = 'flex';
+    document.getElementById('gen-err').innerHTML =
+      `<div class="box err">Fehler: ${err.message}</div>`;
+  }
+}
+
+// ══ Download ══════════════════════════════════════════════════════════════════
+function dl(content, filename) {
+  const b = new Blob([content], {type:'text/plain'});
+  const u = URL.createObjectURL(b);
+  const a = document.createElement('a');
+  a.href=u; a.download=filename; a.click();
+  URL.revokeObjectURL(u);
+}
+function downloadTex() { dl(texContent,'protokoll.tex'); }
+function downloadBib() { dl(bibContent,'literatur.bib'); }
+
+function copyTex() {
+  navigator.clipboard.writeText(texContent).then(()=>{
+    const b = document.getElementById('copy-btn');
+    b.textContent = '✓ Kopiert';
+    setTimeout(()=>b.textContent='Kopieren', 2000);
+  });
+}
+
+// ══ GitHub Push ════════════════════════════════════════════════════════════════
+async function pushGitHub() {
+  const token  = get('gh-token');
+  const owner  = get('gh-owner');
+  const repo   = get('gh-repo');
+  const branch = get('gh-branch') || 'main';
+  const res    = document.getElementById('push-result');
+
+  if (!token || !owner || !repo) {
+    res.innerHTML = '<div class="box err">Bitte GitHub Owner, Repo und Token ausfüllen.</div>';
+    return;
+  }
+
+  const btn = document.getElementById('push-btn');
+  btn.disabled = true; btn.textContent = 'Wird gepusht…';
+  res.innerHTML = '';
+
+  try {
+    const date = new Date().toISOString().slice(0,10);
+    const slug = versuchName().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'').slice(0,30);
+    const folder = `protokolle/${date}_${slug}`;
+    const base = `https://api.github.com/repos/${owner}/${repo}`;
+    const hdrs = {
+      'Authorization': `token ${token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    };
+
+    // 1. Get latest commit
+    const refR = await fetch(`${base}/git/ref/heads/${branch}`, {headers:hdrs});
+    if (!refR.ok) throw new Error(`Branch '${branch}' nicht gefunden (${refR.status}). Existiert der Branch?`);
+    const refD = await refR.json();
+    const latestSha = refD.object.sha;
+
+    // 2. Get tree SHA
+    const comR = await fetch(`${base}/git/commits/${latestSha}`, {headers:hdrs});
+    const comD = await comR.json();
+    const treeSha = comD.tree.sha;
+
+    // 3. Create blobs
+    const toB64 = str => btoa(unescape(encodeURIComponent(str)));
+    const filesToPush = [
+      {path:`${folder}/protokoll.tex`, content: texContent},
+      {path:`${folder}/literatur.bib`, content: bibContent},
+      {path:`${folder}/README.md`,     content: `# ${versuchName()}\n\nProtokoll vom ${date}\n\nGeneriert mit dem PL Protokoll Generator.`},
+    ];
+    const blobs = await Promise.all(filesToPush.map(async f => {
+      const r = await fetch(`${base}/git/blobs`, {method:'POST', headers:hdrs, body:JSON.stringify({content:toB64(f.content), encoding:'base64'})});
+      const d = await r.json();
+      if (!d.sha) throw new Error('Blob-Erstellung fehlgeschlagen: ' + JSON.stringify(d));
+      return {path:f.path, mode:'100644', type:'blob', sha:d.sha};
+    }));
+
+    // 4. Create tree
+    const treeR = await fetch(`${base}/git/trees`, {method:'POST', headers:hdrs, body:JSON.stringify({base_tree:treeSha, tree:blobs})});
+    const treeD = await treeR.json();
+
+    // 5. Create commit
+    const newComR = await fetch(`${base}/git/commits`, {method:'POST', headers:hdrs, body:JSON.stringify({
+      message: `protokoll: ${versuchName()} (${date})`,
+      tree: treeD.sha,
+      parents: [latestSha],
+    })});
+    const newCom = await newComR.json();
+
+    // 6. Update ref
+    await fetch(`${base}/git/refs/heads/${branch}`, {method:'PATCH', headers:hdrs, body:JSON.stringify({sha:newCom.sha})});
+
+    const ghUrl = `https://github.com/${owner}/${repo}/tree/${branch}/${folder}`;
+    res.innerHTML = `<div class="box ok">
+      ✓ Erfolgreich gepusht!<br>
+      <a href="${ghUrl}" target="_blank">${ghUrl}</a><br><br>
+      <strong>Nächster Schritt:</strong> Overleaf öffnen → Menu → GitHub → Pull
+    </div>`;
+
+    // Save settings
+    saveGh();
+  } catch(err) {
+    res.innerHTML = `<div class="box err">✗ ${err.message}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Push zu GitHub ↗';
+  }
+}
+
+// ══ Reset ══════════════════════════════════════════════════════════════════
+function resetAll() {
+  texContent = ''; bibContent = ''; files = [];
+  document.getElementById('flist').innerHTML = '';
+  document.getElementById('notizen').value = '';
+  document.getElementById('push-result').innerHTML = '';
+  document.getElementById('gen-err').innerHTML = '';
+  document.getElementById('gen-running').style.display = 'none';
+  document.getElementById('gen-idle').style.display = 'flex';
+  // reset stepper visually
+  for(let i=1;i<=3;i++) document.getElementById('t'+i).className='stp';
+  goStep(0);
+}
+</script>
+</body>
+</html>
