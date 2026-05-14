@@ -683,7 +683,17 @@ TITELSEITE: Kein \\includegraphics — nur Text:
 \\begin{center}{\\large\\textbf{Technische Universität Berlin}}\\\\[0.3cm]
 {\\large Projektlabor -- Fakultät II}\\end{center}
 
-TABELLEN: NUR l, c, r — KEINE S-Spalten. Zahlen als Text. Einheiten im Kopf.
+TABELLEN — STRIKTE REGELN:
+- NUR l, c, r Spalten — KEINE S-Spalten, KEINE Mehrspaltentabellen mit zu vielen &
+- Spaltenanzahl in \\begin{tabular}{lll} MUSS exakt der Anzahl der & pro Zeile entsprechen
+- Tabelle mit 2 Spalten: {ll}, mit 3 Spalten: {lll} — niemals mehr & als Spalten
+- Die Segmenttabelle (t_mid, phi) hat GENAU 2 Spalten: {lr} mit einer Kopfzeile $t_\\text{mid}$ [s] & $\\varphi$ [°]
+- KEINE mehrspaltige Darstellung (kein 3×2 Layout für eine 2-Spalten-Tabelle)
+
+MATHE-UMGEBUNGEN — STRIKTE REGELN:
+- equation: eine einzelne Gleichung, endet mit \\end{equation}
+- align: mehrere Zeilen mit &=, endet mit \\end{align} — NIEMALS \\end{equation}
+- NIEMALS \\begin{align} mit \\end{equation} mischen
 
 ABBILDUNGEN — PFLICHT (mind. 3):
 1. \\missingfigure{Selbst angefertigte Skizze: [konkreter Inhalt]}
@@ -699,8 +709,12 @@ ZITIERWEISE:
 - Regression/Hauptachse: papula2018
 - Fehlerrechnung: mallick2025 mit Gleichungsnummer
 
-BIBLIOGRAPHIE: \\printbibliography
-AUSGABE: Nur LaTeX ab \\documentclass. Ende: %%BIB%% dann .bib-Inhalt.
+AUSGABE — KRITISCH:
+- Beginne DIREKT mit \\documentclass — KEINE Markdown-Fences, KEIN \`\`\`latex, KEIN \`\`\`
+- Erste Zeile MUSS sein: \\documentclass[a4paper,12pt]{article}
+- Mathe-Umgebungen: equation für einzelne Gleichungen, align für mehrzeilige — NIEMALS mischen
+- align endet mit \\end{align}, equation mit \\end{equation} — nie verwechseln
+- Ende: %%BIB%% dann .bib-Inhalt
 BibTeX-Keys: nolting2023, meschede2015, papula2018, landau1987, pfeiler2020, demtroeder2018, demtroeder2021, mallick2025, rubensrohr_wiki`;
 }
 
@@ -796,13 +810,19 @@ async function generate() {
 
     const data = await resp.json();
     const raw = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    let cleaned = raw.trim();
+    cleaned = cleaned.replace(/^`{1,4}(?:latex|tex)?\s*/i, '');
+    cleaned = cleaned.replace(/\s*`{1,4}\s*$/, '');
+    const dcIdx = cleaned.indexOf('\\documentclass');
+    if (dcIdx > 0) cleaned = cleaned.slice(dcIdx);
+    cleaned = cleaned.trim();
 
-    const bibIdx = raw.indexOf('%%BIB%%');
+    const bibIdx = cleaned.indexOf('%%BIB%%');
     if (bibIdx !== -1) {
-      texContent = raw.slice(0, bibIdx).trim();
-      bibContent = raw.slice(bibIdx+7).trim() || BIB;
+      texContent = cleaned.slice(0, bibIdx).trim();
+      bibContent = cleaned.slice(bibIdx+7).trim() || BIB;
     } else {
-      texContent = raw.trim();
+      texContent = cleaned;
       bibContent = BIB;
     }
 

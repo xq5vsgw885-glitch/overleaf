@@ -22,6 +22,17 @@ app.post("/api/generate", async (req, res) => {
       body: JSON.stringify(req.body),
     });
     const data = await response.json();
+    // Strip markdown code fences if Claude wrapped output in ```latex ... ```
+    if (data.content && Array.isArray(data.content)) {
+      data.content = data.content.map(block => {
+        if (block.type === 'text') {
+          let t = block.text;
+          t = t.replace(/^```(?:latex)?\s*/i, '').replace(/\s*```\s*$/, '');
+          block.text = t;
+        }
+        return block;
+      });
+    }
     res.status(response.status).json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
