@@ -618,12 +618,51 @@ STILREGELN:
 - Zahlen 1–12 ausschreiben
 - Jede Formel/Aussage mit \\cite[S.~X]{key} belegen
 
-FEHLERRECHNUNG (Mallick et al. 2025):
-- Gauß: \\Delta\\bar{F}=\\sqrt{\\sum_i\\left(\\frac{\\partial F}{\\partial x_i}\\Delta\\bar{x}_i\\right)^2}
-- Fehler auf 1 sig. Stelle aufrunden, Ergebnis entsprechend runden
-- Format: \\qty{Wert +- Fehler}{Einheit}
+══════════════════════════════════════════════════
+FEHLERRECHNUNG — EXAKTE METHODIK (Mallick et al. 2025)
+══════════════════════════════════════════════════
 
-LATEX-PRÄAMBEL (exakt so verwenden):
+1. MITTELWERT [Mallick 2025, Gl. 6, S. 6]:
+   \\bar{x} = \\frac{1}{N}\\sum_{i=1}^{N} x_i
+
+2. STANDARDABWEICHUNG [Mallick 2025, Gl. 7, S. 7]:
+   s = \\sqrt{\\frac{1}{N-1}\\sum_{i=1}^{N}(x_i - \\bar{x})^2}
+   IMMER N-1 im Nenner (Stichproben-Standardabweichung).
+
+3. FEHLER DES MITTELWERTS [Mallick 2025, Gl. 9, S. 9]:
+   \\Delta\\bar{x} = \\frac{s}{\\sqrt{n}}
+
+4. GAUẞSCHE FEHLERFORTPFLANZUNG [Mallick 2025, Gl. 14, S. 14]:
+   \\Delta\\bar{F} = \\sqrt{\\left(\\frac{\\partial F}{\\partial x}\\Delta\\bar{x}\\right)^2 + \\left(\\frac{\\partial F}{\\partial y}\\Delta\\bar{y}\\right)^2 + \\cdots}
+   Voraussetzung: Messgrößen aus Messreihen, Standardabweichungen bestimmbar.
+   Bei Einzelmessungen: lineares Fehlerfortpflanzungsgesetz [Mallick 2025, Gl. 13]:
+   \\Delta F = \\left|\\frac{\\partial F}{\\partial x}\\right|\\Delta x + \\left|\\frac{\\partial F}{\\partial y}\\right|\\Delta y + \\cdots
+
+5. SPEZIALFÄLLE [Mallick 2025, Gl. 15–16, S. 14]:
+   Summe F = ax + by: \\Delta F = \\sqrt{(a\\Delta x)^2+(b\\Delta y)^2}
+   Potenzprodukt F = x^a y^b: \\frac{\\Delta F}{F} = \\sqrt{\\left(a\\frac{\\Delta x}{x}\\right)^2+\\left(b\\frac{\\Delta y}{y}\\right)^2}
+
+6. LINEARE REGRESSION [Mallick 2025, Gl. 22–28, S. 21–22]:
+   Modell: Y(x) = a + bx, minimiert Chi-Quadrat [Gl. 23].
+   Steigung: b = \\frac{n\\sum x_i y_i - (\\sum y_i)(\\sum x_i)}{n\\sum x_i^2-(\\sum x_i)^2} [Gl. 24]
+   Achsenabschnitt: a = \\frac{(\\sum y_i)(\\sum x_i^2)-(\\sum x_i)(\\sum x_i y_i)}{n\\sum x_i^2-(\\sum x_i)^2} [Gl. 25]
+   Streuung: s_y = \\sqrt{\\frac{1}{n-2}\\sum(Y(x_i)-y_i)^2} [Gl. 26]
+   Fehler Steigung: \\Delta b = s_y\\sqrt{\\frac{\\sum x_i^2}{n\\sum x_i^2-(\\sum x_i)^2}} [Gl. 28]
+   Fehler Achsenabschnitt: \\Delta a = s_y\\sqrt{\\frac{n}{n\\sum x_i^2-(\\sum x_i)^2}} [Gl. 27]
+
+7. RUNDUNGSREGELN [Mallick 2025, S. 2]:
+   - Fehler: 1 signifikante Stelle, IMMER aufrunden
+   - Ausnahme: 2 Stellen wenn Aufrunden den rel. Fehler ~verdoppelt (Beispiel: 0,11→0,2 verdoppelt 1,1%→2%)
+   - Ergebnis: gleich viele Nachkommastellen wie der Fehler
+   - Format absolut: \\qty{10.3 +- 0.8}{s}
+   - Format relativ: t = 10(1\\pm 0{,}1)\\,\\text{s}
+
+ALLE Fehlerrechnungen im Protokoll MÜSSEN diese Gleichungen explizit verwenden und
+mit [Mallick 2025, Gl. X, S. Y] zitieren.
+
+══════════════════════════════════════════════════
+LATEX-PRÄAMBEL (exakt so):
+══════════════════════════════════════════════════
 \\documentclass[a4paper,12pt]{article}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
@@ -634,36 +673,34 @@ LATEX-PRÄAMBEL (exakt so verwenden):
 \\sisetup{locale=DE,separate-uncertainty=true,exponent-product=\\ensuremath{\\cdot},per-mode=fraction}
 \\usepackage{booktabs}
 \\usepackage{graphicx}
+\\usepackage{todonotes}
 \\usepackage[a4paper,margin=2.5cm]{geometry}
 \\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
 \\usepackage[style=numeric,backend=biber]{biblatex}
 \\addbibresource{literatur.bib}
 
-TITELSEITE: Kein \\includegraphics — stattdessen nur Text:
-\\begin{center}
-{\\large\\textbf{Technische Universität Berlin}}\\\\[0.3cm]
-{\\large Projektlabor -- Fakultät II}\\\\[1cm]
-...Titel, Datum, Tabelle mit Metadaten...
-\\end{center}
+TITELSEITE: Kein \\includegraphics — nur Text:
+\\begin{center}{\\large\\textbf{Technische Universität Berlin}}\\\\[0.3cm]
+{\\large Projektlabor -- Fakultät II}\\end{center}
 
-TABELLEN: KEINE S-Spalten von siunitx in Tabellen verwenden.
-Nur Standard-Spaltentypen: l, c, r.
-Zahlen in Tabellen manuell als Text eintragen.
-Beispiel:
-\\begin{tabular}{lll}
-\\toprule
-Größe & Wert & Einheit \\\\
-\\midrule
-Länge $L$ & 1{,}48 & m \\\\
-\\bottomrule
-\\end{tabular}
+TABELLEN: NUR l, c, r — KEINE S-Spalten. Zahlen als Text. Einheiten im Kopf.
 
-EINHEITEN im Fließtext und Gleichungen: \\qty{1.48}{m}, \\qty{320}{Hz} etc. — nur außerhalb von tabular.
+ABBILDUNGEN — PFLICHT (mind. 3):
+1. \\missingfigure{Selbst angefertigte Skizze: [konkreter Inhalt]}
+2. \\missingfigure{[Hauptergebnis-Plot]: x-Achse = [...], y-Achse = [...], mit Fehlerbalken und Fit}
+3. Weitere versuchsspezifisch
+Alle mit \\label{fig:x} und im Text referenziert: "...in Abbildung~\\ref{fig:x}..."
+Caption: \\caption{\\textbf{Name:} Beschreibung.}
 
-BIBLIOGRAPHIE: \\printbibliography am Ende, KEINE \\bibliography oder \\bibliographystyle.
+ZITIERWEISE:
+- rubensrohr_wiki: NUR beim Rubensrohr
+- Breitengrad Berlin: demtroeder2021 oder meschede2015 (NICHT rubensrohr_wiki)
+- Erdrotation/Corioliskraft/Mechanik: nolting2023, landau1987, demtroeder2018
+- Regression/Hauptachse: papula2018
+- Fehlerrechnung: mallick2025 mit Gleichungsnummer
 
-AUSGABE: Nur LaTeX beginnend mit \\documentclass.
-Am absoluten Ende: %%BIB%% dann den .bib-Inhalt.
+BIBLIOGRAPHIE: \\printbibliography
+AUSGABE: Nur LaTeX ab \\documentclass. Ende: %%BIB%% dann .bib-Inhalt.
 BibTeX-Keys: nolting2023, meschede2015, papula2018, landau1987, pfeiler2020, demtroeder2018, demtroeder2021, mallick2025, rubensrohr_wiki`;
 }
 
