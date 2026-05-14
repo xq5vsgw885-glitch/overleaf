@@ -604,31 +604,51 @@ STILREGELN:
 - Jede Formel/Aussage mit \\cite[S.~X]{key} belegen
 
 FEHLERRECHNUNG (Mallick et al. 2025):
-- Gauß: \\Delta\\bar{F}=\\sqrt{\\sum_i(\\frac{\\partial F}{\\partial x_i}\\Delta\\bar{x}_i)^2}
+- Gauß: \\Delta\\bar{F}=\\sqrt{\\sum_i\\left(\\frac{\\partial F}{\\partial x_i}\\Delta\\bar{x}_i\\right)^2}
 - Fehler auf 1 sig. Stelle aufrunden, Ergebnis entsprechend runden
 - Format: \\qty{Wert +- Fehler}{Einheit}
 
-LATEX:
-- Einheiten immer \\qty{}{} oder \\unit{}, nie Rohtext
-- \\sisetup{locale=DE,separate-uncertainty,exponent-product=\\ensuremath{\\cdot},per-mode=fraction}
-- Alle Gleichungen nummeriert, alle Abb./Tab. referenziert
-- Tabellen mit S-Spalten (siunitx)
+LATEX-PRÄAMBEL (exakt so verwenden):
+\\documentclass[a4paper,12pt]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[ngerman]{babel}
+\\usepackage{csquotes}
+\\usepackage{amsmath,amssymb}
+\\usepackage{siunitx}
+\\sisetup{locale=DE,separate-uncertainty=true,exponent-product=\\ensuremath{\\cdot},per-mode=fraction}
+\\usepackage{booktabs}
+\\usepackage{graphicx}
+\\usepackage[a4paper,margin=2.5cm]{geometry}
+\\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
+\\usepackage[style=numeric,backend=biber]{biblatex}
+\\addbibresource{literatur.bib}
 
-STRUKTUR:
-\\documentclass[a4paper,12pt]{article} mit inputenc,fontenc,babel(ngerman),amsmath,siunitx,biblatex(style=numeric),booktabs,graphicx,geometry,hyperref
-1. Titelseite (alle Metadaten)
-2. Abstract (6–8 Sätze: Ziel, Methode, Ergebnis mit Fehler, Literaturvergleich)
-3. \\tableofcontents
-4. Einleitung
-5. Theorie (vollständige Herleitung mit Zitaten)
-6. Experimenteller Aufbau (booktabs-Geräteliste, \\missingfigure{} für Skizze)
-7. Durchführung
-8. Ergebnisse: 8.1 Fehlerrechnung (schrittweise) · 8.2 Ergebnisangabe · 8.3 Diskussion (Abweichung in σ)
-9. Fazit (abs. UND rel. Fehler)
-10. \\printbibliography
-Anhang: Eigenkorrektur-Checkliste als % Kommentar
+TITELSEITE: Kein \\includegraphics — stattdessen nur Text:
+\\begin{center}
+{\\large\\textbf{Technische Universität Berlin}}\\\\[0.3cm]
+{\\large Projektlabor -- Fakultät II}\\\\[1cm]
+...Titel, Datum, Tabelle mit Metadaten...
+\\end{center}
 
-Ausgabe: nur LaTeX beginnend mit \\documentclass, am Ende %%BIB%% dann .bib-Inhalt.
+TABELLEN: KEINE S-Spalten von siunitx in Tabellen verwenden.
+Nur Standard-Spaltentypen: l, c, r.
+Zahlen in Tabellen manuell als Text eintragen.
+Beispiel:
+\\begin{tabular}{lll}
+\\toprule
+Größe & Wert & Einheit \\\\
+\\midrule
+Länge $L$ & 1{,}48 & m \\\\
+\\bottomrule
+\\end{tabular}
+
+EINHEITEN im Fließtext und Gleichungen: \\qty{1.48}{m}, \\qty{320}{Hz} etc. — nur außerhalb von tabular.
+
+BIBLIOGRAPHIE: \\printbibliography am Ende, KEINE \\bibliography oder \\bibliographystyle.
+
+AUSGABE: Nur LaTeX beginnend mit \\documentclass.
+Am absoluten Ende: %%BIB%% dann den .bib-Inhalt.
 BibTeX-Keys: nolting2023, meschede2015, papula2018, landau1987, pfeiler2020, demtroeder2018, demtroeder2021, mallick2025, rubensrohr_wiki`;
 }
 
@@ -814,13 +834,20 @@ async function pushGitHub() {
 
     // 3. Create blobs
     const toB64 = str => btoa(unescape(encodeURIComponent(str)));
+    const TU_LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAA8CAIAAAAiz+n/AAAAn0lEQVR4nO3QQREAIAzAsPnXhidQQXmQXhVk1syT92e9UQYN+lago0BHgY4CHQU6CnQU6CjQUaCjQEeBjgIdBToKdBToKNBRoKNAR4GOAh0FOgp0FOgo0FGgo0BHgY4CHQU6CnQU6CjQUaCjQEeBjgIdBToKdBToKNBRoKNAR4GOAh0FOgp0FOgo0FGgo0BHgY4CHQU6CnQU6CjQUaCjDuyWg/J+lpsqAAAAAElFTkSuQmCC';
+
     const filesToPush = [
-      {path:`${folder}/protokoll.tex`, content: texContent},
-      {path:`${folder}/literatur.bib`, content: bibContent},
-      {path:`${folder}/README.md`,     content: `# ${versuchName()}\n\nProtokoll vom ${date}\n\nGeneriert mit dem PL Protokoll Generator.`},
+      {path:`${folder}/protokoll.tex`, content: texContent, binary: false},
+      {path:`${folder}/literatur.bib`, content: bibContent, binary: false},
+      {path:`${folder}/tu-berlin-logo.png`, content: TU_LOGO_B64, binary: true},
+      {path:`${folder}/pl-logo.png`, content: TU_LOGO_B64, binary: true},
+      {path:`${folder}/README.md`, content: `# ${versuchName()}\n\nProtokoll vom ${date}\n\nGeneriert mit dem PL Protokoll Generator.`, binary: false},
     ];
     const blobs = await Promise.all(filesToPush.map(async f => {
-      const r = await fetch(`${base}/git/blobs`, {method:'POST', headers:hdrs, body:JSON.stringify({content:toB64(f.content), encoding:'base64'})});
+      const body = f.binary
+        ? JSON.stringify({content: f.content, encoding: 'base64'})
+        : JSON.stringify({content: toB64(f.content), encoding: 'base64'});
+      const r = await fetch(`${base}/git/blobs`, {method:'POST', headers:hdrs, body});
       const d = await r.json();
       if (!d.sha) throw new Error('Blob-Erstellung fehlgeschlagen: ' + JSON.stringify(d));
       return {path:f.path, mode:'100644', type:'blob', sha:d.sha};
