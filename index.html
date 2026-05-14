@@ -789,29 +789,73 @@ PRAEMBEL (unveraendert uebernehmen):
 \\sisetup{locale=DE,uncertainty-mode=separate,exponent-product=\\ensuremath{\\cdot},per-mode=fraction}
 \\usepackage{booktabs}
 \\usepackage{graphicx}
+\\usepackage{tikz}
+\\usepackage{pgfplots}
+\\pgfplotsset{compat=1.18,width=0.85\\linewidth}
 \\usepackage[a4paper,margin=2.5cm]{geometry}
 \\setlength{\\marginparwidth}{2cm}
-\\usepackage{todonotes}
 \\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
 \\usepackage[style=numeric,backend=biber]{biblatex}
 \\addbibresource{literatur.bib}
 
-STRIKTE LATEX-REGELN (Verstoss erzeugt Kompilierfehler):
-1. Griechisch: IMMER LaTeX-Befehle. $\\varphi$ $\\omega$ $\\Delta$ $\\sigma$ -- NIEMALS Unicode phi omega Delta direkt
-2. Grad: in Mathe $^{\\circ}$ oder \\qty{46.7}{\\degree} via siunitx -- NIEMALS \\degree allein (existiert nicht!), NIEMALS Unicode °
-3. Hochgestellt: $R^2$ -- NIEMALS Unicode-Hochzahlen wie squared-Zeichen
-4. In \\missingfigure{} und \\caption{}: NUR ASCII-Text, kein Unicode, keine griechischen Buchstaben
-5. Tabellen: Spaltenanzahl in {lcr...} MUSS exakt der Anzahl & pro Zeile entsprechen
-6. Mathe: \\begin{equation}...\\end{equation} oder \\begin{align}...\\end{align} -- niemals mischen
-7. KEINE \\bibliographystyle, KEINE \\bibliography -- nur \\printbibliography
+STRIKTE LATEX-REGELN:
+1. Griechisch: IMMER LaTeX-Befehle: $\\varphi$ $\\omega$ $\\Delta$ -- NIEMALS Unicode
+2. Grad: $^{\\circ}$ in Mathe, \\qty{46.7}{\\degree} via siunitx -- NIEMALS \\degree allein
+3. Hochgestellt: $R^2$ -- NIEMALS Unicode-Hochzahlen
+4. In \\caption{}: NUR ASCII und LaTeX-Befehle, kein Unicode
+5. Tabellen: Spaltenanzahl MUSS exakt der Anzahl & entsprechen
+6. Mathe: equation oder align -- NIEMALS mischen
+7. KEINE \\bibliographystyle -- nur \\printbibliography
+8. KEIN \\missingfigure -- siehe Abbildungsregeln unten
 
-ABBILDUNGEN (mind. 3, alle referenziert):
-\\missingfigure{Versuchsaufbau: Pendel, Kamera, Aufhaengung [selbst zeichnen]}
-\\missingfigure{Winkel phi(t) in Grad vs. Zeit t in s, Fehlerbalken, linearer Fit}
-\\missingfigure{Trajektorie x(t) vs y(t) in Pixeln}
+ABBILDUNGEN -- PFLICHTREGELN (mind. 3, alle mit \\label und im Text referenziert):
+
+TYP A -- AUFBAU-SKIZZEN (selbst zu zeichnende Skizzen):
+Erzeuge ein TikZ-Skelett mit leeren Achsen, Beschriftungen und Placeholder-Rechtecken.
+Beispiel Foucault-Pendel:
+\\begin{figure}[ht]\\centering
+\\begin{tikzpicture}
+  % Aufhaengepunkt
+  \\fill (0,4) circle (3pt) node[above]{Aufhaengepunkt};
+  % Draht
+  \\draw[thick] (0,4) -- (0,0);
+  % Pendelmasse
+  \\fill (0,0) circle (6pt) node[right]{\\;Pendelmasse};
+  % Kamera (schematisch)
+  \\draw[dashed,->] (0,-1) -- (0,-2) node[below]{Kamera (senkrecht)};
+  % Koordinatensystem
+  \\draw[->] (-2,-2.5) -- (2,-2.5) node[right]{$x$};
+  \\draw[->] (-2,-2.5) -- (-2,0) node[above]{$y$};
+  % TODO: Elliptische Trajektorie eintragen
+  \\node[draw,dashed,rounded corners] at (0,-2.5) {Trajektorie [selbst zeichnen]};
+\\end{tikzpicture}
+\\caption{\\textbf{Versuchsaufbau:} ...}\\label{fig:aufbau}
+\\end{figure}
+
+TYP B -- DATENPLOTS (mit echten Messwerten aus Serveranalyse):
+Erzeuge pgfplots-Code mit den konkreten Zahlenwerten aus der Serveranalyse.
+Fehlerbalken mit \\addplot+[error bars/.cd,...], linearer Fit als \\addplot[domain=...].
+
+Beispiel Winkel-Zeit-Plot (Foucault):
+\\begin{figure}[ht]\\centering
+\\begin{tikzpicture}
+\\begin{axis}[xlabel={$t$ / s}, ylabel={$\\varphi$ / \\textdegree},
+  grid=major, legend pos=north west]
+\\addplot+[only marks, error bars/.cd, y dir=both, y fixed=0.5]
+  coordinates {(20,21.47)(60,21.56)(100,21.65)...}; % echte Segmentwerte eintragen
+\\addplot[red,domain=0:1200] {21.474 + 0.003041*x}; % Regressionsgerade
+\\legend{Messwerte, Linearer Fit}
+\\end{axis}
+\\end{tikzpicture}
+\\caption{\\textbf{Zeitliche Entwicklung der Schwingungsebene:} ...}\\label{fig:winkel}
+\\end{figure}
+
+WICHTIG: Verwende IMMER die konkreten Zahlenwerte aus der Serveranalyse (Segmenttabelle,
+Regressionsgerade, Periode). Keine Platzhalter-Kommentare wie "% Werte eintragen" --
+die echten Werte sind in den Daten vorhanden und MUESSEN verwendet werden.
 
 ZITIERWEISE: rubensrohr_wiki nur beim Rubensrohr. Breitengrad Berlin: demtroeder2021.
-KI-Deklaration: pl_generator2026 fuer Auswertungssoftware, dfg_kodex2024 fuer GWP-Erklaerung.
+KI-Deklaration: pl_generator2026, dfg_kodex2024.
 Keys: nolting2023 meschede2015 papula2018 landau1987 pfeiler2020 demtroeder2018 demtroeder2021 mallick2025 rubensrohr_wiki dfg_kodex2024 pl_generator2026
 
 AUSGABE: Beginne mit \\documentclass. Kein Markdown. Ende: %%BIB%% dann .bib`;
@@ -830,8 +874,15 @@ DATENQUELLEN UND IHRE PRIORITAET:
 
 VERBOTEN:
 - Ergebnisse der Serveranalyse als "nicht vorhanden" markieren
-- Zahlen erfinden die nicht in Daten oder Serveranalyse stehen
-- "angenommen", "geschaetzt", "typischer Wert", "Korrekturfaktor" fuer Eingangsgroessen
+- Zahlenwerte als Messgrössen erfinden die nicht in Daten oder Serveranalyse stehen
+- "plausibel gewaehlt", "typischer Wert von X", "Korrekturfaktor = X" fuer Eingangsgroessen
+- Fehlende Messgroessen mit Literaturwerten ersetzen ohne das explizit zu kennzeichnen
+
+ERLAUBT (normaler wissenschaftlicher Sprachgebrauch):
+- "Es wird angenommen, dass..." fuer physikalische Modellierungsannahmen (z.B. kleine Winkel)
+- "Die Daempfung wird vernachlaessigt" als Naeherungsannahme
+- "wird abgeschaetzt" fuer Fehlerabschaetzungen
+- Fehlende Parameter als %TODO markieren
 
 METADATEN:
 Versuch: ${meta.versuch}
@@ -932,13 +983,18 @@ function validateNoUnsupportedAssumptions(tex) {
   const errors = [];
   const t = String(tex || '');
 
+  // Nur wirklich problematische Muster blockieren:
+  // erfundene Zahlenwerte als Eingangsgrößen, nicht physikalische Annahmen im Text
   const forbiddenPatterns = [
-    {re: /Korrekturfaktor/i, msg: 'Unzulässiger Korrekturfaktor gefunden. Korrekturfaktoren dürfen nur aus Rohdaten stammen.'},
-    {re: /wird angenommen/i, msg: 'Unzulässige Annahme gefunden: "wird angenommen". Fehlende Rohdaten müssen als %TODO markiert werden.'},
-    {re: /angenommen, dass/i, msg: 'Unzulässige Annahme gefunden. Keine Ersatzannahmen für fehlende Rohdaten.'},
-    {re: /geschätzt/i, msg: 'Unzulässige Schätzung gefunden. Keine geschätzten Messwerte verwenden.'},
-    {re: /plausibel gewählt/i, msg: 'Unzulässige Plausibilitätswahl gefunden. Keine erfundenen Eingangsgrößen.'},
-    {re: /typischer Wert/i, msg: 'Unzulässiger typischer Wert gefunden. Numerische Eingangsgrößen müssen aus Rohdaten stammen.'}
+    // Korrekturfaktor mit Zahl = erfundener Korrekturwert
+    {re: /Korrekturfaktor\s*=\s*[\d]/i,
+     msg: 'Unzulässiger numerischer Korrekturfaktor gefunden. Korrekturfaktoren müssen aus Rohdaten stammen.'},
+    // "typischer Wert" gefolgt von Zahl = Literaturwert als Messwert ausgegeben
+    {re: /typischer Wert\s*(?:von|:)\s*[\d]/i,
+     msg: 'Unzulässiger "typischer Wert" als Messgröße gefunden. Fehlende Messwerte als %TODO markieren.'},
+    // "plausibel gewählt" = explizit erfundener Wert
+    {re: /plausibel gew[äa]hlt/i,
+     msg: 'Unzulässige Formulierung "plausibel gewählt". Fehlende Eingangsgrößen als %TODO markieren.'},
   ];
 
   for (const p of forbiddenPatterns) {
