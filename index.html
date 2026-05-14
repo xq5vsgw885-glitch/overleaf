@@ -513,7 +513,20 @@ function readFile(f) {
       r.readAsDataURL(f);
     } else {
       const r = new FileReader();
-      r.onload = e => res({type:'text', data:e.target.result, name:f.name});
+      r.onload = e => {
+        let text = e.target.result;
+        const lines = text.split('\n');
+        if (lines.length > 500) {
+          // Keep header + first 200 + evenly sampled 300 from rest
+          const header = lines.slice(0, 1);
+          const first = lines.slice(1, 201);
+          const rest = lines.slice(201);
+          const step = Math.floor(rest.length / 299);
+          const sampled = rest.filter((_, i) => i % step === 0).slice(0, 299);
+          text = [...header, ...first, `... (${lines.length - 500} Zeilen übersprungen, gleichmäßige Stichprobe) ...`, ...sampled].join('\n');
+        }
+        res({type:'text', data:text, name:f.name});
+      };
       r.readAsText(f);
     }
   });
