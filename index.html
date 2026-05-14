@@ -337,10 +337,14 @@ a:hover{text-decoration:underline}
     <div class="ov-title">⚙ Einstellungen</div>
 
     <div class="field">
-      <label>Anthropic API Key <span style="color:var(--red)">*</span></label>
-      <input type="password" id="s-key" placeholder="sk-ant-api03-…">
-      <p class="hint">Erhältlich unter <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys.<br>
-      Wird nur lokal im Browser gespeichert (localStorage), nie übertragen.</p>
+      <label>Proxy-URL <span style="color:var(--red)">*</span></label>
+      <input type="text" id="s-proxy" placeholder="https://pl-proxy.onrender.com">
+      <p class="hint">Die URL deines Render-Servers (nach dem Deploy unten kopieren).<br>
+      Kein Schrägstrich am Ende.</p>
+    </div>
+    <div class="field">
+      <label>Anthropic API Key — wird auf dem Proxy-Server als Umgebungsvariable gesetzt, nicht hier eintragen</label>
+      <input type="text" disabled value="→ wird in Render als ANTHROPIC_API_KEY gesetzt" style="opacity:.5;cursor:not-allowed">
     </div>
 
     <div class="divider"></div>
@@ -398,7 +402,7 @@ function loadAll() {
   set('gh-branch', s.ghbranch || 'main');
   set('gh-token',  s.ghtoken  || '');
   // settings panel
-  set('s-key',     s.apikey   || '');
+  set('s-proxy',   s.proxyurl || '');
   set('s-pg',      s.pg       || '');
   set('s-sem',     s.semester || 'SoSe 2026');
   set('s-members', s.members  || '');
@@ -416,7 +420,7 @@ function openSettings()  { document.getElementById('ov').style.display='flex'; }
 function closeSettings() { document.getElementById('ov').style.display='none'; }
 function saveSettings() {
   const s = {
-    apikey:   get('s-key'),
+    proxyurl: get('s-proxy'),
     pg:       get('s-pg'),
     semester: get('s-sem'),
     members:  get('s-members'),
@@ -657,10 +661,11 @@ Denke schrittweise:
 
 // ══ Generate ══════════════════════════════════════════════════════════════════
 async function generate() {
-  const apiKey = JSON.parse(localStorage.getItem('pl-cfg')||'{}').apikey || '';
-  if (!apiKey) {
+  const cfg = JSON.parse(localStorage.getItem('pl-cfg')||'{}');
+  const proxyUrl = (cfg.proxyurl || '').replace(/\/$/, '');
+  if (!proxyUrl) {
     document.getElementById('gen-err').innerHTML =
-      '<div class="box err">Kein API Key gespeichert. Bitte unter ⚙ Einstellungen eintragen.</div>';
+      '<div class="box err">Keine Proxy-URL gespeichert. Bitte unter ⚙ Einstellungen eintragen (z.B. https://pl-proxy.onrender.com).</div>';
     return;
   }
 
@@ -701,9 +706,9 @@ async function generate() {
 
     setStatus('Claude generiert das Protokoll (30–90 s) …');
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch(`${proxyUrl}/api/generate`, {
       method: 'POST',
-      headers: {'Content-Type':'application/json', 'x-api-key': apiKey, 'anthropic-version':'2023-06-01'},
+      headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 8000,
