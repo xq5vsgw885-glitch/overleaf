@@ -518,13 +518,34 @@ function readFile(f) {
         const RAW_TEXT_LIMIT = 350000; // harte Grenze: wenn größer, abbrechen statt heimlich kürzen
 
         if (raw.length > RAW_TEXT_LIMIT) {
+          // Zu groß für direkte Übergabe — Server-Analyse verwenden
+          let analysis = '';
+          let analysisError = '';
+          try {
+            const proxyUrl = (JSON.parse(localStorage.getItem('pl-cfg')||'{}').proxyurl||'').replace(/\/$/,'');
+            if (proxyUrl) {
+              const resp = await fetch(`${proxyUrl}/api/analyze`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({csv: raw, filename: f.name}),
+              });
+              const d = await resp.json().catch(() => ({}));
+              analysis = d.summary || '';
+              analysisError = d.error || '';
+            }
+          } catch(err) {
+            analysisError = err.message || 'Serveranalyse fehlgeschlagen.';
+          }
+
           res({
             type: 'text',
-            data: '',
-            raw,
+            data:
+`DATEI: ${f.name}
+STATUS: Datei zu gross fuer direkte Uebertragung (${raw.length} Zeichen). Vollstaendige Serveranalyse wird verwendet.
+SERVERANALYSE (deterministisch, alle ${raw.split('\n').length} Zeilen ausgewertet):
+${analysis || analysisError || 'Keine Analyse verfuegbar.'}`,
             name: f.name,
-            tooLarge: true,
-            error: `Datei ist zu groß für vollständige Übergabe (${raw.length} Zeichen > ${RAW_TEXT_LIMIT}).`
+            tooLarge: false,
           });
           return;
         }
