@@ -513,19 +513,21 @@ function readFile(f) {
       r.readAsDataURL(f);
     } else {
       const r = new FileReader();
-      r.onload = e => {
-        let text = e.target.result;
-        const lines = text.split('\n');
-        if (lines.length > 500) {
-          // Keep header + first 200 + evenly sampled 300 from rest
-          const header = lines.slice(0, 1);
-          const first = lines.slice(1, 201);
-          const rest = lines.slice(201);
-          const step = Math.floor(rest.length / 299);
-          const sampled = rest.filter((_, i) => i % step === 0).slice(0, 299);
-          text = [...header, ...first, `... (${lines.length - 500} Zeilen übersprungen, gleichmäßige Stichprobe) ...`, ...sampled].join('\n');
+      r.onload = async e => {
+        // Send full CSV to server for physics analysis
+        try {
+          const proxyUrl = (JSON.parse(localStorage.getItem('pl-cfg')||'{}').proxyurl||'').replace(/\/$/,'');
+          const resp = await fetch(`${proxyUrl}/api/analyze`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({csv: e.target.result, filename: f.name}),
+          });
+          const d = await resp.json();
+          res({type:'text', data: d.summary || d.error || e.target.result.slice(0,3000), name:f.name});
+        } catch {
+          // fallback: send first 3000 chars
+          res({type:'text', data: e.target.result.slice(0,3000), name:f.name});
         }
-        res({type:'text', data:text, name:f.name});
       };
       r.readAsText(f);
     }
@@ -709,7 +711,7 @@ async function generate() {
   const setStatus = t => document.getElementById('gen-txt').textContent = t;
 
   try {
-    setStatus('Dateien werden gelesen…');
+    setStatus('CSV-Rohdaten werden auf dem Server ausgewertet…');
     const fileData = await Promise.all(files.map(readFile));
 
     // Build message content
