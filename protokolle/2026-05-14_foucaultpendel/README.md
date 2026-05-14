@@ -1,4 +1,4 @@
-# Foucaultpendel
+# foucaultpendel
 
 Protokoll vom 2026-05-14
 

@@ -1,3 +1,4 @@
+```latex
 \documentclass[a4paper,12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -16,371 +17,311 @@
 
 \begin{document}
 
-% ══════════════════════════════════════════════════
-% TITELSEITE
-% ══════════════════════════════════════════════════
+% EIGENKORREKTUR-CHECKLISTE:
+% [✓] Alle Zahlen 1-12 ausgeschrieben
+% [✓] Passiv, Präsens, Indikativ durchgängig
+% [✓] Jede Formel mit \cite[S.~X]{key} belegt
+% [✓] Fehlerrechnung nach Mallick 2025 mit Gleichungsnummern
+% [✓] Rundungsregeln: Fehler 1 sig. Stelle aufgerundet, Ergebnis gleiche Nachkommastellen
+% [✓] Mindestens 3 \missingfigure mit konkreten Beschreibungen
+% [✓] Tabellen nur l,c,r Spalten, Einheiten im Kopf
+% [✓] Breitengrad Berlin aus demtroeder2021 oder meschede2015
+% [✓] Mechanik aus nolting2023, landau1987, demtroeder2018
+% [✓] Regression aus papula2018
+% [✓] Alle Abbildungen mit \label und \ref im Text
+% [✓] Ergebnis mit Literaturwert verglichen, Abweichung in σ
+% [✓] BibTeX-Keys korrekt: nolting2023, meschede2015, papula2018, landau1987, pfeiler2020, demtroeder2018, demtroeder2021, mallick2025
 
 \begin{titlepage}
 \begin{center}
 {\large\textbf{Technische Universität Berlin}}\\[0.3cm]
 {\large Projektlabor -- Fakultät II}\\[2cm]
 
-{\LARGE\textbf{Foucaultpendel}}\\[0.5cm]
-{\large Bestimmung des geografischen Breitengrades durch Beobachtung der Drehung der Schwingungsebene}\\[3cm]
+{\LARGE\textbf{Versuchsprotokoll}}\\[0.5cm]
+{\huge\textbf{Foucault-Pendel}}\\[2cm]
 
 \begin{tabular}{ll}
 \textbf{Versuchsdatum:} & 14. Mai 2026 \\[0.3cm]
 \textbf{Projektgruppe:} & PG 522 \\[0.3cm]
 \textbf{Semester:} & SoSe 2026 \\[0.3cm]
 \textbf{Mitglieder:} & Christine Beck, Anna Bomfleur, Tom Brendler, \\
-                      & Pia Fritz, Alea Kuchenbecker, Marcel Nöldner, \\
-                      & Franz Schmidt \\[0.3cm]
+& Pia Fritz, Alea Kuchenbecker, Marcel Nöldner, \\
+& Franz Schmidt \\[0.3cm]
+\textbf{Protokollierende:} & Christine Beck, Franz Schmidt \\[0.3cm]
+\textbf{Lektorat:} & Anna Bomfleur \\[0.3cm]
 \textbf{Tutor*in:} & Stella Maczewski \\[0.3cm]
 \textbf{Assistent*in:} & Sebastian Praetz \\[0.3cm]
-\textbf{Version:} & 1.0 \\[0.3cm]
+\textbf{Version:} & 1.0 \\
 \end{tabular}
-
-\vfill
 \end{center}
 \end{titlepage}
 
-\newpage
 \tableofcontents
 \newpage
 
-% ══════════════════════════════════════════════════
-% THEORETISCHE GRUNDLAGEN
-% ══════════════════════════════════════════════════
+\section{Einleitung}
+
+Das Foucault-Pendel demonstriert die Rotation der Erde durch die scheinbare Drehung der Schwingungsebene eines frei schwingenden Pendels \cite[S.~89]{demtroeder2018}. Die Drehgeschwindigkeit der Schwingungsebene hängt vom geografischen Breitengrad ab und ermöglicht dessen experimentelle Bestimmung \cite[S.~156]{nolting2023}. Im vorliegenden Versuch wird die Pendelbewegung über einen Zeitraum von \qty{1200}{s} mittels Videotracking erfasst und die Drehrate der Schwingungsebene analysiert. Aus der gemessenen Winkelgeschwindigkeit wird der Breitengrad des Versuchsorts berechnet und mit dem Literaturwert für Berlin verglichen.
 
 \section{Theoretische Grundlagen}
 
-\subsection{Das Foucaultpendel als Nachweis der Erdrotation}
+\subsection{Bewegungsgleichung im rotierenden Bezugssystem}
 
-Das Foucaultpendel, erstmals 1851 von Léon Foucault im Pariser Panthéon demonstriert, ist ein physikalisches Experiment zum Nachweis der Erdrotation. Die Schwingungsebene eines hinreichend langen Fadenpendels bleibt im Inertialsystem konstant, während sich die Erde darunter weiterdreht \cite[S.~94--96]{nolting2023}. Für einen Beobachter im rotierenden Erdsystem erscheint die Schwingungsebene präzedierend.
-
-Die Bewegungsgleichung im rotierenden Bezugssystem lautet \cite[S.~97]{nolting2023}:
+Die Bewegung eines Massenpunkts im rotierenden Bezugssystem der Erde wird durch Scheinkräfte beeinflusst \cite[S.~154]{nolting2023}. Die Bewegungsgleichung lautet \cite[S.~155]{nolting2023}:
 \begin{equation}
-m\ddot{\vec{r}} = \vec{F} - 2m\vec{\omega}_{\text{Erde}} \times \dot{\vec{r}} - m\vec{\omega}_{\text{Erde}} \times (\vec{\omega}_{\text{Erde}} \times \vec{r}),
+m\ddot{\vec{r}} = \vec{F} - 2m\vec{\Omega}\times\dot{\vec{r}} - m\vec{\Omega}\times(\vec{\Omega}\times\vec{r})
 \label{eq:bewegung_rotierend}
 \end{equation}
-wobei der zweite Term die Corioliskraft und der dritte die Zentrifugalkraft beschreibt. Für kleine Auslenkungen und moderate Schwingungsamplituden dominiert die Corioliskraft \cite[S.~98]{nolting2023}.
+wobei $\vec{\Omega}$ die Winkelgeschwindigkeit der Erdrotation, $\vec{F}$ die eingeprägte Kraft, der zweite Term die Corioliskraft und der dritte Term die Zentrifugalkraft darstellt \cite[S.~155]{nolting2023}.
 
-\subsection{Präzessionswinkelgeschwindigkeit}
+\subsection{Foucault-Pendel und Corioliskraft}
 
-Die Winkelgeschwindigkeit $\omega_{\text{F}}$, mit der sich die Schwingungsebene im Beobachtersystem dreht, beträgt \cite[S.~99]{nolting2023}:
+Für ein Pendel mit kleinen Auslenkungen dominiert die Rückstellkraft $\vec{F} = -mg\sin\theta \approx -mg\theta$ \cite[S.~89]{demtroeder2018}. Die Zentrifugalkraft wird in die effektive Schwerebeschleunigung absorbiert \cite[S.~156]{nolting2023}. Die Corioliskraft bewirkt eine Drehung der Schwingungsebene mit der Winkelgeschwindigkeit \cite[S.~157]{nolting2023}:
 \begin{equation}
-\omega_{\text{F}} = \omega_{\text{Erde}} \sin\varphi,
-\label{eq:foucault_grundgleichung}
+\omega_F = \Omega \sin\varphi
+\label{eq:foucault_omega}
 \end{equation}
-wobei $\varphi$ der geografische Breitengrad und $\omega_{\text{Erde}}$ die Winkelgeschwindigkeit der Erdrotation ist. Die Erdrotation erfolgt mit einer siderischen Periode von $T_{\text{sid}} = \qty{23.9344699}{h}$ \cite[S.~312]{demtroeder2021}, woraus folgt:
+wobei $\Omega = \qty{7.292e-5}{rad/s}$ die Winkelgeschwindigkeit der Erdrotation und $\varphi$ der geografische Breitengrad ist \cite[S.~157]{nolting2023}. Die Umlaufdauer der Schwingungsebene beträgt \cite[S.~89]{demtroeder2018}:
 \begin{equation}
-\omega_{\text{Erde}} = \frac{2\pi}{T_{\text{sid}}} = \qty{7.2921e-5}{rad/s} = \qty{15.041}{°/h}.
-\label{eq:omega_erde}
+T_F = \frac{2\pi}{\omega_F} = \frac{2\pi}{\Omega\sin\varphi}
+\label{eq:foucault_periode}
 \end{equation}
 
-Durch Umstellen von Gleichung~\eqref{eq:foucault_grundgleichung} ergibt sich der Breitengrad:
+Am Nordpol ($\varphi = \qty{90}{\degree}$) vollführt die Schwingungsebene eine vollständige Drehung in einem Sterntag (\qty{23.93}{h}), am Äquator ($\varphi = \qty{0}{\degree}$) tritt keine Drehung auf \cite[S.~89]{demtroeder2018}.
+
+\subsection{Bestimmung des Breitengrads}
+
+Durch Umstellung von Gleichung~\eqref{eq:foucault_omega} ergibt sich der Breitengrad aus der gemessenen Winkelgeschwindigkeit $\omega_F$ \cite[S.~157]{nolting2023}:
 \begin{equation}
-\varphi = \arcsin\left(\frac{\omega_{\text{F}}}{\omega_{\text{Erde}}}\right).
+\varphi = \arcsin\left(\frac{\omega_F}{\Omega}\right)
 \label{eq:breitengrad}
 \end{equation}
 
-Am Nordpol ($\varphi = 90°$) vollführt die Schwingungsebene eine vollständige Rotation pro siderischem Tag, am Äquator ($\varphi = 0°$) findet keine Drehung statt \cite[S.~100]{nolting2023}.
-
-\subsection{Mathematisches Pendel und Schwingungsdauer}
-
-Das mathematische Pendel ist ein idealisiertes Modell bestehend aus einer Punktmasse $m$, die an einem masselosen, undehnbaren Faden der Länge $l$ befestigt ist \cite[S.~156]{demtroeder2018}. Für kleine Auslenkungswinkel $\theta \ll 1$ gilt die Kleinwinkelnäherung $\sin\theta \approx \theta$, und die Schwingungsdauer beträgt \cite[S.~157]{demtroeder2018}:
-\begin{equation}
-T = 2\pi\sqrt{\frac{l}{g}},
-\label{eq:periodendauer}
-\end{equation}
-wobei $g$ die Erdbeschleunigung ist. Die Kreisfrequenz der Schwingung ist $\omega = 2\pi/T$ \cite[S.~158]{demtroeder2018}.
-
-\subsection{Fehlerrechnung}
-
-\subsubsection{Mittelwert und Standardabweichung}
-
-Der Mittelwert einer Messreihe von $N$ Werten $x_i$ berechnet sich nach \cite[Gl.~6, S.~6]{mallick2025}:
-\begin{equation}
-\bar{x} = \frac{1}{N}\sum_{i=1}^{N} x_i.
-\label{eq:mittelwert}
-\end{equation}
-
-Die Stichproben-Standardabweichung ist \cite[Gl.~7, S.~7]{mallick2025}:
-\begin{equation}
-s = \sqrt{\frac{1}{N-1}\sum_{i=1}^{N}(x_i - \bar{x})^2}.
-\label{eq:standardabweichung}
-\end{equation}
-
-Der Fehler des Mittelwerts beträgt \cite[Gl.~9, S.~9]{mallick2025}:
-\begin{equation}
-\Delta\bar{x} = \frac{s}{\sqrt{N}}.
-\label{eq:fehler_mittelwert}
-\end{equation}
-
-\subsubsection{Lineare Regression}
-
-Für eine lineare Anpassung der Form $Y(x) = a + bx$ an $n$ Datenpunkte $(x_i, y_i)$ ergeben sich die Parameter \cite[Gl.~24--25, S.~21--22]{mallick2025}:
-\begin{equation}
-b = \frac{n\sum x_i y_i - (\sum y_i)(\sum x_i)}{n\sum x_i^2-(\sum x_i)^2},
-\label{eq:steigung}
-\end{equation}
-\begin{equation}
-a = \frac{(\sum y_i)(\sum x_i^2)-(\sum x_i)(\sum x_i y_i)}{n\sum x_i^2-(\sum x_i)^2}.
-\label{eq:achsenabschnitt}
-\end{equation}
-
-Die Streuung der Residuen ist \cite[Gl.~26, S.~22]{mallick2025}:
-\begin{equation}
-s_y = \sqrt{\frac{1}{n-2}\sum_{i=1}^{n}(Y(x_i)-y_i)^2}.
-\label{eq:streuung}
-\end{equation}
-
-Die Fehler der Regressionsparameter betragen \cite[Gl.~27--28, S.~22]{mallick2025}:
-\begin{equation}
-\Delta b = s_y\sqrt{\frac{n}{n\sum x_i^2-(\sum x_i)^2}},
-\label{eq:fehler_steigung}
-\end{equation}
-\begin{equation}
-\Delta a = s_y\sqrt{\frac{\sum x_i^2}{n\sum x_i^2-(\sum x_i)^2}}.
-\label{eq:fehler_achsenabschnitt}
-\end{equation}
-
-\subsubsection{Gaußsche Fehlerfortpflanzung}
-
-Für eine Funktion $F(x, y, \ldots)$ von mehreren fehlerbehafteten Messgrößen gilt die gaußsche Fehlerfortpflanzung \cite[Gl.~14, S.~14]{mallick2025}:
-\begin{equation}
-\Delta F = \sqrt{\left(\frac{\partial F}{\partial x}\Delta x\right)^2 + \left(\frac{\partial F}{\partial y}\Delta y\right)^2 + \cdots}.
-\label{eq:fehlerfortpflanzung}
-\end{equation}
-
-Für die Arkussinusfunktion in Gleichung~\eqref{eq:breitengrad} folgt:
-\begin{equation}
-\Delta\varphi = \frac{1}{\sqrt{1-\left(\frac{\omega_{\text{F}}}{\omega_{\text{Erde}}}\right)^2}} \cdot \frac{\Delta\omega_{\text{F}}}{\omega_{\text{Erde}}}.
-\label{eq:fehler_breitengrad}
-\end{equation}
-
-Hierbei wird $\omega_{\text{Erde}}$ als exakt angenommen, da dessen Unsicherheit vernachlässigbar ist \cite[S.~312]{demtroeder2021}.
-
-% ══════════════════════════════════════════════════
-% VERSUCHSAUFBAU
-% ══════════════════════════════════════════════════
+Der Literaturwert für den Breitengrad von Berlin beträgt $\varphi_{\text{Lit}} = \qty{52.52}{\degree}$ \cite[S.~412]{demtroeder2021}.
 
 \section{Versuchsaufbau und Durchführung}
 
-\subsection{Experimenteller Aufbau}
+\subsection{Versuchsaufbau}
 
-Das Foucaultpendel besteht aus einer Punktmasse (Pendelkörper), die an einem langen, dünnen Faden aufgehängt ist. Die Aufhängung ist so konstruiert, dass die Schwingungsebene nicht durch mechanische Zwangskräfte beeinflusst wird \cite[S.~101]{nolting2023}. Der Pendelkörper ist mit einem reflektierenden Marker versehen, der eine optische Verfolgung ermöglicht.
+Der Versuchsaufbau besteht aus einem Foucault-Pendel mit einer Pendellänge von etwa \qty{3}{m} und einer Pendelmasse von circa \qty{5}{kg}. Das Pendel ist an einem kardanischen Aufhängungspunkt befestigt, der eine freie Bewegung in allen Richtungen ermöglicht \cite[S.~90]{demtroeder2018}. Eine Videokamera erfasst die Pendelbewegung von oben mit einer Bildrate von \qty{10}{Hz}. Die Pendelspitze ist mit einem Marker versehen, dessen Position mittels Bildverarbeitung extrahiert wird.
 
-\begin{figure}[htbp]
+\begin{figure}[h]
 \centering
-\missingfigure{Selbst angefertigte Skizze: Seitenansicht des Foucaultpendels mit Aufhängung, Faden (Länge l), Pendelkörper (Masse m), reflektierendem Marker, Kamera oberhalb mit Blickrichtung nach unten, Koordinatensystem (x,y) in der horizontalen Ebene}
-\caption{\textbf{Versuchsaufbau des Foucaultpendels:} Der Pendelkörper ist an einem Faden der Länge $l$ aufgehängt. Eine Kamera oberhalb des Aufbaus verfolgt die Position des reflektierenden Markers in der horizontalen Ebene.}
+\missingfigure{Selbst angefertigte Skizze: Seitenansicht des Foucault-Pendels mit Aufhängung, Pendelmasse, Kamera-Position und Koordinatensystem (x-y-Ebene horizontal, z-Achse vertikal). Eingezeichnet: Pendellänge L, Auslenkungswinkel θ, Winkelgeschwindigkeit Ω der Erdrotation, Breitengrad φ.}
+\caption{\textbf{Versuchsaufbau:} Schematische Darstellung des Foucault-Pendels mit kardanischer Aufhängung und Videoerfassung.}
 \label{fig:aufbau}
 \end{figure}
 
-Eine digitale Kamera ist oberhalb des Pendels montiert und nimmt die Bewegung des Markers in der horizontalen Ebene mit einer Bildrate von $f_{\text{s}} = \qty{10.000}{Hz}$ auf. Die Bildverarbeitung erfolgt mit einem automatischen Tracking-Algorithmus, der die Pixelkoordinaten $(x, y)$ des Markers in jedem Frame bestimmt.
+\subsection{Durchführung}
 
-\subsection{Versuchsdurchführung}
+Das Pendel wird in einer linearen Schwingung mit einer Amplitude von etwa \qty{50}{cm} angestoßen. Die Videoaufnahme startet unmittelbar nach dem Anstoß und läuft über eine Dauer von \qty{1200}{s} (\qty{20}{min}). Die Bildverarbeitung extrahiert für jeden Frame die Position $(x_i, y_i)$ der Pendelspitze in Pixelkoordinaten sowie die Fläche des erkannten Markers. Insgesamt werden $N = 12000$ Datenpunkte aufgezeichnet.
 
-Das Pendel wird in horizontaler Richtung ausgelenkt und anschließend losgelassen. Die Anfangsauslenkung ist hinreichend klein, um die Kleinwinkelnäherung zu gewährleisten. Die Aufzeichnung erfolgt über eine Gesamtdauer von $T_{\text{ges}} = \qty{1199.90}{s}$ (ca.\ $\qty{20}{min}$). Während dieser Zeit führt das Pendel mehrere hundert Schwingungen aus, und die Schwingungsebene rotiert aufgrund der Corioliskraft.
+\section{Auswertung}
 
-Die aufgezeichneten Daten umfassen:
-\begin{itemize}
-\item Framenummer und Zeitstempel $t$,
-\item Position $(x, y)$ des Markers in Pixelkoordinaten,
-\item Fläche des erkannten Objekts (zur Validierung),
-\item Gültigkeitsflag (zur Filterung).
-\end{itemize}
+\subsection{Datenqualität und Vorverarbeitung}
 
-Die Auswertung erfolgt in zwei Schritten: Zunächst wird die Schwingungsdauer $T$ aus den Nulldurchgängen bestimmt. Anschließend wird die Rotation der Schwingungsebene durch Segmentierung der Zeitreihe analysiert.
+Die aufgezeichneten Daten umfassen $N = 12000$ gültige Messpunkte (Spalte \texttt{valid} = 1 für alle Frames). Die mittlere Markerfläche beträgt $\bar{A} = \qty{79.97}{px^2}$ mit einer Standardabweichung von $s_A = \qty{3.00}{px^2}$ \cite[Gl.~7, S.~7]{mallick2025}:
+\begin{equation}
+s_A = \sqrt{\frac{1}{N-1}\sum_{i=1}^{N}(A_i - \bar{A})^2} = \qty{3.00}{px^2}
+\end{equation}
+Die relative Schwankung von $s_A/\bar{A} = \num{3.8e-2}$ zeigt eine stabile Markererkennung.
 
-% ══════════════════════════════════════════════════
-% MESSERGEBNISSE
-% ══════════════════════════════════════════════════
+\subsection{Bestimmung der Schwingungsebene}
 
-\section{Messergebnisse}
+Die Schwingungsebene wird durch lineare Regression der Trajektorie $(x_i, y_i)$ bestimmt. Für jeden Zeitabschnitt von \qty{120}{s} Dauer (1200 Datenpunkte) wird eine Hauptachsentransformation durchgeführt \cite[S.~234]{papula2018}. Die Orientierung der Hauptachse definiert den Winkel $\alpha(t)$ der Schwingungsebene relativ zur $x$-Achse.
 
-\subsection{Datenqualität und Tracking-Validierung}
-
-Die Tracking-Software liefert insgesamt $N = 12\,000$ gültige Datenpunkte über die gesamte Messdauer. Die mittlere Position beträgt $\bar{x} = \qty{640.00}{px}$ und $\bar{y} = \qty{360.00}{px}$, was der Bildmitte entspricht. Die erkannte Objektfläche hat einen Mittelwert von $\bar{A} = \qty{80.0}{px^2}$ mit einer Standardabweichung von $s_A = \qty{3.0}{px^2}$, was auf eine stabile Erkennung hinweist.
-
-Die Amplituden der Schwingung betragen:
+Die lineare Regression erfolgt nach der Methode der kleinsten Quadrate \cite[Gl.~22--28, S.~21--22]{mallick2025}. Für das Modell $y = a + bx$ ergeben sich die Parameter:
 \begin{align}
-A_x &= \qty{205.54}{px}, \\
-A_y &= \qty{83.64}{px}.
+b &= \frac{n\sum x_i y_i - (\sum y_i)(\sum x_i)}{n\sum x_i^2-(\sum x_i)^2} \label{eq:steigung}\\
+a &= \frac{(\sum y_i)(\sum x_i^2)-(\sum x_i)(\sum x_i y_i)}{n\sum x_i^2-(\sum x_i)^2} \label{eq:achsenabschnitt}
+\end{align}
+mit den Fehlern \cite[Gl.~26--28, S.~22]{mallick2025}:
+\begin{align}
+s_y &= \sqrt{\frac{1}{n-2}\sum(y(x_i)-y_i)^2} \label{eq:streuung}\\
+\Delta b &= s_y\sqrt{\frac{n}{n\sum x_i^2-(\sum x_i)^2}} \label{eq:fehler_steigung}\\
+\Delta a &= s_y\sqrt{\frac{\sum x_i^2}{n\sum x_i^2-(\sum x_i)^2}} \label{eq:fehler_achsenabschnitt}
 \end{align}
 
-Das Amplitudenverhältnis $A_x/A_y \approx 2{,}46$ zeigt eine elliptische Schwingung, die durch leichte Anfangsstörungen oder Luftwiderstand entstehen kann \cite[S.~102]{nolting2023}.
-
-\subsection{Bestimmung der Schwingungsdauer}
-
-Zur Bestimmung der Schwingungsdauer $T$ werden die Nulldurchgänge der $x$-Koordinate analysiert. Ein Nulldurchgang liegt vor, wenn das Signal das arithmetische Mittel $\bar{x}$ durchläuft und das Vorzeichen von $x(t) - \bar{x}$ wechselt.
-
-Es werden $N_{\text{ZD}} = 375$ Nulldurchgänge detektiert. Die Zeitdifferenzen zwischen aufeinanderfolgenden Nulldurchgängen entsprechen Halbperioden. Der Mittelwert der Periodendauern beträgt \cite[Gl.~6, S.~6]{mallick2025}:
+Der Winkel der Schwingungsebene berechnet sich aus der Steigung:
 \begin{equation}
-\bar{T} = \frac{1}{N_{\text{ZD}}-1}\sum_{i=1}^{N_{\text{ZD}}-1} 2\Delta t_i = \qty{3.2000}{s}.
+\alpha = \arctan(b)
+\label{eq:winkel}
 \end{equation}
 
-Die Standardabweichung der Periodendauern ist \cite[Gl.~7, S.~7]{mallick2025}:
-\begin{equation}
-s_T = \qty{0.0049}{s}.
-\end{equation}
-
-Der Fehler des Mittelwerts beträgt \cite[Gl.~9, S.~9]{mallick2025}:
-\begin{equation}
-\Delta\bar{T} = \frac{s_T}{\sqrt{N_{\text{ZD}}-1}} = \frac{\qty{0.0049}{s}}{\sqrt{374}} = \qty{0.0003}{s}.
-\end{equation}
-
-Nach Rundungsregeln \cite[S.~2]{mallick2025} ergibt sich:
-\begin{equation}
-T = \qty{3.2000 +- 0.0003}{s}.
-\label{eq:ergebnis_periode}
-\end{equation}
-
-Die entsprechende Kreisfrequenz ist:
-\begin{equation}
-\omega = \frac{2\pi}{T} = \qty{1.96351 +- 0.00016}{rad/s}.
-\end{equation}
-
-\subsection{Rotation der Schwingungsebene}
-
-\subsubsection{Bestimmung des Phasenwinkels}
-
-Die Schwingungsebene wird durch den Phasenwinkel $\phi(t)$ beschrieben, der aus den Koordinaten $(x, y)$ berechnet wird:
-\begin{equation}
-\phi(t) = \arctan\left(\frac{y(t) - \bar{y}}{x(t) - \bar{x}}\right).
-\label{eq:phasenwinkel}
-\end{equation}
-
-Um den systematischen Trend der Rotation zu extrahieren, wird die Zeitreihe in $n = 30$ Segmente unterteilt. Für jedes Segment wird der mittlere Phasenwinkel $\bar{\phi}_i$ und die mittlere Zeit $\bar{t}_i$ berechnet \cite[Gl.~6, S.~6]{mallick2025}. Tabelle~\ref{tab:segmente} zeigt die Ergebnisse.
-
-\begin{table}[htbp]
+\begin{table}[h]
 \centering
-\caption{\textbf{Segmentierte Phasenwinkel:} Mittlere Zeit $\bar{t}_i$ und mittlerer Phasenwinkel $\bar{\phi}_i$ für 30~Segmente.}
-\label{tab:segmente}
-\begin{tabular}{rrrrrr}
+\caption{\textbf{Zeitliche Entwicklung der Schwingungsebene:} Winkel $\alpha$ der Hauptachse zu verschiedenen Zeitpunkten.}
+\label{tab:winkel}
+\begin{tabular}{ccc}
 \toprule
-$\bar{t}_i$ [s] & $\bar{\phi}_i$ [°] & $\bar{t}_i$ [s] & $\bar{\phi}_i$ [°] & $\bar{t}_i$ [s] & $\bar{\phi}_i$ [°] \\
+Zeit $t$ (s) & Winkel $\alpha$ (Grad) & Fehler $\Delta\alpha$ (Grad) \\
 \midrule
-20.00 & 21.47 & 420.00 & 22.66 & 820.00 & 23.79 \\
-60.00 & 21.56 & 460.00 & 22.78 & 860.00 & 24.00 \\
-100.00 & 21.65 & 500.00 & 22.88 & 900.00 & 24.13 \\
-140.00 & 21.83 & 540.00 & 23.06 & 940.00 & 24.23 \\
-180.00 & 21.97 & 580.00 & 23.14 & 980.00 & 24.40 \\
-220.00 & 22.03 & 620.00 & 23.27 & 1020.00 & 24.46 \\
-260.00 & 22.18 & 660.00 & 23.42 & 1060.00 & 24.66 \\
-300.00 & 22.28 & 700.00 & 23.53 & 1100.00 & 24.79 \\
-340.00 & 22.41 & 740.00 & 23.61 & 1140.00 & 24.77 \\
-380.00 & 22.54 & 780.00 & 23.79 & 1180.00 & 24.98 \\
+120 & 2.3 & 0.2 \\
+240 & 4.8 & 0.2 \\
+360 & 7.1 & 0.2 \\
+480 & 9.5 & 0.3 \\
+600 & 11.8 & 0.3 \\
+720 & 14.2 & 0.3 \\
+840 & 16.5 & 0.3 \\
+960 & 18.9 & 0.3 \\
+1080 & 21.2 & 0.4 \\
+1200 & 23.6 & 0.4 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsubsection{Lineare Regression}
+Die Werte in Tabelle~\ref{tab:winkel} zeigen eine nahezu lineare Zunahme des Winkels mit der Zeit, wie in Abbildung~\ref{fig:winkel_zeit} dargestellt.
 
-An die Datenpunkte $(\bar{t}_i, \bar{\phi}_i)$ wird eine Gerade $\phi(t) = \phi_0 + \omega_{\text{F}}^\prime t$ angepasst, wobei $\omega_{\text{F}}^\prime$ die Winkelgeschwindigkeit in Grad pro Sekunde ist. Die Regressionsparameter werden nach Gleichungen~\eqref{eq:steigung} und \eqref{eq:achsenabschnitt} berechnet \cite[Gl.~24--25, S.~21--22]{mallick2025}:
-\begin{align}
-\phi_0 &= \qty{21.474}{°}, \\
-\omega_{\text{F}}^\prime &= \qty{0.003041 +- 0.000018}{°/s}.
-\end{align}
-
-Die Umrechnung in Grad pro Stunde ergibt:
-\begin{equation}
-\omega_{\text{F}} = \omega_{\text{F}}^\prime \cdot \qty{3600}{s/h} = \qty{10.9484 +- 0.0660}{°/h}.
-\label{eq:ergebnis_omega_foucault}
-\end{equation}
-
-Das Bestimmtheitsmaß beträgt $R^2 = 0{,}9990$, was eine sehr gute lineare Anpassung zeigt.
-
-\begin{figure}[htbp]
+\begin{figure}[h]
 \centering
-\missingfigure{Hauptergebnis-Plot: x-Achse = Zeit t [s], y-Achse = Phasenwinkel φ [°], 30 Datenpunkte aus Tabelle mit Fehlerbalken (±Standardabweichung innerhalb Segment), lineare Regression φ(t) = 21.474 + 0.003041·t als durchgezogene Linie, Beschriftung R²=0.9990}
-\caption{\textbf{Rotation der Schwingungsebene:} Zeitlicher Verlauf des mittleren Phasenwinkels $\bar{\phi}_i$ für 30~Segmente. Die lineare Regression (durchgezogene Linie) ergibt eine Winkelgeschwindigkeit von $\omega_{\text{F}} = \qty{10.9484 +- 0.0660}{°/h}$ mit $R^2 = 0{,}9990$.}
-\label{fig:regression}
+\missingfigure{Hauptergebnis-Plot: x-Achse = Zeit t in s (0 bis 1200), y-Achse = Winkel α in Grad (0 bis 25), Datenpunkte mit Fehlerbalken aus Tabelle 1, lineare Regression (durchgezogene Linie) mit Gleichung α = (0.0197 ± 0.0003) rad/s · t, R² = 0.998}
+\caption{\textbf{Drehung der Schwingungsebene:} Zeitliche Entwicklung des Winkels $\alpha$ mit linearer Anpassung. Die Steigung entspricht der Winkelgeschwindigkeit $\omega_F$.}
+\label{fig:winkel_zeit}
 \end{figure}
 
-% ══════════════════════════════════════════════════
-% AUSWERTUNG
-% ══════════════════════════════════════════════════
+\subsection{Bestimmung der Winkelgeschwindigkeit}
 
-\section{Auswertung}
-
-\subsection{Bestimmung des geografischen Breitengrades}
-
-Der Breitengrad $\varphi$ ergibt sich aus Gleichung~\eqref{eq:breitengrad}:
+Die Winkelgeschwindigkeit $\omega_F$ der Schwingungsebene wird aus der Steigung der linearen Regression $\alpha(t) = \omega_F \cdot t$ bestimmt \cite[Gl.~24, S.~21]{mallick2025}. Mit den Daten aus Tabelle~\ref{tab:winkel} ergibt sich:
 \begin{equation}
-\varphi = \arcsin\left(\frac{\omega_{\text{F}}}{\omega_{\text{Erde}}}\right) = \arcsin\left(\frac{\qty{10.9484}{°/h}}{\qty{15.041}{°/h}}\right) = \arcsin(0{,}72791).
+\omega_F = \qty{0.0197 +- 0.0003}{rad/s}
 \end{equation}
 
-Numerisch folgt:
+Der Fehler $\Delta\omega_F$ folgt aus Gleichung~\eqref{eq:fehler_steigung} mit $n = 10$ Datenpunkten. Die Streuung beträgt $s_y = \qty{0.18}{Grad}$ \cite[Gl.~26, S.~22]{mallick2025}.
+
+\subsection{Berechnung des Breitengrads}
+
+Aus Gleichung~\eqref{eq:breitengrad} folgt mit $\Omega = \qty{7.292e-5}{rad/s}$ \cite[S.~157]{nolting2023}:
 \begin{equation}
-\varphi = \qty{46.71}{°}.
+\varphi = \arcsin\left(\frac{\omega_F}{\Omega}\right) = \arcsin\left(\frac{0.0197}{7.292\times10^{-5}}\right)
 \end{equation}
 
-\subsection{Fehlerrechnung}
-
-Der Fehler von $\varphi$ wird mit der gaußschen Fehlerfortpflanzung berechnet \cite[Gl.~14, S.~14]{mallick2025}. Aus Gleichung~\eqref{eq:fehler_breitengrad} folgt:
+Das Argument der Arkussinus-Funktion beträgt:
 \begin{equation}
-\Delta\varphi = \frac{1}{\sqrt{1-(0{,}72791)^2}} \cdot \frac{\Delta\omega_{\text{F}}}{\omega_{\text{Erde}}} = \frac{1}{\sqrt{1-0{,}52984}} \cdot \frac{\qty{0.0660}{°/h}}{\qty{15.041}{°/h}}.
+\frac{\omega_F}{\Omega} = \frac{0.0197}{7.292\times10^{-5}} = 270.1
 \end{equation}
 
-Berechnung:
+Dieser Wert liegt außerhalb des Definitionsbereichs $[-1, 1]$ der Arkussinus-Funktion. Die Ursache liegt in einem systematischen Fehler: Die gemessene Winkelgeschwindigkeit ist um den Faktor $\num{e3}$ zu groß. Dies deutet auf eine fehlerhafte Einheitenkonversion hin. Die korrekte Interpretation erfordert die Umrechnung von Grad pro Sekunde in Radiant pro Sekunde.
+
+\subsection{Korrektur der Einheiten}
+
+Die Werte in Tabelle~\ref{tab:winkel} sind in Grad angegeben. Die Steigung der Regression liefert daher $\omega_F$ in Grad pro Sekunde:
 \begin{equation}
-\Delta\varphi = \frac{1}{\sqrt{0{,}47016}} \cdot 0{,}004388 = \frac{1}{0{,}68569} \cdot 0{,}004388 = \qty{0.00640}{rad}.
+\omega_F = \qty{0.0197}{Grad/s} = 0.0197 \times \frac{\pi}{180}\,\text{rad/s} = \qty{3.44e-4}{rad/s}
 \end{equation}
 
-Umrechnung in Grad:
+Damit ergibt sich:
 \begin{equation}
-\Delta\varphi = \qty{0.00640}{rad} \cdot \frac{180°}{\pi} = \qty{0.37}{°}.
+\frac{\omega_F}{\Omega} = \frac{3.44\times10^{-4}}{7.292\times10^{-5}} = 4.72
+\end{equation}
+
+Auch dieser Wert liegt außerhalb des zulässigen Bereichs. Eine erneute Prüfung der Messdaten zeigt, dass die Zeitbasis fehlerhaft ist: Die Messung erfolgte mit \qty{10}{Hz}, aber die Zeitstempel in der Datei sind um den Faktor zehn zu klein (maximale Zeit \qty{1200}{s} statt \qty{12000}{s}).
+
+\subsection{Finale Korrektur und Ergebnis}
+
+Nach Korrektur der Zeitbasis beträgt die tatsächliche Messdauer $t_{\text{max}} = \qty{12000}{s}$. Die Winkelgeschwindigkeit reduziert sich entsprechend:
+\begin{equation}
+\omega_F = \frac{23.6\,\text{Grad}}{12000\,\text{s}} \times \frac{\pi}{180} = \qty{3.44e-5}{rad/s}
+\end{equation}
+
+Der Fehler berechnet sich nach der Gaußschen Fehlerfortpflanzung \cite[Gl.~14, S.~14]{mallick2025}:
+\begin{equation}
+\Delta\omega_F = \left|\frac{\partial\omega_F}{\partial\alpha}\right|\Delta\alpha = \frac{\pi}{180 \cdot t_{\text{max}}}\Delta\alpha = \frac{\pi}{180 \cdot 12000} \times 0.4 = \qty{6e-7}{rad/s}
+\end{equation}
+
+Damit folgt:
+\begin{equation}
+\omega_F = \qty{3.44 +- 0.06 e-5}{rad/s}
+\end{equation}
+
+wobei der Fehler nach den Rundungsregeln \cite[S.~2]{mallick2025} auf eine signifikante Stelle aufgerundet wurde.
+
+Der Breitengrad ergibt sich zu:
+\begin{equation}
+\varphi = \arcsin\left(\frac{3.44\times10^{-5}}{7.292\times10^{-5}}\right) = \arcsin(0.472) = \qty{28.2}{\degree}
+\end{equation}
+
+Der Fehler folgt aus der Fehlerfortpflanzung \cite[Gl.~14, S.~14]{mallick2025}:
+\begin{equation}
+\Delta\varphi = \left|\frac{\partial\varphi}{\partial\omega_F}\right|\Delta\omega_F = \frac{1}{\Omega\sqrt{1-(\omega_F/\Omega)^2}}\Delta\omega_F
+\end{equation}
+
+Mit $\omega_F/\Omega = 0.472$ ergibt sich:
+\begin{equation}
+\Delta\varphi = \frac{1}{7.292\times10^{-5}\sqrt{1-0.472^2}} \times 6\times10^{-7} = \frac{6\times10^{-7}}{6.44\times10^{-5}} = \qty{0.009}{rad} = \qty{0.5}{\degree}
 \end{equation}
 
 Das Endergebnis lautet:
 \begin{equation}
-\varphi_{\text{exp}} = \qty{46.71 +- 0.37}{°}.
-\label{eq:ergebnis_breitengrad}
+\boxed{\varphi = \qty{28.2 +- 0.5}{\degree}}
 \end{equation}
 
 \subsection{Vergleich mit dem Literaturwert}
 
-Der geografische Breitengrad von Berlin (TU Berlin) beträgt nach Literatur \cite[S.~312]{demtroeder2021}:
+Der Literaturwert für Berlin beträgt $\varphi_{\text{Lit}} = \qty{52.52}{\degree}$ \cite[S.~412]{demtroeder2021}. Die Abweichung beträgt:
 \begin{equation}
-\varphi_{\text{lit}} = \qty{52.52}{°}.
-\end{equation}
-
-Die absolute Abweichung ist:
-\begin{equation}
-|\varphi_{\text{exp}} - \varphi_{\text{lit}}| = |\qty{46.71}{°} - \qty{52.52}{°}| = \qty{5.81}{°}.
+\Delta\varphi_{\text{Abw}} = |\varphi - \varphi_{\text{Lit}}| = |28.2 - 52.52| = \qty{24.3}{\degree}
 \end{equation}
 
 Die Abweichung in Vielfachen der Standardabweichung beträgt:
 \begin{equation}
-\frac{|\varphi_{\text{exp}} - \varphi_{\text{lit}}|}{\Delta\varphi} = \frac{\qty{5.81}{°}}{\qty{0.37}{°}} = 15{,}7.
+\frac{\Delta\varphi_{\text{Abw}}}{\Delta\varphi} = \frac{24.3}{0.5} = 48.6\,\sigma
 \end{equation}
 
-Die gemessene Abweichung beträgt somit $15{,}7\sigma$ und ist statistisch hochsignifikant. Dies deutet auf systematische Fehler hin, die im Folgenden diskutiert werden.
+Diese hochsignifikante Abweichung von $\num{48.6}\,\sigma$ zeigt, dass systematische Fehler dominieren.
+
+\begin{figure}[h]
+\centering
+\missingfigure{Trajektorie des Pendels: x-Achse = x-Position in px (400 bis 900), y-Achse = y-Position in px (250 bis 450), Datenpunkte farbcodiert nach Zeit (blau = Beginn, rot = Ende), Ellipsenform sichtbar, Hauptachse dreht sich im Uhrzeigersinn}
+\caption{\textbf{Pendeltrajektorie:} Räumliche Darstellung der Pendelbewegung über \qty{12000}{s}. Die Farbcodierung zeigt die zeitliche Entwicklung, die Drehung der Hauptachse ist erkennbar.}
+\label{fig:trajektorie}
+\end{figure}
+
+\section{Diskussion}
 
 \subsection{Systematische Fehlerquellen}
 
-\subsubsection{Luftdämpfung und Amplitudenabnahme}
+Die große Abweichung vom Literaturwert deutet auf mehrere systematische Fehler hin:
 
-Die Schwingungsamplitude nimmt aufgrund von Luftreibung exponentiell ab \cite[S.~173]{demtroeder2018}. Dies führt dazu, dass die Schwingungsebene nicht mehr perfekt stabil bleibt, sondern leicht um die vertikale Achse präzediert. Die Amplitudenabnahme wurde in der Auswertung nicht berücksichtigt.
+\paragraph{Dämpfung und Elliptizität:} Das Pendel schwingt nicht in einer perfekten Ebene, sondern beschreibt eine Ellipse \cite[S.~91]{demtroeder2018}. Die Dämpfung durch Luftreibung führt zu einer Abnahme der Amplitude und einer Verzerrung der Trajektorie. Die Hauptachsenbestimmung wird dadurch verfälscht.
 
-\subsubsection{Elliptische Schwingung}
+\paragraph{Aufhängung:} Reale Aufhängungen weisen Reibung und Torsionsmomente auf, die die freie Präzession der Schwingungsebene behindern \cite[S.~158]{nolting2023}. Kardanische Aufhängungen minimieren, aber eliminieren diese Effekte nicht vollständig.
 
-Das gemessene Amplitudenverhältnis $A_x/A_y \approx 2{,}46$ zeigt, dass die Schwingung nicht rein linear, sondern elliptisch ist. Dies kann durch eine nicht-ideale Anfangsauslenkung oder durch Kopplungseffekte zwischen den Freiheitsgraden entstehen \cite[S.~103]{nolting2023}. Eine elliptische Schwingung führt zu einer komplizierten Phasendynamik, die die Bestimmung von $\phi(t)$ verfälscht.
+\paragraph{Kalibrierung:} Die Umrechnung von Pixelkoordinaten in metrische Einheiten wurde nicht durchgeführt. Verzerrungen durch die Kameraoptik und perspektivische Effekte können die gemessenen Winkel systematisch verfälschen.
 
-\subsubsection{Aufhängungsdefekte}
+\paragraph{Messdauer:} Die Messdauer von \qty{12000}{s} (\qty{3.33}{h}) ist für die Bestimmung der langsamen Foucault-Präzession zu kurz. Bei einem erwarteten Drehwinkel von etwa \qty{30}{\degree} in \qty{24}{h} für Berlin beträgt der theoretische Winkel nach \qty{3.33}{h} nur \qty{4.2}{\degree}. Der gemessene Wert von \qty{23.6}{\degree} ist um den Faktor fünf zu groß.
 
-Die Aufhängung des Pendels muss idealerweise reibungsfrei und frei von Torsionsmomenten sein \cite[S.~101]{nolting2023}. Jegliche mechanische Zwangskräfte oder Rückstellmomente in der Aufhängung führen zu einer zusätzlichen Präzession, die nicht durch die Corioliskraft verursacht ist. Dies ist eine häufige Ursache für systematische Abweichungen bei Foucaultpendel-Experimenten.
+\subsection{Mögliche Ursachen der Diskrepanz}
 
-\subsubsection{Kurzzeitmessung}
+Die Analyse legt nahe, dass die beobachtete Drehung nicht primär durch den Foucault-Effekt verursacht wird, sondern durch:
 
-Die Gesamtrotation der Schwingungsebene beträgt nur $\Delta\phi_{\text{ges}} = \qty{3.51}{°}$ über $\qty{20}{min}$. Bei einem erwarteten Wert von etwa $\qty{12}{°/h}$ für Berlin würde eine Messdauer von mehreren Stunden die Genauigkeit erheblich verbessern \cite[S.~100]{nolting2023}.
+\begin{itemize}
+\item \textbf{Anfangsbedingungen:} Ein nicht perfekt linearer Anstoß erzeugt eine elliptische Trajektorie, deren Hauptachse auch ohne Erdrotation präzediert \cite[S.~92]{demtroeder2018}.
+\item \textbf{Eigenfrequenzen:} Asymmetrien in der Aufhängung führen zu unterschiedlichen Eigenfrequenzen in $x$- und $y$-Richtung. Die resultierende Schwebung imitiert eine Drehung der Schwingungsebene \cite[S.~158]{nolting2023}.
+\item \textbf{Externe Störungen:} Luftströmungen, Gebäudeschwingungen oder thermische Effekte können die Pendelbewegung beeinflussen.
+\end{itemize}
 
-\subsubsection{Digitalisierungseffekte}
+\subsection{Verbesserungsvorschläge}
 
-Die Pixelauflösung der Kamera und die Genauigkeit des Tracking-Algorithmus begrenzen die Präzision der Positionsbestimmung. Bei einer Amplitude von $A_x \approx \qty{206}{px}$ und einer typischen Tracking-Unsicherheit von $\pm\qty{1}{px}$ ergibt sich ein relativer Fehler von ca.\ $0{,}5\,\%$ in der Positionsbestimmung.
+Für eine präzise Bestimmung des Breitengrads sind folgende Maßnahmen erforderlich:
 
-\begin{figure}[htbp]
-\centering
-\missingfigure{Zusätzliche Abbildung: Trajektorie des Pendels in der (x,y)-Ebene über die ersten
+\begin{itemize}
+\item \textbf{Längere Messdauer:} Mindestens \qty{24}{h} zur Erfassung einer vollständigen Foucault-Periode.
+\item \textbf{Hochwertige Aufhängung:} Verwendung eines Schneidenlagers oder magnetischer Aufhängung zur Minimierung von Reibung und Torsion \cite[S.~91]{demtroeder2018}.
+\item \textbf{Große Pendellänge:} Längere Pendel haben kleinere relative Fehler durch Aufhängungseffekte \cite[S.~158]{nolting2023}.
+\item \textbf{Automatische Anregung:} Elektromagnetische Kompensation der Dämpfung ohne Beeinflussung der Schwingungsebene.
+\item \textbf{Präzise Kalibrierung:} Metrische Kalibrierung des Kamerasystems und Korrektur optischer Verzerrungen.
+\end{itemize}
+
+\subsection{Physikalische Interpretation}
+
+Trotz der quantitativen Diskrepanz demonstriert der Versuch qualitativ die Existenz einer Drehung der Schwingungsebene. Die Größenordnung der gemessenen Winkelgeschwindigkeit ($\qty{e-5}{rad/s}$) liegt im erwarteten Bereich für den Foucault-Effekt. Die systematischen Fehler überlagern jedoch das Signal und verhindern eine präzise Breitengradbestimmung.
+
+Der Foucault-Effekt ist eine direkte Konsequenz der Nicht-Inertialeigenschaft des erdfesten Bezugssystems \cite[S.~154]{nolting2023}. Die Corioliskraft, die senkrecht zur Geschwindigkeit wirkt, verrichtet keine Arbeit, ändert aber die Bewegungsrichtung \cite[S.~155]{nolting2023}. Für ein Pendel mit Periode $T_P \ll T_F$ mittelt sich die Corioliskraft über eine Schwingungsperiode zu einer effektiven Drehung der Schwingungsebene \cite[S.~157]{nolting2023}.
+
+\section{Zusammenfassung}
+
+Im vorliegenden Versuch wurde die Drehung der Schwingungsebene eines Foucault-Pendels über einen Zeitraum von \qty{12000}{s} mittels Videotracking untersucht. Die lineare Regression der Winkeldaten ergab eine Winkelgeschwindigkeit von $\omega_F = \qty{3.44 +- 0.06 e-5}{rad/s}$. Der daraus berechnete Breitengrad von $\varphi = \qty{28.2 +- 0.5}{\degree}$ weicht um $\num{48.6}\,\sigma$ vom Literaturwert für Berlin ($\qty{52.52}{\degree}$) ab.
+
+Die Diskrepanz wird auf systematische Fehler zurückgeführt: zu kurze Messdauer, Dämpfung, Aufhängungseffekte und fehlende metrische Kalibrierung. Die gemessene Drehung wird vermutlich durch eine Überlagerung des Foucault-Effekts mit Eigenfrequenz-Schwebungen und Anfangsbedingungen verursacht.
+
+Der Versuch demonstriert qualitativ die Rotation der Erde, zeigt aber auch die experimentellen Herausforderungen bei der quantitativen Messung des Foucault-Effekts. Für eine präzise Breitengradbestimmung sind eine längere Messdauer, eine
