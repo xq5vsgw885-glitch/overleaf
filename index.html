@@ -284,11 +284,11 @@ a:hover{text-decoration:underline}
       <div class="copy-wrap"><button class="btn sm" id="copy-btn" onclick="copyTex()">Kopieren</button></div>
     </div>
     <div class="xgrid">
-      <button class="xbtn" onclick="dl(texContent,'protokoll.tex')">
+      <button class="xbtn" onclick="safeDownload(texContent,'protokoll.tex')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
         <span>protokoll.tex<small>LaTeX-Hauptdatei</small></span>
       </button>
-      <button class="xbtn" onclick="dl(bibContent,'literatur.bib')">
+      <button class="xbtn" onclick="safeDownload(bibContent,'literatur.bib')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
         <span>literatur.bib<small>BibTeX-Datenbank</small></span>
       </button>
@@ -752,6 +752,68 @@ Denke schrittweise:
 4. Eigenkorrektur-Checkliste als % Kommentar einfügen`;
 }
 
+
+// ══ LaTeX completeness check ═════════════════════════════════════════════════
+function validateCompleteness(tex, bib) {
+  const errors = [];
+  const warnings = [];
+
+  const t = String(tex || '').trim();
+  const b = String(bib || '').trim();
+
+  if (!t.startsWith('\\documentclass')) {
+    errors.push('Die Ausgabe beginnt nicht mit \\documentclass. Markdown, Vorrede oder defekte Bereinigung erkannt.');
+  }
+
+  if (!t.includes('\\begin{document}')) {
+    errors.push('LaTeX ist unvollständig: \\begin{document} fehlt.');
+  }
+
+  if (!t.includes('\\end{document}')) {
+    errors.push('LaTeX ist unvollständig: \\end{document} fehlt. Die Modellantwort wurde vermutlich abgeschnitten.');
+  }
+
+  if (!t.includes('\\printbibliography')) {
+    warnings.push('Bibliographie-Ausgabe fehlt: \\printbibliography.');
+  }
+
+  if (!b) {
+    errors.push('literatur.bib ist leer oder fehlt.');
+  }
+
+  if (/```/.test(t)) {
+    errors.push('Markdown-Codeblock ``` wurde nicht entfernt.');
+  }
+
+  return { errors, warnings };
+}
+
+function renderCompletenessError(report) {
+  const parts = [];
+
+  if (report.errors.length) {
+    parts.push('<strong>Fehler:</strong>');
+    parts.push(...report.errors.map(e => `• ${escapeHtml(e)}`));
+  }
+
+  if (report.warnings.length) {
+    parts.push('<br><strong>Warnungen:</strong>');
+    parts.push(...report.warnings.map(w => `• ${escapeHtml(w)}`));
+  }
+
+  return parts.join('<br>');
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[c]));
+}
+
 // ══ Generate ══════════════════════════════════════════════════════════════════
 async function generate() {
   const cfg = JSON.parse(localStorage.getItem('pl-cfg')||'{}');
@@ -804,7 +866,7 @@ async function generate() {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 8000,
+        max_tokens: 12000,
         system: sysPrompt(),
         messages: [{role:'user', content}],
       }),
@@ -833,6 +895,28 @@ async function generate() {
       bibContent = BIB;
     }
 
+    const completenessReport = validateCompleteness(texContent, bibContent);
+
+    if (completenessReport.errors.length) {
+      document.getElementById('gen-running').style.display = 'none';
+      document.getElementById('gen-idle').style.display = 'flex';
+      document.getElementById('gen-err').innerHTML =
+        `<div class="box err">
+          Ausgabe unvollständig oder nicht exportierbar:<br>
+          ${renderCompletenessError(completenessReport)}<br><br>
+          Die Datei wurde nicht in den Export übernommen. Bitte erneut generieren.
+        </div>`;
+      return;
+    }
+
+    if (completenessReport.warnings.length) {
+      document.getElementById('gen-err').innerHTML =
+        `<div class="box info">
+          Qualitätswarnung:<br>
+          ${renderCompletenessError(completenessReport)}
+        </div>`;
+    }
+
     setStatus('Fertig.');
     document.getElementById('tex-preview').textContent =
       texContent.slice(0,3500) + (texContent.length > 3500 ? '\n\n% … (Vorschau gekürzt, Download für vollständige Datei)' : '');
@@ -854,6 +938,26 @@ async function generate() {
 }
 
 // ══ Download ══════════════════════════════════════════════════════════════════
+
+function safeDownload(content, filename) {
+  const report = validateCompleteness(texContent, bibContent);
+
+  if (filename.endsWith('.tex') && report.errors.length) {
+    alert(
+      'Export blockiert: Die LaTeX-Ausgabe ist unvollständig.\n\n' +
+      report.errors.join('\n')
+    );
+    return;
+  }
+
+  if (filename.endsWith('.bib') && !String(bibContent || '').trim()) {
+    alert('Export blockiert: literatur.bib ist leer.');
+    return;
+  }
+
+  dl(content, filename);
+}
+
 function dl(content, filename) {
   const b = new Blob([content], {type:'text/plain'});
   const u = URL.createObjectURL(b);
