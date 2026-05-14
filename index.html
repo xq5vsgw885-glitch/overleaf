@@ -327,6 +327,17 @@ a:hover{text-decoration:underline}
         <span>literatur.bib<small>BibTeX-Datenbank</small></span>
       </button>
     </div>
+
+    <!-- KI-Erklärung als separates Dokument -->
+    <div class="box info" style="margin-top:12px">
+      <strong>KI-Nutzungserklärung (DFG-Kodex Leitlinie 14)</strong><br>
+      Gehört <em>nicht</em> ins Protokoll — separat ausdrucken und beim Abgabegespräch vorlegen.
+      <div style="margin-top:8px">
+        <button class="btn sm" onclick="downloadKiErklaerung()">
+          Erklärung herunterladen (.tex)
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- GitHub Push -->
@@ -918,23 +929,17 @@ PFLICHTABSCHNITTE fuer gute wissenschaftliche Praxis (DFG-Kodex):
      (30 Segmente je ${Math.round(1200/30)} s), lineare Regression nach [mallick2025, Gl. 24-28].
    - Alle Berechnungen sind deterministisch und reproduzierbar aus den Rohdaten.
 
-2. Am Ende des Protokolls, vor \\printbibliography: Abschnitt "Erklaerung zur KI-Nutzung"
-   (DFG-Kodex Leitlinie 14 -- Autorschaft und Beitraege):
-\\section*{Erkl{\\"{a}}rung zur Nutzung von KI-Werkzeugen}
-Der Protokolltext wurde mithilfe des KI-Sprachmodells Claude (Anthropic, Modell: claude-sonnet-4-5)
-auf Basis der automatisierten Rohdatenanalyse generiert. Die inhaltliche Verantwortung
-fuer Korrektheit, Vollstaendigkeit und wissenschaftliche Redlichkeit liegt bei den
-unterzeichnenden Protokollierenden. Die Nutzung erfolgt in Uebereinstimmung mit den
-Leitlinien zur Sicherung guter wissenschaftlicher Praxis der DFG (Leitlinie~14)
-und den Regelungen des Projektlabors der TU~Berlin.
-
-3. In der Bibliographie muss folgender Eintrag enthalten sein:
+2. In der Bibliographie muss folgender Eintrag enthalten sein:
 @misc{pl_generator_2026,
   author = {{PL Protokoll Generator}},
   title  = {Automatisierte Rohdatenauswertung fuer Projektlabor-Protokolle},
   year   = {2026},
   note   = {Proxy-Server: ${serverUrl}; Methoden: Nulldurchgangsdetektion, Hauptachsentransformation, lineare Regression},
 }
+
+WICHTIG: Die KI-Nutzungserklaerung gehoert NICHT ins Protokoll.
+Sie wird separat als eigenstaendiges Dokument ausgehaendigt.
+Kein \\section*{Erklaerung...} und kein Hinweis auf Claude/Anthropic im Protokolltext.
 
 - Ausgabe beginnt direkt mit \\documentclass, endet mit \\end{document}, dann %%BIB%%`;
 }
@@ -1087,26 +1092,48 @@ async function generate() {
 
     content.push({type:'text', text: userPrompt(meta, csvText, notizKombiniert)});
 
-    setStatus('Claude generiert das Protokoll (30–90 s) …');
+    setStatus('Claude generiert das Protokoll (30–120 s) …');
 
-    const resp = await fetch(`${proxyUrl}/api/generate`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 12000,
-        system: sysPrompt(),
-        messages: [{role:'user', content}],
-      }),
-    });
+    // Hilfsfunktion: einzelner API-Call
+    const apiCall = async (messages) => {
+      const r = await fetch(`${proxyUrl}/api/generate`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 16000,
+          system: sysPrompt(),
+          messages,
+        }),
+      });
+      if (!r.ok) {
+        const e = await r.json().catch(()=>({}));
+        throw new Error(e.error?.message || `HTTP ${r.status}`);
+      }
+      return r.json();
+    };
 
-    if (!resp.ok) {
-      const e = await resp.json().catch(()=>({}));
-      throw new Error(e.error?.message || `HTTP ${resp.status}`);
+    // Erster Call
+    let data = await apiCall([{role:'user', content}]);
+    let raw = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+
+    // Automatische Fortsetzung wenn abgeschnitten (kein \end{document})
+    const isTruncated = d => d.stop_reason === 'max_tokens' ||
+      !d.content.filter(b=>b.type==='text').map(b=>b.text).join('').includes('\\end{document}');
+
+    if (isTruncated(data)) {
+      setStatus('Ausgabe zu lang — fordere Fortsetzung an …');
+      // Continuation: schicke bisherigen Output als Assistant-Antwort zurück
+      const contData = await apiCall([
+        {role:'user', content},
+        {role:'assistant', content: raw},
+        {role:'user',     content: 'Bitte fahre direkt fort wo du aufgehört hast. Schreibe NUR den fehlenden Rest des LaTeX-Dokuments, beginnend genau an der Stelle wo du abgebrochen hast. Kein Markdown, kein Kommentar.'},
+      ]);
+      const cont = contData.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+      raw = raw + cont;
     }
 
-    const data = await resp.json();
-    const raw = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const resp = {ok: true}; // dummy für Kompatibilität
     let cleaned = raw.trim();
     cleaned = cleaned.replace(/^`{1,4}(?:latex|tex)?\s*/i, '');
     cleaned = cleaned.replace(/\s*`{1,4}\s*$/, '');
@@ -1237,6 +1264,79 @@ function dl(content, filename) {
 }
 function downloadTex() { dl(texContent,'protokoll.tex'); }
 function downloadBib() { dl(bibContent,'literatur.bib'); }
+
+function downloadKiErklaerung() {
+  const meta = {
+    versuch:  versuchName(),
+    datum:    get('m-datum'),
+    pg:       get('m-pg'),
+    semester: get('m-semester'),
+    members:  get('m-members'),
+    proto:    get('m-proto'),
+  };
+  const content =
+`\\documentclass[a4paper,12pt]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[ngerman]{babel}
+\\usepackage[a4paper,margin=2.5cm]{geometry}
+\\begin{document}
+
+\\begin{center}
+  {\\large\\textbf{Erkl{\\"a}rung zur Nutzung von KI-Werkzeugen}}\\\\[0.5cm]
+  {\\large Projektlabor -- Fakult{\\"a}t II, Technische Universit{\\"a}t Berlin}
+\\end{center}
+
+\\vspace{0.5cm}
+
+\\noindent
+\\textbf{Versuch:} ${meta.versuch}\\\\
+\\textbf{Projektgruppe:} ${meta.pg}, ${meta.semester}\\\\
+\\textbf{Versuchsdatum:} ${meta.datum}\\\\
+\\textbf{Protokollierende:} ${meta.proto || meta.members}
+
+\\vspace{1cm}
+
+\\noindent
+Der Protokolltext des oben genannten Versuchs wurde mithilfe des
+KI-Sprachmodells Claude (Anthropic, Modell: claude-sonnet-4-5)
+auf Basis einer automatisierten Rohdatenanalyse generiert
+(PL Protokoll Generator, ${new Date().getFullYear()}).
+
+\\vspace{0.5cm}
+
+\\noindent
+Die inhaltliche Verantwortung f{\\"u}r Korrektheit, Vollst{\\"a}ndigkeit
+und wissenschaftliche Redlichkeit liegt bei den unterzeichnenden
+Protokollierenden. S{\\"a}mtliche numerischen Ergebnisse wurden vor
+der Protokollerstellung durch die Unterzeichnenden gepr{\\"u}ft und
+best{\\"a}tigt.
+
+\\vspace{0.5cm}
+
+\\noindent
+Die Nutzung erfolgt in {\\"U}bereinstimmung mit:
+\\begin{itemize}
+  \\item Leitlinien zur Sicherung guter wissenschaftlicher Praxis
+        der DFG, Kodex Version~1.2 (Leitlinie~14: Autorschaft), DOI: 10.5281/zenodo.14281892
+  \\item den Regelungen des Projektlabors der TU~Berlin
+\\end{itemize}
+
+\\vspace{2cm}
+
+\\noindent
+\\begin{tabular}{p{7cm} p{7cm}}
+  Datum, Unterschrift & Datum, Unterschrift \\\\[2cm]
+  \\hline & \\hline \\\\
+  & \\\\[2cm]
+  \\hline & \\hline \\\\
+  & \\\\[2cm]
+  \\hline & \\hline
+\\end{tabular}
+
+\\end{document}`;
+  dl(content, 'ki_erklaerung.tex');
+}
 
 function copyTex() {
   navigator.clipboard.writeText(texContent).then(()=>{
