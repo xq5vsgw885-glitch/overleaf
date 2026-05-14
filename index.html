@@ -514,20 +514,58 @@ function readFile(f) {
     } else {
       const r = new FileReader();
       r.onload = async e => {
-        // Send full CSV to server for physics analysis
+        const raw = String(e.target.result || '');
+        const RAW_TEXT_LIMIT = 350000; // harte Grenze: wenn größer, abbrechen statt heimlich kürzen
+
+        if (raw.length > RAW_TEXT_LIMIT) {
+          res({
+            type: 'text',
+            data: '',
+            raw,
+            name: f.name,
+            tooLarge: true,
+            error: `Datei ist zu groß für vollständige Übergabe (${raw.length} Zeichen > ${RAW_TEXT_LIMIT}).`
+          });
+          return;
+        }
+
+        let analysis = '';
+        let analysisError = '';
         try {
           const proxyUrl = (JSON.parse(localStorage.getItem('pl-cfg')||'{}').proxyurl||'').replace(/\/$/,'');
-          const resp = await fetch(`${proxyUrl}/api/analyze`, {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({csv: e.target.result, filename: f.name}),
-          });
-          const d = await resp.json();
-          res({type:'text', data: d.summary || d.error || e.target.result.slice(0,3000), name:f.name});
-        } catch {
-          // fallback: send first 3000 chars
-          res({type:'text', data: e.target.result.slice(0,3000), name:f.name});
+          if (proxyUrl) {
+            const resp = await fetch(`${proxyUrl}/api/analyze`, {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({csv: raw, filename: f.name}),
+            });
+            const d = await resp.json().catch(() => ({}));
+            analysis = d.summary || '';
+            analysisError = d.error || '';
+          }
+        } catch(err) {
+          analysisError = err.message || 'Serveranalyse fehlgeschlagen.';
         }
+
+        // Wichtig: data enthält IMMER die vollständigen Rohdaten, niemals eine gekürzte Vorschau.
+        res({
+          type: 'text',
+          data:
+`DATEI: ${f.name}
+STATUS: vollständige Rohdaten vollständig übergeben.
+${analysis ? `SERVERANALYSE ZUR ORIENTIERUNG, NICHT ALS ERSATZ FÜR ROHDATEN:
+${analysis}
+
+` : ''}${analysisError ? `SERVERANALYSE-WARNUNG:
+${analysisError}
+
+` : ''}VOLLSTÄNDIGE ROHDATEN:
+${raw}`,
+          raw,
+          name: f.name,
+          tooLarge: false,
+          error: analysisError
+        });
       };
       r.readAsText(f);
     }
@@ -726,7 +764,17 @@ BibTeX-Keys: nolting2023, meschede2015, papula2018, landau1987, pfeiler2020, dem
 }
 
 function userPrompt(meta, csvText, notizen) {
-  return `Erstelle das vollständige Protokoll:
+  return `Erstelle ein vollständiges LaTeX-Protokoll ausschließlich aus den folgenden Rohdaten.
+
+NICHT VERHANDELBARE ROHDATENREGELN:
+1. Die vollständigen Rohdaten unten sind die einzige numerische Grundlage.
+2. Keine Messwerte, Zeiten, Längen, Massen, Kameradaten, Bildraten, Auflösungen, Fitparameter, Korrekturfaktoren, Literaturwerte oder Beobachtungen erfinden.
+3. Keine Datenzeilen, Spalten oder Dateien ignorieren.
+4. Die Serveranalyse darf nur zur Orientierung dienen. Maßgeblich sind die vollständigen Rohdaten.
+5. Wenn eine Größe nicht explizit in den Rohdaten steht oder daraus eindeutig berechnet werden kann, wird sie als %TODO markiert.
+6. Wenn eine Auswertung mathematisch unmöglich ist, z.B. arcsin-Argument > 1, wird kein Korrekturfaktor angenommen. Stattdessen wird die Auswertung als nicht bestimmbar dokumentiert.
+7. Wenn die Rohdaten für ein vollständiges Protokoll nicht ausreichen, wird ein LaTeX-Dokument mit dem Abschnitt "Fehlende Rohdaten und nicht auswertbare Größen" erzeugt. Es werden keine Ersatzwerte konstruiert.
+8. Wörter und Konzepte wie "angenommen", "geschätzt", "plausibel gewählt", "Korrekturfaktor", "typischer Wert" oder "ca." sind für numerische Eingangsgrößen verboten, außer sie stehen wörtlich in den Rohdaten oder Notizen.
 
 METADATEN:
 Versuch: ${meta.versuch}
@@ -739,71 +787,23 @@ Tutor*in: ${meta.tutor}
 Assistent*in: ${meta.assist}
 Version: ${meta.version}
 
-MESSDATEN:
-${csvText || '(keine Messdaten — Platzhalter mit %TODO einfügen)'}
+ROHDATEN:
+${csvText}
 
 NOTIZEN / BEOBACHTUNGEN:
 ${notizen || '(keine)'}
 
-Denke schrittweise:
-1. Welche physikalischen Gesetze sind zentral? → korrekt zitieren
-2. Welche Messgrößen tragen zur Unsicherheit bei? → Fehlerfortpflanzung vollständig herleiten
-3. Ergebnis mit Literaturwert vergleichen, Abweichung in σ angeben
-4. Eigenkorrektur-Checkliste als % Kommentar einfügen`;
+AUSWERTUNGSAUFTRAG:
+- Vor jeder Rechnung benennen, aus welchen Rohdatenzeilen oder Rohdatenspalten die verwendeten Zahlen stammen.
+- Nur mit belegten Rohdaten rechnen.
+- Unvollständige oder widersprüchliche Daten als %TODO markieren.
+- Ergebnis mit Literaturwert nur vergleichen, wenn Literaturwert explizit gegeben oder in der Bibliographie allgemein etabliert ist.
+- Eigenkorrektur-Checkliste als % Kommentar einfügen.
+- Ausgabe beginnt direkt mit \\documentclass und endet mit \\end{document}, danach %%BIB%% und BibTeX.`;
 }
 
 
-// ══ LaTeX completeness check ═════════════════════════════════════════════════
-function validateCompleteness(tex, bib) {
-  const errors = [];
-  const warnings = [];
-
-  const t = String(tex || '').trim();
-  const b = String(bib || '').trim();
-
-  if (!t.startsWith('\\documentclass')) {
-    errors.push('Die Ausgabe beginnt nicht mit \\documentclass. Markdown, Vorrede oder defekte Bereinigung erkannt.');
-  }
-
-  if (!t.includes('\\begin{document}')) {
-    errors.push('LaTeX ist unvollständig: \\begin{document} fehlt.');
-  }
-
-  if (!t.includes('\\end{document}')) {
-    errors.push('LaTeX ist unvollständig: \\end{document} fehlt. Die Modellantwort wurde vermutlich abgeschnitten.');
-  }
-
-  if (!t.includes('\\printbibliography')) {
-    warnings.push('Bibliographie-Ausgabe fehlt: \\printbibliography.');
-  }
-
-  if (!b) {
-    errors.push('literatur.bib ist leer oder fehlt.');
-  }
-
-  if (/```/.test(t)) {
-    errors.push('Markdown-Codeblock ``` wurde nicht entfernt.');
-  }
-
-  return { errors, warnings };
-}
-
-function renderCompletenessError(report) {
-  const parts = [];
-
-  if (report.errors.length) {
-    parts.push('<strong>Fehler:</strong>');
-    parts.push(...report.errors.map(e => `• ${escapeHtml(e)}`));
-  }
-
-  if (report.warnings.length) {
-    parts.push('<br><strong>Warnungen:</strong>');
-    parts.push(...report.warnings.map(w => `• ${escapeHtml(w)}`));
-  }
-
-  return parts.join('<br>');
-}
-
+// ══ Strict raw-data and LaTeX checks ═════════════════════════════════════════
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({
     '&': '&amp;',
@@ -814,6 +814,78 @@ function escapeHtml(s) {
   }[c]));
 }
 
+function validateCompleteness(tex, bib) {
+  const errors = [];
+  const warnings = [];
+  const t = String(tex || '').trim();
+  const b = String(bib || '').trim();
+
+  if (!t.startsWith('\\documentclass')) {
+    errors.push('Die Ausgabe beginnt nicht mit \\documentclass. Markdown, Vorrede oder defekte Bereinigung erkannt.');
+  }
+  if (!t.includes('\\begin{document}')) {
+    errors.push('LaTeX ist unvollständig: \\begin{document} fehlt.');
+  }
+  if (!t.includes('\\end{document}')) {
+    errors.push('LaTeX ist unvollständig: \\end{document} fehlt. Die Modellantwort wurde vermutlich abgeschnitten.');
+  }
+  if (!t.includes('\\printbibliography')) {
+    warnings.push('Bibliographie-Ausgabe fehlt: \\printbibliography.');
+  }
+  if (!b) {
+    errors.push('literatur.bib ist leer oder fehlt.');
+  }
+  if (/```/.test(t)) {
+    errors.push('Markdown-Codeblock ``` wurde nicht entfernt.');
+  }
+
+  return { errors, warnings };
+}
+
+function validateNoUnsupportedAssumptions(tex) {
+  const errors = [];
+  const t = String(tex || '');
+
+  const forbiddenPatterns = [
+    {re: /Korrekturfaktor/i, msg: 'Unzulässiger Korrekturfaktor gefunden. Korrekturfaktoren dürfen nur aus Rohdaten stammen.'},
+    {re: /wird angenommen/i, msg: 'Unzulässige Annahme gefunden: "wird angenommen". Fehlende Rohdaten müssen als %TODO markiert werden.'},
+    {re: /angenommen, dass/i, msg: 'Unzulässige Annahme gefunden. Keine Ersatzannahmen für fehlende Rohdaten.'},
+    {re: /geschätzt/i, msg: 'Unzulässige Schätzung gefunden. Keine geschätzten Messwerte verwenden.'},
+    {re: /plausibel gewählt/i, msg: 'Unzulässige Plausibilitätswahl gefunden. Keine erfundenen Eingangsgrößen.'},
+    {re: /typischer Wert/i, msg: 'Unzulässiger typischer Wert gefunden. Numerische Eingangsgrößen müssen aus Rohdaten stammen.'}
+  ];
+
+  for (const p of forbiddenPatterns) {
+    if (p.re.test(t)) errors.push(p.msg);
+  }
+
+  return errors;
+}
+
+function renderCheckReport(errors, warnings = []) {
+  const parts = [];
+  if (errors.length) {
+    parts.push('<strong>Fehler:</strong>');
+    parts.push(...errors.map(e => `• ${escapeHtml(e)}`));
+  }
+  if (warnings.length) {
+    parts.push('<br><strong>Warnungen:</strong>');
+    parts.push(...warnings.map(w => `• ${escapeHtml(w)}`));
+  }
+  return parts.join('<br>');
+}
+
+function failGeneration(message, errors = [], warnings = []) {
+  document.getElementById('gen-running').style.display = 'none';
+  document.getElementById('gen-idle').style.display = 'flex';
+  document.getElementById('gen-err').innerHTML =
+    `<div class="box err">
+      ${escapeHtml(message)}<br>
+      ${renderCheckReport(errors, warnings)}
+    </div>`;
+}
+
+
 // ══ Generate ══════════════════════════════════════════════════════════════════
 async function generate() {
   const cfg = JSON.parse(localStorage.getItem('pl-cfg')||'{}');
@@ -821,6 +893,12 @@ async function generate() {
   if (!proxyUrl) {
     document.getElementById('gen-err').innerHTML =
       '<div class="box err">Keine Proxy-URL gespeichert. Bitte unter ⚙ Einstellungen eintragen (z.B. https://pl-proxy.onrender.com).</div>';
+    return;
+  }
+
+  if (!files.length) {
+    document.getElementById('gen-err').innerHTML =
+      '<div class="box err">Keine Rohdaten hochgeladen. Die App erzeugt kein Protokoll ohne vollständige Rohdaten.</div>';
     return;
   }
 
@@ -833,16 +911,38 @@ async function generate() {
   try {
     setStatus('CSV-Rohdaten werden auf dem Server ausgewertet…');
     const fileData = await Promise.all(files.map(readFile));
+    const tooLarge = fileData.filter(f => f.tooLarge);
+    if (tooLarge.length) {
+      failGeneration(
+        'Rohdaten wurden nicht vollständig übergeben.',
+        tooLarge.map(f => `${f.name}: ${f.error}`)
+      );
+      return;
+    }
+
+
 
     // Build message content
     const content = [];
     for (const fd of fileData) {
       if (fd.type === 'image') {
         content.push({type:'image', source:{type:'base64', media_type:fd.mime, data:fd.data}});
-        content.push({type:'text', text:`Bild "${fd.name}": Extrahiere alle sichtbaren Messwerte, Achsenbeschriftungen und Einheiten.`});
+        content.push({type:'text', text:`Bild "${fd.name}" ist Rohdatenmaterial. Extrahiere nur eindeutig sichtbare Messwerte, Achsenbeschriftungen und Einheiten. Unsichere oder nicht lesbare Werte als %TODO markieren. Keine Werte schätzen.`});
       }
     }
     const csvText = fileData.filter(f=>f.type==='text').map(f=>`=== ${f.name} ===\n${f.data}`).join('\n\n');
+    const hasTextRawData = csvText.trim().length > 0;
+    const hasImageRawData = fileData.some(f => f.type === 'image');
+
+    if (!hasTextRawData && !hasImageRawData) {
+      failGeneration(
+        'Keine vollständigen Rohdaten lesbar.',
+        ['Es wurde keine CSV/TXT-Datei und kein Bild mit Rohdaten erkannt.']
+      );
+      return;
+    }
+
+
 
     const meta = {
       versuch:  versuchName(),
@@ -896,16 +996,15 @@ async function generate() {
     }
 
     const completenessReport = validateCompleteness(texContent, bibContent);
+    const assumptionErrors = validateNoUnsupportedAssumptions(texContent);
+    const allErrors = [...completenessReport.errors, ...assumptionErrors];
 
-    if (completenessReport.errors.length) {
-      document.getElementById('gen-running').style.display = 'none';
-      document.getElementById('gen-idle').style.display = 'flex';
-      document.getElementById('gen-err').innerHTML =
-        `<div class="box err">
-          Ausgabe unvollständig oder nicht exportierbar:<br>
-          ${renderCompletenessError(completenessReport)}<br><br>
-          Die Datei wurde nicht in den Export übernommen. Bitte erneut generieren.
-        </div>`;
+    if (allErrors.length) {
+      failGeneration(
+        'Ausgabe blockiert: Das Protokoll ist unvollständig oder enthält nicht belegte Annahmen.',
+        allErrors,
+        completenessReport.warnings
+      );
       return;
     }
 
@@ -913,7 +1012,7 @@ async function generate() {
       document.getElementById('gen-err').innerHTML =
         `<div class="box info">
           Qualitätswarnung:<br>
-          ${renderCompletenessError(completenessReport)}
+          ${renderCheckReport([], completenessReport.warnings)}
         </div>`;
     }
 
@@ -940,12 +1039,14 @@ async function generate() {
 // ══ Download ══════════════════════════════════════════════════════════════════
 
 function safeDownload(content, filename) {
-  const report = validateCompleteness(texContent, bibContent);
+  const completenessReport = validateCompleteness(texContent, bibContent);
+  const assumptionErrors = validateNoUnsupportedAssumptions(texContent);
+  const allErrors = [...completenessReport.errors, ...assumptionErrors];
 
-  if (filename.endsWith('.tex') && report.errors.length) {
+  if (filename.endsWith('.tex') && allErrors.length) {
     alert(
-      'Export blockiert: Die LaTeX-Ausgabe ist unvollständig.\n\n' +
-      report.errors.join('\n')
+      'Export blockiert: Die LaTeX-Ausgabe ist unvollständig oder enthält nicht belegte Annahmen.\\n\\n' +
+      allErrors.join('\\n')
     );
     return;
   }
@@ -983,6 +1084,14 @@ async function pushGitHub() {
   const repo   = get('gh-repo');
   const branch = get('gh-branch') || 'main';
   const res    = document.getElementById('push-result');
+
+  const pushCompleteness = validateCompleteness(texContent, bibContent);
+  const pushAssumptionErrors = validateNoUnsupportedAssumptions(texContent);
+  const pushErrors = [...pushCompleteness.errors, ...pushAssumptionErrors];
+  if (pushErrors.length) {
+    res.innerHTML = `<div class="box err">Push blockiert:<br>${renderCheckReport(pushErrors, pushCompleteness.warnings)}</div>`;
+    return;
+  }
 
   if (!token || !owner || !repo) {
     res.innerHTML = '<div class="box err">Bitte GitHub Owner, Repo und Token ausfüllen.</div>';
