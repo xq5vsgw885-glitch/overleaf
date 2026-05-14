@@ -670,11 +670,11 @@ LATEX-PRÄAMBEL (exakt so):
 \\usepackage{csquotes}
 \\usepackage{amsmath,amssymb}
 \\usepackage{siunitx}
-\\sisetup{locale=DE,separate-uncertainty=true,exponent-product=\\ensuremath{\\cdot},per-mode=fraction}
+\\sisetup{locale=DE,uncertainty-mode=separate,exponent-product=\\ensuremath{\\cdot},per-mode=fraction}
 \\usepackage{booktabs}
 \\usepackage{graphicx}
+\\usepackage[a4paper,margin=2.5cm,marginparwidth=2cm]{geometry}
 \\usepackage{todonotes}
-\\usepackage[a4paper,margin=2.5cm]{geometry}
 \\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
 \\usepackage[style=numeric,backend=biber]{biblatex}
 \\addbibresource{literatur.bib}
@@ -689,6 +689,13 @@ TABELLEN — STRIKTE REGELN:
 - Tabelle mit 2 Spalten: {ll}, mit 3 Spalten: {lll} — niemals mehr & als Spalten
 - Die Segmenttabelle (t_mid, phi) hat GENAU 2 Spalten: {lr} mit einer Kopfzeile $t_\\text{mid}$ [s] & $\\varphi$ [°]
 - KEINE mehrspaltige Darstellung (kein 3×2 Layout für eine 2-Spalten-Tabelle)
+
+LATEX-ZEICHENREGELN — KRITISCH:
+- Grad-Symbol: IMMER $^\\circ$ in Mathe, \\textdegree{} im Text — NIEMALS ° als Unicode
+- Griechische Buchstaben: IMMER als LaTeX-Befehl: $\\varphi$, $\\omega$, $\\phi$, $\\Delta$ — NIEMALS φ, ω, Δ als Unicode-Zeichen direkt im Code
+- Umlaute: ä ö ü ß sind OK im Fließtext (UTF-8), aber NICHT in Mathe-Umgebungen
+- In \\missingfigure{}: NUR ASCII und LaTeX-Befehle, keine Unicode-Sonderzeichen
+- $R^2$ nicht R² — niemals hochgestellte Ziffern als Unicode
 
 MATHE-UMGEBUNGEN — STRIKTE REGELN:
 - equation: eine einzelne Gleichung, endet mit \\end{equation}
