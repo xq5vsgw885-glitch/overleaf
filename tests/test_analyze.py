@@ -42,3 +42,32 @@ def test_not_computable_latitude_has_no_correction_factor():
     latitude = next(i for i in d["results"] if i["id"] == "latitude_result")
     assert latitude["data"]["not_computable"] is True
     assert latitude["data"]["correction_factor_used"] is False
+
+
+def test_xy_tracking_without_angle_transformation_does_not_invent_angle():
+    csv = "time,x,y\n0,1,0\n1,0,1\n2,-1,0\n"
+    r = client.post("/api/analyze", json={"csv": csv, "filename": "tracking.csv"})
+    assert r.status_code == 200
+    d = r.json()
+
+    calculation_ids = {item["id"] for item in d["calculations"]}
+    result_ids = {item["id"] for item in d["results"]}
+    warning_ids = {item["id"] for item in d["warnings"]}
+
+    assert "angular_regression" not in calculation_ids
+    assert "latitude_result" not in result_ids
+    assert "xy_tracking_no_angle" in warning_ids
+
+    warning = next(item for item in d["warnings"] if item["id"] == "xy_tracking_no_angle")
+    assert warning["data"]["not_computable"] is True
+    assert warning["data"]["requires_todo"] is True
+
+
+def test_malformed_or_empty_csv_returns_clear_error():
+    empty = client.post("/api/analyze", json={"csv": "", "filename": "empty.csv"})
+    assert empty.status_code in {400, 422}
+
+    malformed = client.post("/api/analyze", json={"csv": 'time,angle\n0,"unterminated', "filename": "bad.csv"})
+    assert malformed.status_code == 400
+    detail = malformed.json().get("detail", "")
+    assert "konnte nicht" in detail or "CSV" in detail
