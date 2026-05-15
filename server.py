@@ -58,65 +58,66 @@ def _score_delimiter(df: pd.DataFrame) -> float:
     """Score a parsed DataFrame for plausibility. Higher is better."""
     if df.empty:
         return -1.0
-    
+
     num_cols = len(df.columns)
     if num_cols == 0:
         return -1.0
-    
-    # Convert to numeric with decimal-comma handling
+
     converted = pd.DataFrame(index=df.index)
     for col in df.columns:
         s = df[col]
         if s.dtype == object:
             s = s.astype(str).str.replace(",", ".", regex=False)
         converted[col] = pd.to_numeric(s, errors="coerce")
-    
-    # Count numeric columns (at least one non-null value)
+
     numeric_cols = sum(1 for c in converted.columns if converted[c].notna().any())
-    
-    # Count completely empty columns
     empty_cols = sum(1 for c in converted.columns if converted[c].isna().all())
-    
-    # Score: prefer more numeric columns, fewer empty columns, reasonable column count
-    score = numeric_cols * 10.0 - empty_cols * 5.0 - (num_cols - numeric_cols) * 2.0
-    return score
+    non_numeric_cols = num_cols - numeric_cols
+    return numeric_cols * 10.0 - empty_cols * 5.0 - non_numeric_cols * 2.0
+
+
+def _first_nonempty_line(raw: str) -> str:
+    for line in raw.splitlines():
+        if line.strip():
+            return line.strip()
+    return ""
 
 
 def _read_table(raw: str) -> pd.DataFrame:
     if not raw.strip():
         raise ValueError("Leere Messdatei.")
-    
-    # Try common delimiters with plausibility scoring
+
+    header = _first_nonempty_line(raw)
     delimiters = [",", ";", "\t"]
-    candidates = []
-    
+    candidates: list[tuple[float, str, pd.DataFrame]] = []
+
     for delim in delimiters:
         try:
             df = pd.read_csv(io.StringIO(raw), sep=delim, engine="python")
-            if not df.empty:
-                score = _score_delimiter(df)
-                candidates.append((score, delim, df))
+            if df.empty:
+                continue
+            score = _score_delimiter(df)
+            # Scientific CSV/TXT data usually has a header row. A delimiter found
+            # in the header is strongly preferred so decimal commas do not masquerade
+            # as field separators in semicolon-separated European data.
+            header_bonus = header.count(delim) * 100.0
+            candidates.append((score + header_bonus, delim, df))
         except Exception:
             continue
-    
-    # If explicit delimiters found plausible candidates, use the best one
+
     if candidates:
         candidates.sort(reverse=True, key=lambda x: x[0])
-        best_score, best_delim, best_df = candidates[0]
+        best_score, _best_delim, best_df = candidates[0]
         if best_score >= 0:
             return best_df
-    
-    # If explicit delimiters failed, try auto-detection
+
     try:
         df = pd.read_csv(io.StringIO(raw), sep=None, engine="python")
-        if not df.empty:
-            score = _score_delimiter(df)
-            if score >= 0:
-                return df
+        if not df.empty and _score_delimiter(df) >= 0:
+            return df
     except Exception:
         pass
-    
-    # All attempts failed
+
     raise ValueError("CSV/TXT konnte nicht vollständig gelesen werden: Keine plausible Spaltenstruktur gefunden.")
 
 
@@ -154,14 +155,19 @@ def _linear_regression(num: pd.DataFrame) -> dict[str, Any] | None:
     cols = [str(c) for c in num.columns]
     time_col = _find_column(cols, [r"^t$", r"time", r"zeit"])
     angle_col = _find_column(cols, [r"angle", r"winkel", r"phi", r"varphi"])
-    if not time_col or not angle_col:
+    if not time_col or not angle_col or time_col == angle_col:
         return None
     pair = num[[time_col, angle_col]].dropna().astype(float)
     if len(pair) < 2:
         return None
     x = pair[time_col].to_numpy(dtype=float)
     y = pair[angle_col].to_numpy(dtype=float)
-    lr = stats.linregress(x, y)
+    if len(set(x.tolist())) < 2:
+        return None
+    try:
+        lr = stats.linregress(x, y)
+    except ValueError:
+        return None
     return {"x_column": time_col, "y_column": angle_col, "n": int(len(pair)), "slope": float(lr.slope), "intercept": float(lr.intercept), "r_value": float(lr.rvalue), "r_squared": float(lr.rvalue**2), "p_value": float(lr.pvalue), "stderr": float(lr.stderr)}
 
 
@@ -224,7 +230,7 @@ def analyze(req: AnalyzeRequest) -> dict[str, Any]:
         calculations.append(_analysis_item(item_id="angular_regression", item_type="calculation", title="Lineare Winkelregression", description="Deterministische lineare Regression für erkannte Zeit-Winkel-Paare mit Slope, Intercept, R² und p-Wert.", data=regression))
         figures.append(_analysis_item(item_id="angle_time_plot", item_type="figure", title="Winkel-Zeit-Diagramm", description="Pgfplots-kompatible Koordinaten der ausgewerteten Zeit- und Winkelwerte mit Regressionsgerade.", data={"x_col": regression.get("x_column"), "y_col": regression.get("y_column"), "slope": regression.get("slope")}))
     else:
-        warnings.append(_analysis_item(item_id="no_time_angle_regression", item_type="warning", title="Keine Zeit-Winkel-Regression", description="Es wurden keine eindeutig benannten Zeit- und Winkelspalten gefunden.", data={"not_computable": True, "requires_todo": True}))
+        warnings.append(_analysis_item(item_id="no_time_angle_regression", item_type="warning", title="Keine Zeit-Winkel-Regression", description="Es wurden keine eindeutig benannten Zeit- und Winkelspalten gefunden oder die unabhängige Variable besitzt keine Variation.", data={"not_computable": True, "requires_todo": True}))
 
     cols_lower = {str(c).lower() for c in df.columns}
     has_x = any(c in cols_lower or "x" == c for c in cols_lower)
