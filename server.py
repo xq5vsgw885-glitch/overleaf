@@ -54,34 +54,70 @@ def _analysis_item(*, item_id: str, item_type: AnalysisType, title: str, descrip
     return {"id": item_id, "type": item_type, "title": title, "description": description, "include_default": include_default, "essential": essential, "data": data, "latex_hint": latex_hint}
 
 
+def _score_delimiter(df: pd.DataFrame) -> float:
+    """Score a parsed DataFrame for plausibility. Higher is better."""
+    if df.empty:
+        return -1.0
+    
+    num_cols = len(df.columns)
+    if num_cols == 0:
+        return -1.0
+    
+    # Convert to numeric with decimal-comma handling
+    converted = pd.DataFrame(index=df.index)
+    for col in df.columns:
+        s = df[col]
+        if s.dtype == object:
+            s = s.astype(str).str.replace(",", ".", regex=False)
+        converted[col] = pd.to_numeric(s, errors="coerce")
+    
+    # Count numeric columns (at least one non-null value)
+    numeric_cols = sum(1 for c in converted.columns if converted[c].notna().any())
+    
+    # Count completely empty columns
+    empty_cols = sum(1 for c in converted.columns if converted[c].isna().all())
+    
+    # Score: prefer more numeric columns, fewer empty columns, reasonable column count
+    score = numeric_cols * 10.0 - empty_cols * 5.0 - (num_cols - numeric_cols) * 2.0
+    return score
+
+
 def _read_table(raw: str) -> pd.DataFrame:
     if not raw.strip():
         raise ValueError("Leere Messdatei.")
     
-    # Try common delimiters explicitly before fallback to auto-detection
+    # Try common delimiters with plausibility scoring
     delimiters = [",", ";", "\t"]
-    df = None
-    last_error = None
+    candidates = []
     
     for delim in delimiters:
         try:
             df = pd.read_csv(io.StringIO(raw), sep=delim, engine="python")
             if not df.empty:
-                break
-        except Exception as e:
-            last_error = e
+                score = _score_delimiter(df)
+                candidates.append((score, delim, df))
+        except Exception:
             continue
     
-    # If explicit delimiters failed, try auto-detection
-    if df is None or df.empty:
-        try:
-            df = pd.read_csv(io.StringIO(raw), sep=None, engine="python")
-        except Exception as exc:
-            raise ValueError(f"CSV/TXT konnte nicht vollständig gelesen werden: {exc}") from exc
+    # If explicit delimiters found plausible candidates, use the best one
+    if candidates:
+        candidates.sort(reverse=True, key=lambda x: x[0])
+        best_score, best_delim, best_df = candidates[0]
+        if best_score >= 0:
+            return best_df
     
-    if df.empty:
-        raise ValueError("Die Datei enthält keine auswertbaren Datenzeilen.")
-    return df
+    # If explicit delimiters failed, try auto-detection
+    try:
+        df = pd.read_csv(io.StringIO(raw), sep=None, engine="python")
+        if not df.empty:
+            score = _score_delimiter(df)
+            if score >= 0:
+                return df
+    except Exception:
+        pass
+    
+    # All attempts failed
+    raise ValueError("CSV/TXT konnte nicht vollständig gelesen werden: Keine plausible Spaltenstruktur gefunden.")
 
 
 def _numeric_frame(df: pd.DataFrame) -> pd.DataFrame:
