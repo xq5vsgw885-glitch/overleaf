@@ -210,58 +210,12 @@ a:hover{text-decoration:underline}
 
 <!-- ════════════════ SCHRITT 1: MESSDATEN ════════════════ -->
 <div id="s1" style="display:none">
-
-  <!-- Notebook-Download -->
   <div class="card">
-    <div class="card-title">Schritt 1 — Jupyter Notebook ausführen</div>
-    <div class="box info" style="margin-bottom:1rem">
-      Die vollständige Auswertung der Rohdaten erfolgt im Jupyter Notebook —
-      alle Datenpunkte, kein Sampling, reproduzierbar, numpy/scipy.
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
-      <button class="xbtn" onclick="downloadNotebook()" style="flex:1;min-width:200px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-        <span>Notebook herunterladen<small>auswertung.ipynb</small></span>
-      </button>
-    </div>
-    <ol style="font-size:12px;color:var(--muted);line-height:2;padding-left:1.2rem">
-      <li>Notebook herunterladen und in denselben Ordner wie deine CSV-Datei legen</li>
-      <li><code>CSV_FILE</code> in Zelle 1 auf deinen Dateinamen setzen</li>
-      <li>Jupyter starten: <code>jupyter notebook auswertung.ipynb</code></li>
-      <li><em>Kernel → Restart &amp; Run All</em> — alle Zellen werden ausgeführt</li>
-      <li>Ergebnisse aus der letzten Zelle kopieren und unten einfügen</li>
-    </ol>
-  </div>
-
-  <!-- Notebook-Ergebnisse einfügen -->
-  <div class="card">
-    <div class="card-title">Schritt 2 — Notebook-Ergebnisse einfügen</div>
-    <div class="field">
-      <label>Ausgabe der letzten Notebook-Zelle (vollständig kopieren)</label>
-      <textarea id="notebook-results" style="height:200px;font-size:11px"
-        placeholder="════════════════════════════════════════════════════
-AUSWERTUNGSERGEBNISSE — in App einfügen
-════════════════════════════════════════════════════
-
-ROHDATEN:
-  N          = 12000 Datenpunkte
-  T_ges      = 1200.0 s = 20.0 min
-  ...
-
-SCHWINGUNGSDAUER:
-  T          = (3.2080 ± 0.0003) s
-  ...
-
-FOUCAULT-DREHRATE:
-  b          = (10.9500 ± 0.0700) °/h
-  R²         = 0.999000
-  ..."></textarea>
-    </div>
-  </div>
-
-  <!-- Fotos / zusätzliche Dateien -->
-  <div class="card">
-    <div class="card-title">Optional — Fotos des Messbuchs oder Zusatzdaten</div>
+    <div class="card-title">Rohdaten hochladen</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:1rem">
+      CSV hochladen — der Server wertet alle Datenpunkte mit Python (numpy/scipy) aus
+      und zeigt die Ergebnisse zur Prüfung an, bevor das Protokoll generiert wird.
+    </p>
     <div class="drop" id="dropzone"
          onclick="document.getElementById('finput').click()"
          ondragover="event.preventDefault();this.classList.add('drag')"
@@ -270,8 +224,8 @@ FOUCAULT-DREHRATE:
       <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
       </svg>
-      <p>Fotos des Messbuchs oder zusätzliche CSV-Dateien</p>
-      <small>.jpg · .png · .csv · .txt</small>
+      <p>CSV-Datei hierher ziehen oder klicken</p>
+      <small>.csv · .txt — mehrere Dateien möglich · auch Fotos .jpg .png</small>
     </div>
     <input type="file" id="finput" multiple accept=".csv,.txt,.jpg,.jpeg,.png,image/*"
            style="display:none" onchange="onFileInput(this.files)">
@@ -281,10 +235,10 @@ FOUCAULT-DREHRATE:
   <div class="card">
     <div class="card-title">Beobachtungen &amp; Notizen</div>
     <div class="field">
-      <textarea id="notizen" placeholder="Stichpunkte reichen, z.B.:
-– Frequenz: 320 Hz, Rohrlänge L = 1,48 m
+      <textarea id="notizen" placeholder="Stichpunkte, z.B.:
 – Raumtemperatur: 22 °C, Gas: Methan
-– Geräte: Funktionsgenerator (PL-Nr. 123), Rubensrohr (PL-Nr. 378)
+– Rohrlänge L = 1,48 m
+– Geräte: Funktionsgenerator (PL-Nr. 123)
 – Besonderheiten: starke Dämpfung nach 15 min"></textarea>
     </div>
   </div>
@@ -295,60 +249,68 @@ FOUCAULT-DREHRATE:
   </div>
 </div>
 
-<!-- ════════════════ SCHRITT 2: ANALYSE & VALIDIERUNG ════════════════ -->
+<!-- ════════════════ SCHRITT 2: PYTHON-AUSWERTUNG & VORSCHAU ════════════════ -->
 <div id="s2" style="display:none">
 
-  <!-- Phase A: Analyse laden -->
+  <!-- Phase A: Auswertung starten -->
   <div id="s2-analyse" class="card">
-    <div class="card-title">Datenanalyse — Validierung vor Generierung</div>
+    <div class="card-title">Python-Auswertung (numpy/scipy, alle Datenpunkte)</div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:1rem">
-      Bevor das Protokoll generiert wird, werden die Daten ausgewertet.
-      <strong style="color:var(--text)">Prüfe die berechneten Werte sorgfältig</strong> — sie gehen direkt ins Protokoll ein.
+      Der Server führt die vollständige Auswertung mit Python durch —
+      kein Sampling, alle Datenpunkte, Mallick et al. (2025).
+      <strong style="color:var(--text)">Prüfe die Ergebnisse sorgfältig</strong> bevor du das Protokoll generierst.
     </p>
     <div id="analyse-idle" class="btn-row" style="margin-top:0">
       <button class="btn" onclick="goStep(1)">← Zurück</button>
-      <button class="btn primary" onclick="runAnalysis()">Daten analysieren ▶</button>
+      <button class="btn primary" onclick="runAnalysis()">Auswertung starten ▶</button>
     </div>
     <div id="analyse-running" style="display:none;padding:1.5rem 0;text-align:center">
-      <span class="spinner"></span><span id="analyse-txt" style="font-size:12px;color:var(--muted)">Serveranalyse läuft…</span>
+      <span class="spinner"></span>
+      <span id="analyse-txt" style="font-size:12px;color:var(--muted)">Python läuft…</span>
     </div>
   </div>
 
-  <!-- Phase B: Analyseergebnisse zur Validierung -->
+  <!-- Phase B: Vorschau der Ergebnisse -->
   <div id="s2-results" style="display:none">
+
+    <!-- Plots -->
+    <div class="card" id="plots-card" style="display:none">
+      <div class="card-title">Abbildungen (Python/matplotlib)</div>
+      <div id="plots-container" style="display:flex;flex-direction:column;gap:1rem"></div>
+    </div>
+
+    <!-- Ergebnistabelle -->
     <div class="card">
       <div class="card-title">
-        Analyseergebnisse — Bitte prüfen
+        Ergebnisse — Bitte prüfen
         <span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px">Diese Werte gehen ins Protokoll ein</span>
       </div>
-
-      <div class="box info" style="margin-bottom:1rem">
-        <strong>Wissenschaftliche Sorgfaltspflicht:</strong> Prüfe jeden Wert auf Plausibilität.
-        Unplausible Werte (z.B. sin(φ) > 1, negative Perioden) deuten auf systematische Fehler hin
-        und müssen im Protokoll diskutiert werden. Ergänze fehlende Parameter in den Notizen.
+      <div class="box info" style="margin-bottom:1rem;font-size:11px">
+        <strong>Sorgfaltspflicht:</strong> Prüfe Plausibilität.
+        sin(φ) &gt; 1 oder R² &lt; 0,9 deuten auf Messprobleme hin — im Protokoll diskutieren.
       </div>
+      <div id="ergebnisse-tabelle" style="font-size:12px"></div>
+    </div>
 
-      <pre class="code" id="analyse-output" style="max-height:400px;font-size:10px">—</pre>
-
-      <div style="margin-top:1rem">
-        <div class="field">
-          <label>Ergänzende Parameter und Korrekturen (optional)</label>
-          <textarea id="notizen-ergaenzung" style="height:80px"
-            placeholder="z.B.:&#10;– Pendellänge L = 2,54 m (gemessen)&#10;– Kalibrierung: 1 px = 0,593 mm&#10;– Kamera: 10 Hz, 1920×1080&#10;– Anmerkung: Messung zu kurz für Breitengrad-Bestimmung"></textarea>
-        </div>
+    <!-- Ergänzungen -->
+    <div class="card">
+      <div class="card-title">Ergänzende Parameter (optional)</div>
+      <div class="field">
+        <textarea id="notizen-ergaenzung" style="height:70px"
+          placeholder="z.B.: Pendellänge L = 2,54 m · Kalibrierung: 1 px = 0,593 mm · Kamera: 10 Hz"></textarea>
       </div>
-
-      <div class="btn-row">
+      <div class="btn-row" style="margin-top:0.5rem">
         <button class="btn" onclick="goStep(1)">← Zurück</button>
-        <button class="btn" onclick="resetAnalysis()">Neu analysieren</button>
+        <button class="btn sm" onclick="resetAnalysis()">Neu analysieren</button>
         <button class="btn primary" onclick="generate()">Protokoll generieren ✦</button>
       </div>
     </div>
 
-    <!-- Generierung läuft -->
+    <!-- Generierung -->
     <div id="gen-running" style="display:none" class="card">
       <div class="gen-center">
-        <span class="spinner"></span><span id="gen-txt" style="font-size:12px;color:var(--muted)">Starte…</span>
+        <span class="spinner"></span>
+        <span id="gen-txt" style="font-size:12px;color:var(--muted)">Starte…</span>
       </div>
     </div>
     <div id="gen-err"></div>
@@ -1371,39 +1333,82 @@ const FALLBACK_NOTEBOOK = JSON.stringify({
   ]
 }, null, 1);
 
-// runAnalysis: Notebook-Ergebnisse verwenden statt Server-Analyse
+// ══ Python-Auswertung ════════════════════════════════════════════════════════
+
+function resetAnalysis() {
+  document.getElementById('s2-analyse').style.display = 'block';
+  document.getElementById('s2-results').style.display = 'none';
+  document.getElementById('analyse-idle').style.display = 'flex';
+  document.getElementById('analyse-running').style.display = 'none';
+  document.getElementById('plots-container').innerHTML = '';
+  document.getElementById('ergebnisse-tabelle').innerHTML = '';
+  document.getElementById('plots-card').style.display = 'none';
+  window._nbResult = null;
+}
+
 async function runAnalysis() {
+  const cfg = JSON.parse(localStorage.getItem('pl-cfg')||'{}');
+  const proxyUrl = (cfg.proxyurl||'').replace(/\/$/,'');
+  if (!proxyUrl) {
+    alert('Bitte Proxy-URL in ⚙ Einstellungen eintragen.');
+    return;
+  }
+
   document.getElementById('analyse-idle').style.display = 'none';
   document.getElementById('analyse-running').style.display = 'block';
-  document.getElementById('analyse-txt').textContent = 'Daten werden gelesen…';
+  const setTxt = t => document.getElementById('analyse-txt').textContent = t;
 
   try {
-    // Notebook-Ergebnisse aus Textfeld
-    const notebookResults = (document.getElementById('notebook-results')?.value || '').trim();
-    // Bilder aus file-Upload
-    const fileData = await Promise.all(files.map(readFile));
+    // CSV-Dateien lesen
+    const csvFiles = files.filter(f => !f.type.startsWith('image/'));
+    const imgFiles = files.filter(f =>  f.type.startsWith('image/'));
 
-    const parts = [];
-    if (notebookResults) {
-      parts.push(`=== JUPYTER NOTEBOOK ERGEBNISSE (alle Datenpunkte, numpy/scipy) ===\n${notebookResults}`);
-    }
-    for (const fd of fileData) {
-      if (fd.type === 'text' && fd.data) {
-        parts.push(`=== ${fd.name} ===\n${fd.data.slice(0, 5000)}`);
-      }
-      // Bilder werden separat als Vision-Input übergeben
+    if (!csvFiles.length) {
+      throw new Error('Keine CSV-Datei hochgeladen. Bitte zuerst eine CSV-Datei hinzufügen.');
     }
 
-    if (!notebookResults && parts.length === 0) {
-      parts.push('(Keine Notebook-Ergebnisse eingefügt — Protokoll wird ohne numerische Auswertung generiert)');
+    setTxt('CSV wird gelesen…');
+    const csvFile = csvFiles[0];
+    const csvContent = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result);
+      r.onerror = rej;
+      r.readAsText(csvFile);
+    });
+
+    setTxt('Python-Auswertung läuft (alle Datenpunkte, numpy/scipy)…');
+
+    const resp = await fetch(`${proxyUrl}/api/run-notebook`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        csv: csvContent,
+        filename: csvFile.name,
+        versuch: versuchName(),
+        n_segmente: 30,
+      }),
+    });
+
+    if (!resp.ok) {
+      const e = await resp.json().catch(()=>({}));
+      throw new Error(e.error || `Server-Fehler ${resp.status}: ${e.details||''}`);
     }
 
-    window._analysisText = parts.join('\n\n');
-    window._fileDataForVision = fileData.filter(f => f.type === 'image');
+    const result = await resp.json();
+    if (result.error) throw new Error(result.error + (result.details ? '\n' + result.details : ''));
 
-    document.getElementById('analyse-output').textContent =
-      window._analysisText.slice(0, 8000) +
-      (window._analysisText.length > 8000 ? '\n\n[… zur Anzeige gekürzt]' : '');
+    window._nbResult = result;
+
+    // Bilder für Vision laden
+    const imgData = [];
+    for (const f of imgFiles) {
+      const d = await readFile(f);
+      if (d.type === 'image') imgData.push(d);
+    }
+    window._fileDataForVision = imgData;
+
+    // Vorschau rendern
+    renderPreview(result);
 
     document.getElementById('s2-analyse').style.display = 'none';
     document.getElementById('s2-results').style.display = 'block';
@@ -1411,9 +1416,149 @@ async function runAnalysis() {
   } catch(err) {
     document.getElementById('analyse-running').style.display = 'none';
     document.getElementById('analyse-idle').style.display = 'flex';
-    document.getElementById('gen-err').innerHTML = `<div class="box err">Fehler: ${escapeHtml(err.message)}</div>`;
+    document.getElementById('gen-err').innerHTML =
+      `<div class="box err">Fehler: ${escapeHtml(err.message)}</div>`;
   }
 }
+
+function renderPreview(r) {
+  // ── Plots ──
+  const plotsDiv = document.getElementById('plots-container');
+  const plotsCard = document.getElementById('plots-card');
+  plotsDiv.innerHTML = '';
+  const plotLabels = {trajektorie:'Trajektorie', perioden:'Schwingungsdauer',
+                       winkel:'Schwingungsebene & Regression', tracking:'Tracking-Qualität'};
+  let hasPlots = false;
+  for (const [key, label] of Object.entries(plotLabels)) {
+    if (r.plots && r.plots[key]) {
+      hasPlots = true;
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `<p style="font-size:11px;color:var(--muted);margin-bottom:4px">${label}</p>
+        <img src="data:image/png;base64,${r.plots[key]}"
+             style="width:100%;border-radius:var(--radius-sm);border:.5px solid var(--border)">`;
+      plotsDiv.appendChild(wrap);
+    }
+  }
+  plotsCard.style.display = hasPlots ? 'block' : 'none';
+
+  // ── Ergebnistabelle ──
+  const e = r.ergebnisse || {};
+  const tbl = document.getElementById('ergebnisse-tabelle');
+
+  const row = (label, val, unit='', warn=false) => {
+    const color = warn ? 'var(--red)' : 'var(--text)';
+    return `<tr>
+      <td style="padding:4px 8px;color:var(--muted);font-size:11px">${label}</td>
+      <td style="padding:4px 8px;color:${color};font-family:var(--mono);font-size:12px">${val}</td>
+      <td style="padding:4px 8px;color:var(--hint);font-size:11px">${unit}</td>
+    </tr>`;
+  };
+  const sec = title => `<tr><td colspan="3" style="padding:8px 8px 2px;font-size:10px;
+    font-weight:600;text-transform:uppercase;letter-spacing:.8px;
+    color:var(--muted);border-top:.5px solid var(--border)">${title}</td></tr>`;
+
+  let html2 = '<table style="width:100%;border-collapse:collapse">';
+  html2 += sec('Rohdaten');
+  html2 += row('N', (e.N||'?').toLocaleString(), 'Datenpunkte');
+  html2 += row('T_ges', e.T_ges_s, 's');
+  html2 += row('f_s', e.fs_hz, 'Hz');
+
+  if (e.T_s) {
+    html2 += sec('Schwingungsdauer [Mallick Gl. 6–9]');
+    html2 += row('T', `(${e.T_s} ± ${e.Delta_T_s}) s`, 's');
+    html2 += row('s_T', e.s_T_s, 's');
+    html2 += row('N_Perioden', e.N_per, '');
+    html2 += row('f', `(${e.f_hz} ± ${e.Delta_f})`, 'Hz');
+    html2 += row('L_exp', `(${e.L_exp_m} ± ${e.Delta_L_m})`, 'm');
+  }
+
+  if (e.b_h !== undefined) {
+    html2 += sec('Foucault-Drehrate [Mallick Gl. 22–28]');
+    html2 += row('ω_exp', `(${e.b_h} ± ${e.Delta_b_h})`, '°/h');
+    html2 += row('φ₀', e.phi0_deg, '°');
+    html2 += row('s_y', e.s_y, '°');
+    html2 += row('R²', e.R2, '', e.R2 < 0.9);
+    html2 += row('N_seg', `${e.N_seg} × ${e.seg_sz_s} s`, '');
+  }
+
+  if (e.phi_exp !== null && e.phi_exp !== undefined) {
+    const badSig = e.abw_sigma > 5;
+    html2 += sec('Breitengrad [Mallick Gl. 14]');
+    html2 += row('φ_exp', `(${e.phi_exp} ± ${e.Delta_phi})`, '°');
+    html2 += row('φ_lit (Berlin)', e.phi_lit, '°');
+    html2 += row('Abweichung', `${e.abw_deg}° = ${e.abw_sigma}σ`, '', badSig);
+  } else if (e.hinweis_phi) {
+    html2 += sec('Breitengrad');
+    html2 += row('⚠', e.hinweis_phi, '', true);
+  }
+
+  if (e.area_mean) {
+    html2 += sec('Tracking-Qualität');
+    html2 += row('Ā', `(${e.area_mean} ± ${e.area_s})`, 'px²');
+    html2 += row('CV', e.area_cv, '%', e.area_cv > 5);
+  }
+
+  html2 += '</table>';
+  tbl.innerHTML = html2;
+
+  // Analysedaten für generate() speichern
+  window._analysisText = buildAnalysisText(r);
+}
+
+function buildAnalysisText(r) {
+  const e = r.ergebnisse || {};
+  const lines = [
+    `=== PYTHON-AUSWERTUNG (numpy/scipy, alle ${e.N} Datenpunkte) ===`,
+    `Versuch: ${r.versuch}`,
+    `N = ${e.N}, T_ges = ${e.T_ges_s} s, fs = ${e.fs_hz} Hz`,
+    '',
+  ];
+  const t = r.tabellen || {};
+  if (t.statistik) {
+    lines.push('STATISTIK [Mallick Gl. 6-9]:');
+    for (const [col, s] of Object.entries(t.statistik)) {
+      lines.push(`  ${col}: mu=${s.mu}, s=${s.s}, SEM=${s.sem}, [${s.min}, ${s.max}]`);
+    }
+    lines.push('');
+  }
+  if (e.T_s) {
+    lines.push('SCHWINGUNGSDAUER:');
+    lines.push(`  T = (${e.T_s} +- ${e.Delta_T_s}) s  [SEM, N=${e.N_per}, s_T=${e.s_T_s}]`);
+    lines.push(`  f = (${e.f_hz} +- ${e.Delta_f}) Hz`);
+    lines.push(`  omega0 = (${e.omega0} +- ${e.Delta_om}) rad/s`);
+    lines.push(`  L_exp = (${e.L_exp_m} +- ${e.Delta_L_m}) m`);
+    lines.push('');
+  }
+  if (e.b_h !== undefined) {
+    lines.push('FOUCAULT-DREHRATE [Mallick Gl. 22-28]:');
+    lines.push(`  phi0 = ${e.phi0_deg} deg`);
+    lines.push(`  b = (${e.b_h} +- ${e.Delta_b_h}) deg/h`);
+    lines.push(`  s_y = ${e.s_y} deg, R2 = ${e.R2}`);
+    lines.push(`  N_seg = ${e.N_seg} (je ${e.seg_sz_s} s)`);
+    lines.push('');
+  }
+  if (e.phi_exp !== null && e.phi_exp !== undefined) {
+    lines.push('BREITENGRAD [Mallick Gl. 14]:');
+    lines.push(`  phi_exp = (${e.phi_exp} +- ${e.Delta_phi}) deg`);
+    lines.push(`  phi_lit = ${e.phi_lit} deg (Berlin)`);
+    lines.push(`  Abweichung = ${e.abw_deg} deg = ${e.abw_sigma} sigma`);
+    lines.push('');
+  }
+  if (t.segmente) {
+    lines.push('SEGMENTTABELLE:');
+    lines.push('t_mid/s  phi/deg');
+    for (const s of t.segmente) lines.push(`  ${s.t_mid}  ${s.phi}`);
+    lines.push('');
+  }
+  if (r.pgfplots) {
+    lines.push('PGFPLOTS-KOORDINATEN:');
+    lines.push(`  ${r.pgfplots.winkel_coords}`);
+    lines.push(`FIT: ${r.pgfplots.fit_formel}`);
+    lines.push(`  a=${r.pgfplots.fit_a}, b=${r.pgfplots.fit_b}`);
+  }
+  return lines.join('\n');
+}
+
 
 // ══ Download ══════════════════════════════════════════════════════════════════
 
