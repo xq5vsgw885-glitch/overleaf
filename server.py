@@ -88,7 +88,12 @@ def _read_table(raw: str) -> pd.DataFrame:
         raise ValueError("Leere Messdatei.")
 
     header = _first_nonempty_line(raw)
-    delimiters = [",", ";", "\t"]
+    common_delimiters = [",", ";", "\t"]
+    header_delimiters = [d for d in common_delimiters if d in header]
+    # If the header declares a field separator, decimal separators in data rows
+    # must not compete as delimiters. This is essential for semicolon-separated
+    # European measurement files with decimal commas.
+    delimiters = header_delimiters or common_delimiters
     candidates: list[tuple[float, str, pd.DataFrame]] = []
 
     for delim in delimiters:
@@ -96,12 +101,11 @@ def _read_table(raw: str) -> pd.DataFrame:
             df = pd.read_csv(io.StringIO(raw), sep=delim, engine="python")
             if df.empty:
                 continue
+            expected_cols = header.count(delim) + 1 if delim in header else 1
+            if delim in header and len(df.columns) != expected_cols:
+                continue
             score = _score_delimiter(df)
-            # Scientific CSV/TXT data usually has a header row. A delimiter found
-            # in the header is strongly preferred so decimal commas do not masquerade
-            # as field separators in semicolon-separated European data.
-            header_bonus = header.count(delim) * 100.0
-            candidates.append((score + header_bonus, delim, df))
+            candidates.append((score, delim, df))
         except Exception:
             continue
 
@@ -111,12 +115,13 @@ def _read_table(raw: str) -> pd.DataFrame:
         if best_score >= 0:
             return best_df
 
-    try:
-        df = pd.read_csv(io.StringIO(raw), sep=None, engine="python")
-        if not df.empty and _score_delimiter(df) >= 0:
-            return df
-    except Exception:
-        pass
+    if not header_delimiters:
+        try:
+            df = pd.read_csv(io.StringIO(raw), sep=None, engine="python")
+            if not df.empty and _score_delimiter(df) >= 0:
+                return df
+        except Exception:
+            pass
 
     raise ValueError("CSV/TXT konnte nicht vollständig gelesen werden: Keine plausible Spaltenstruktur gefunden.")
 
