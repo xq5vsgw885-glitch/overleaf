@@ -210,8 +210,58 @@ a:hover{text-decoration:underline}
 
 <!-- ════════════════ SCHRITT 1: MESSDATEN ════════════════ -->
 <div id="s1" style="display:none">
+
+  <!-- Notebook-Download -->
   <div class="card">
-    <div class="card-title">Messdaten hochladen</div>
+    <div class="card-title">Schritt 1 — Jupyter Notebook ausführen</div>
+    <div class="box info" style="margin-bottom:1rem">
+      Die vollständige Auswertung der Rohdaten erfolgt im Jupyter Notebook —
+      alle Datenpunkte, kein Sampling, reproduzierbar, numpy/scipy.
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+      <button class="xbtn" onclick="downloadNotebook()" style="flex:1;min-width:200px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        <span>Notebook herunterladen<small>auswertung.ipynb</small></span>
+      </button>
+    </div>
+    <ol style="font-size:12px;color:var(--muted);line-height:2;padding-left:1.2rem">
+      <li>Notebook herunterladen und in denselben Ordner wie deine CSV-Datei legen</li>
+      <li><code>CSV_FILE</code> in Zelle 1 auf deinen Dateinamen setzen</li>
+      <li>Jupyter starten: <code>jupyter notebook auswertung.ipynb</code></li>
+      <li><em>Kernel → Restart &amp; Run All</em> — alle Zellen werden ausgeführt</li>
+      <li>Ergebnisse aus der letzten Zelle kopieren und unten einfügen</li>
+    </ol>
+  </div>
+
+  <!-- Notebook-Ergebnisse einfügen -->
+  <div class="card">
+    <div class="card-title">Schritt 2 — Notebook-Ergebnisse einfügen</div>
+    <div class="field">
+      <label>Ausgabe der letzten Notebook-Zelle (vollständig kopieren)</label>
+      <textarea id="notebook-results" style="height:200px;font-size:11px"
+        placeholder="════════════════════════════════════════════════════
+AUSWERTUNGSERGEBNISSE — in App einfügen
+════════════════════════════════════════════════════
+
+ROHDATEN:
+  N          = 12000 Datenpunkte
+  T_ges      = 1200.0 s = 20.0 min
+  ...
+
+SCHWINGUNGSDAUER:
+  T          = (3.2080 ± 0.0003) s
+  ...
+
+FOUCAULT-DREHRATE:
+  b          = (10.9500 ± 0.0700) °/h
+  R²         = 0.999000
+  ..."></textarea>
+    </div>
+  </div>
+
+  <!-- Fotos / zusätzliche Dateien -->
+  <div class="card">
+    <div class="card-title">Optional — Fotos des Messbuchs oder Zusatzdaten</div>
     <div class="drop" id="dropzone"
          onclick="document.getElementById('finput').click()"
          ondragover="event.preventDefault();this.classList.add('drag')"
@@ -220,8 +270,8 @@ a:hover{text-decoration:underline}
       <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
       </svg>
-      <p>CSV-Dateien oder Fotos des Messbuchs hierher ziehen</p>
-      <small>.csv · .txt · .jpg · .png — mehrere Dateien möglich</small>
+      <p>Fotos des Messbuchs oder zusätzliche CSV-Dateien</p>
+      <small>.jpg · .png · .csv · .txt</small>
     </div>
     <input type="file" id="finput" multiple accept=".csv,.txt,.jpg,.jpeg,.png,image/*"
            style="display:none" onchange="onFileInput(this.files)">
@@ -233,10 +283,9 @@ a:hover{text-decoration:underline}
     <div class="field">
       <textarea id="notizen" placeholder="Stichpunkte reichen, z.B.:
 – Frequenz: 320 Hz, Rohrlänge L = 1,48 m
-– Flammenmuster klar bei Resonanz sichtbar
 – Raumtemperatur: 22 °C, Gas: Methan
-– Besonderheiten: Knoten 3 und 7 besonders ausgeprägt
-– Verwendete Geräte: Funktionsgenerator (PL-Nr. 123), Rubensrohr (PL-Nr. 378)"></textarea>
+– Geräte: Funktionsgenerator (PL-Nr. 123), Rubensrohr (PL-Nr. 378)
+– Besonderheiten: starke Dämpfung nach 15 min"></textarea>
     </div>
   </div>
 
@@ -1053,21 +1102,13 @@ async function generate() {
     const analysisText = window._analysisText || '';
     const ergaenzung = get('notizen-ergaenzung');
     const notizen = get('notizen');
-
-    // Kombiniere alle Textquellen
     const csvText = analysisText;
 
-    // Bilder aus fileData (für Vision)
+    // Bilder aus runAnalysis (bereits geladen)
     const content = [];
-    for (const fd of files) {
-      if (fd.type && fd.type.startsWith('image/')) {
-        // Bild wurde bereits in runAnalysis geladen, hier nochmal für Vision
-        const imgData = await readFile(fd);
-        if (imgData.type === 'image') {
-          content.push({type:'image', source:{type:'base64', media_type:imgData.mime, data:imgData.data}});
-          content.push({type:'text', text:`Bild "${fd.name}": Extrahiere nur eindeutig sichtbare Messwerte. Unsichere Werte als %TODO markieren.`});
-        }
-      }
+    for (const fd of (window._fileDataForVision || [])) {
+      content.push({type:'image', source:{type:'base64', media_type:fd.mime, data:fd.data}});
+      content.push({type:'text', text:`Bild "${fd.name}": Extrahiere nur eindeutig sichtbare Messwerte. Unsichere Werte als %TODO markieren.`});
     }
 
     const notizKombiniert = [notizen, ergaenzung].filter(Boolean).join('\n\n');
@@ -1229,6 +1270,148 @@ async function generate() {
     
     document.getElementById('gen-err').innerHTML =
       `<div class="box err">Fehler: ${err.message}</div>`;
+  }
+}
+
+// ══ Notebook ══════════════════════════════════════════════════════════════════
+
+// Notebook-Inhalt aus eingebettetem Base64 laden
+const NOTEBOOK_B64 = null; // wird beim Build gesetzt
+
+async function downloadNotebook() {
+  // Lade Notebook-Template vom Server
+  const cfg = JSON.parse(localStorage.getItem('pl-cfg')||'{}');
+  const proxyUrl = (cfg.proxyurl||'').replace(/\/$/,'');
+  const versuch = versuchName();
+
+  // Generiere versuchsspezifisches Notebook via Claude
+  if (!proxyUrl) {
+    alert('Bitte zuerst Proxy-URL in ⚙ Einstellungen eintragen.');
+    return;
+  }
+
+  const btn = event.currentTarget;
+  btn.textContent = 'Wird generiert…';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch(`${proxyUrl}/api/generate`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 8000,
+        system: `Du generierst Jupyter Notebooks als valides JSON.
+Antworte NUR mit dem vollstaendigen JSON des Notebooks, beginnend mit { und endend mit }.
+Kein Markdown, keine Erklaerungen, nur JSON.`,
+        messages: [{role:'user', content: notebookPrompt(versuch)}],
+      }),
+    });
+    const data = await resp.json();
+    let raw = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    // Strip markdown fences if present
+    raw = raw.replace(/^```(?:json|python)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
+    // Find JSON object
+    const start = raw.indexOf('{');
+    if (start > 0) raw = raw.slice(start);
+    // Validate JSON
+    JSON.parse(raw); // throws if invalid
+    dl(raw, `auswertung_${versuch.toLowerCase().replace(/\s+/g,'_')}.ipynb`);
+  } catch(err) {
+    alert('Notebook-Generierung fehlgeschlagen: ' + err.message + '\nBitte Fallback-Notebook verwenden.');
+    // Fallback: statisches Foucault-Notebook
+    dl(FALLBACK_NOTEBOOK, 'auswertung.ipynb');
+  } finally {
+    btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span>Notebook herunterladen<small>auswertung.ipynb</small></span>`;
+    btn.disabled = false;
+  }
+}
+
+function notebookPrompt(versuch) {
+  const meta = {
+    versuch,
+    datum: get('m-datum'),
+    pg: get('m-pg'),
+    semester: get('m-semester'),
+  };
+  return `Erstelle ein vollstaendiges Jupyter Notebook fuer den Versuch "${versuch}" am Projektlabor TU Berlin.
+
+Das Notebook soll:
+1. Alle Rohdaten aus einer CSV-Datei laden (KEIN Sampling, ALLE Zeilen)
+2. Statistik berechnen: Mittelwert [Mallick Gl.6], Standardabweichung N-1 [Gl.7], SEM [Gl.9]
+3. Versuchsspezifische Auswertung mit numpy/scipy durchfuehren
+4. Lineare Regression mit scipy.stats.linregress [Mallick Gl.22-28]
+5. Gauss-Fehlerfortpflanzung explizit berechnen [Mallick Gl.14]
+6. Abbildungen mit matplotlib speichern (PDF-Format fuer LaTeX)
+7. Alle Ergebnisse mit korrekter Rundung ausgeben
+8. pgfplots-Koordinaten fuer den Winkel-Zeit-Plot ausgeben
+
+Metadaten: ${JSON.stringify(meta)}
+
+Das Notebook muss als valides JSON zurueckgegeben werden.
+Erstelle ein vollstaendiges, ausfuehrbares Jupyter Notebook mit nbformat=4.`;
+}
+
+// Fallback-Notebook (statisch, Foucault-Pendel)
+const FALLBACK_NOTEBOOK = JSON.stringify({
+  nbformat: 4, nbformat_minor: 5,
+  metadata: {kernelspec: {display_name:'Python 3',language:'python',name:'python3'},
+              language_info: {name:'python',version:'3.10.0'}},
+  cells: [
+    {cell_type:'markdown',metadata:{},source:['# PL Auswertungs-Notebook\n','Bitte CSV_FILE anpassen und alle Zellen ausfuehren.']},
+    {cell_type:'code',execution_count:null,metadata:{},outputs:[],source:[
+      'CSV_FILE = "messdaten.csv"  # HIER ANPASSEN\n',
+      'import numpy as np, pandas as pd\n',
+      'from scipy import stats\n',
+      'import matplotlib.pyplot as plt\n',
+      'df = pd.read_csv(CSV_FILE)\n',
+      'print(f"Geladen: {len(df)} Zeilen")\n',
+      'display(df.describe())',
+    ]},
+  ]
+}, null, 1);
+
+// runAnalysis: Notebook-Ergebnisse verwenden statt Server-Analyse
+async function runAnalysis() {
+  document.getElementById('analyse-idle').style.display = 'none';
+  document.getElementById('analyse-running').style.display = 'block';
+  document.getElementById('analyse-txt').textContent = 'Daten werden gelesen…';
+
+  try {
+    // Notebook-Ergebnisse aus Textfeld
+    const notebookResults = (document.getElementById('notebook-results')?.value || '').trim();
+    // Bilder aus file-Upload
+    const fileData = await Promise.all(files.map(readFile));
+
+    const parts = [];
+    if (notebookResults) {
+      parts.push(`=== JUPYTER NOTEBOOK ERGEBNISSE (alle Datenpunkte, numpy/scipy) ===\n${notebookResults}`);
+    }
+    for (const fd of fileData) {
+      if (fd.type === 'text' && fd.data) {
+        parts.push(`=== ${fd.name} ===\n${fd.data.slice(0, 5000)}`);
+      }
+      // Bilder werden separat als Vision-Input übergeben
+    }
+
+    if (!notebookResults && parts.length === 0) {
+      parts.push('(Keine Notebook-Ergebnisse eingefügt — Protokoll wird ohne numerische Auswertung generiert)');
+    }
+
+    window._analysisText = parts.join('\n\n');
+    window._fileDataForVision = fileData.filter(f => f.type === 'image');
+
+    document.getElementById('analyse-output').textContent =
+      window._analysisText.slice(0, 8000) +
+      (window._analysisText.length > 8000 ? '\n\n[… zur Anzeige gekürzt]' : '');
+
+    document.getElementById('s2-analyse').style.display = 'none';
+    document.getElementById('s2-results').style.display = 'block';
+
+  } catch(err) {
+    document.getElementById('analyse-running').style.display = 'none';
+    document.getElementById('analyse-idle').style.display = 'flex';
+    document.getElementById('gen-err').innerHTML = `<div class="box err">Fehler: ${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -1448,13 +1631,15 @@ async function pushGitHub() {
 // ══ Reset ══════════════════════════════════════════════════════════════════
 function resetAll() {
   texContent = ''; bibContent = ''; files = [];
+  window._analysisText = '';
+  window._fileDataForVision = [];
   document.getElementById('flist').innerHTML = '';
   document.getElementById('notizen').value = '';
+  const nbr = document.getElementById('notebook-results');
+  if (nbr) nbr.value = '';
   document.getElementById('push-result').innerHTML = '';
   document.getElementById('gen-err').innerHTML = '';
   document.getElementById('gen-running').style.display = 'none';
-  
-  // reset stepper visually
   for(let i=1;i<=3;i++) document.getElementById('t'+i).className='stp';
   goStep(0);
 }
