@@ -54,6 +54,12 @@ def _analysis_item(*, item_id: str, item_type: AnalysisType, title: str, descrip
     return {"id": item_id, "type": item_type, "title": title, "description": description, "include_default": include_default, "essential": essential, "data": data, "latex_hint": latex_hint}
 
 
+def _numeric_series(series: pd.Series) -> pd.Series:
+    """Convert a measurement column to numbers, accepting decimal commas."""
+    normalized = series.astype("string").str.strip().str.replace(",", ".", regex=False)
+    return pd.to_numeric(normalized, errors="coerce")
+
+
 def _score_delimiter(df: pd.DataFrame) -> float:
     """Score a parsed DataFrame for plausibility. Higher is better."""
     if df.empty:
@@ -65,10 +71,7 @@ def _score_delimiter(df: pd.DataFrame) -> float:
 
     converted = pd.DataFrame(index=df.index)
     for col in df.columns:
-        s = df[col]
-        if s.dtype == object:
-            s = s.astype(str).str.replace(",", ".", regex=False)
-        converted[col] = pd.to_numeric(s, errors="coerce")
+        converted[col] = _numeric_series(df[col])
 
     numeric_cols = sum(1 for c in converted.columns if converted[c].notna().any())
     empty_cols = sum(1 for c in converted.columns if converted[c].isna().all())
@@ -129,10 +132,7 @@ def _read_table(raw: str) -> pd.DataFrame:
 def _numeric_frame(df: pd.DataFrame) -> pd.DataFrame:
     converted = pd.DataFrame(index=df.index)
     for col in df.columns:
-        s = df[col]
-        if s.dtype == object:
-            s = s.astype(str).str.replace(",", ".", regex=False)
-        converted[col] = pd.to_numeric(s, errors="coerce")
+        converted[col] = _numeric_series(df[col])
     return converted
 
 
