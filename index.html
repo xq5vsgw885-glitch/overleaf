@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PL Protokoll Generator · TU Berlin</title>
 <style>
@@ -1333,7 +1334,22 @@ const FALLBACK_NOTEBOOK = JSON.stringify({
   ]
 }, null, 1);
 
-// ══ Python-Auswertung ════════════════════════════════════════════════════════
+// ══ Pyodide Auswertung (lokal, numpy/scipy) ════════════════════════════════
+
+let pyodideReady = null;
+
+async function getPyodide() {
+  if (!pyodideReady) {
+    pyodideReady = loadPyodide();
+  }
+  const py = await pyodideReady;
+  // Pakete nur einmal laden
+  if (!py._packagesLoaded) {
+    await py.loadPackage(['numpy', 'scipy', 'matplotlib', 'pandas']);
+    py._packagesLoaded = true;
+  }
+  return py;
+}
 
 function resetAnalysis() {
   document.getElementById('s2-analyse').style.display = 'block';
@@ -1344,72 +1360,51 @@ function resetAnalysis() {
   document.getElementById('ergebnisse-tabelle').innerHTML = '';
   document.getElementById('plots-card').style.display = 'none';
   window._nbResult = null;
+  window._analysisText = '';
 }
 
 async function runAnalysis() {
-  const cfg = JSON.parse(localStorage.getItem('pl-cfg')||'{}');
-  const proxyUrl = (cfg.proxyurl||'').replace(/\/$/,'');
-  if (!proxyUrl) {
-    alert('Bitte Proxy-URL in ⚙ Einstellungen eintragen.');
-    return;
-  }
-
   document.getElementById('analyse-idle').style.display = 'none';
   document.getElementById('analyse-running').style.display = 'block';
   const setTxt = t => document.getElementById('analyse-txt').textContent = t;
 
   try {
-    // CSV-Dateien lesen
     const csvFiles = files.filter(f => !f.type.startsWith('image/'));
     const imgFiles = files.filter(f =>  f.type.startsWith('image/'));
 
     if (!csvFiles.length) {
-      throw new Error('Keine CSV-Datei hochgeladen. Bitte zuerst eine CSV-Datei hinzufügen.');
+      throw new Error('Keine CSV-Datei hochgeladen.');
     }
 
     setTxt('CSV wird gelesen…');
-    const csvFile = csvFiles[0];
     const csvContent = await new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = e => res(e.target.result);
-      r.onerror = rej;
-      r.readAsText(csvFile);
+      const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej;
+      r.readAsText(csvFiles[0]);
     });
 
-    setTxt('Python-Auswertung läuft (alle Datenpunkte, numpy/scipy)…');
+    setTxt('Pyodide lädt (numpy/scipy) — einmalig ca. 30 s…');
+    const py = await getPyodide();
 
-    const resp = await fetch(`${proxyUrl}/api/run-notebook`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        csv: csvContent,
-        filename: csvFile.name,
-        versuch: versuchName(),
-        n_segmente: 30,
-      }),
-    });
+    setTxt('Python-Auswertung läuft (alle Datenpunkte)…');
 
-    if (!resp.ok) {
-      const e = await resp.json().catch(()=>({}));
-      throw new Error(e.error || `Server-Fehler ${resp.status}: ${e.details||''}`);
-    }
+    // CSV an Python übergeben
+    py.globals.set('csv_content', csvContent);
+    py.globals.set('versuch_name', versuchName());
+    py.globals.set('n_segmente', 30);
 
-    const result = await resp.json();
-    if (result.error) throw new Error(result.error + (result.details ? '\n' + result.details : ''));
+    const result = await py.runPythonAsync(PYTHON_SCRIPT);
+    const r = result.toJs({dict_converter: Object.fromEntries});
 
-    window._nbResult = result;
+    window._nbResult = r;
 
-    // Bilder für Vision laden
+    // Bilder für Vision
     const imgData = [];
     for (const f of imgFiles) {
-      const d = await readFile(f);
-      if (d.type === 'image') imgData.push(d);
+      const d = await readFile(f); if (d.type==='image') imgData.push(d);
     }
     window._fileDataForVision = imgData;
 
-    // Vorschau rendern
-    renderPreview(result);
-
+    renderPreview(r);
     document.getElementById('s2-analyse').style.display = 'none';
     document.getElementById('s2-results').style.display = 'block';
 
@@ -1417,147 +1412,144 @@ async function runAnalysis() {
     document.getElementById('analyse-running').style.display = 'none';
     document.getElementById('analyse-idle').style.display = 'flex';
     document.getElementById('gen-err').innerHTML =
-      `<div class="box err">Fehler: ${escapeHtml(err.message)}</div>`;
+      `<div class="box err">Fehler: ${escapeHtml(String(err.message||err))}</div>`;
   }
 }
 
-function renderPreview(r) {
-  // ── Plots ──
-  const plotsDiv = document.getElementById('plots-container');
-  const plotsCard = document.getElementById('plots-card');
-  plotsDiv.innerHTML = '';
-  const plotLabels = {trajektorie:'Trajektorie', perioden:'Schwingungsdauer',
-                       winkel:'Schwingungsebene & Regression', tracking:'Tracking-Qualität'};
-  let hasPlots = false;
-  for (const [key, label] of Object.entries(plotLabels)) {
-    if (r.plots && r.plots[key]) {
-      hasPlots = true;
-      const wrap = document.createElement('div');
-      wrap.innerHTML = `<p style="font-size:11px;color:var(--muted);margin-bottom:4px">${label}</p>
-        <img src="data:image/png;base64,${r.plots[key]}"
-             style="width:100%;border-radius:var(--radius-sm);border:.5px solid var(--border)">`;
-      plotsDiv.appendChild(wrap);
-    }
-  }
-  plotsCard.style.display = hasPlots ? 'block' : 'none';
+// ── Python-Skript als Template-String ────────────────────────────────────────
+const PYTHON_SCRIPT = `
+import numpy as np
+import pandas as pd
+from scipy import stats
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import json, io, base64, warnings
+warnings.filterwarnings('ignore')
 
-  // ── Ergebnistabelle ──
-  const e = r.ergebnisse || {};
-  const tbl = document.getElementById('ergebnisse-tabelle');
+plt.rcParams.update({'figure.dpi':110,'font.size':10,
+  'axes.grid':True,'grid.alpha':0.3,
+  'axes.spines.top':False,'axes.spines.right':False})
 
-  const row = (label, val, unit='', warn=false) => {
-    const color = warn ? 'var(--red)' : 'var(--text)';
-    return `<tr>
-      <td style="padding:4px 8px;color:var(--muted);font-size:11px">${label}</td>
-      <td style="padding:4px 8px;color:${color};font-family:var(--mono);font-size:12px">${val}</td>
-      <td style="padding:4px 8px;color:var(--hint);font-size:11px">${unit}</td>
-    </tr>`;
-  };
-  const sec = title => `<tr><td colspan="3" style="padding:8px 8px 2px;font-size:10px;
-    font-weight:600;text-transform:uppercase;letter-spacing:.8px;
-    color:var(--muted);border-top:.5px solid var(--border)">${title}</td></tr>`;
+def fig_b64(fig):
+    buf=io.BytesIO(); fig.savefig(buf,format='png',bbox_inches='tight',dpi=110)
+    buf.seek(0); s=base64.b64encode(buf.read()).decode(); plt.close(fig); return s
 
-  let html2 = '<table style="width:100%;border-collapse:collapse">';
-  html2 += sec('Rohdaten');
-  html2 += row('N', (e.N||'?').toLocaleString(), 'Datenpunkte');
-  html2 += row('T_ges', e.T_ges_s, 's');
-  html2 += row('f_s', e.fs_hz, 'Hz');
+from io import StringIO
+df_raw = pd.read_csv(StringIO(csv_content), comment='#')
+df_raw.columns = [c.strip().lower() for c in df_raw.columns]
+cols = list(df_raw.columns)
 
-  if (e.T_s) {
-    html2 += sec('Schwingungsdauer [Mallick Gl. 6–9]');
-    html2 += row('T', `(${e.T_s} ± ${e.Delta_T_s}) s`, 's');
-    html2 += row('s_T', e.s_T_s, 's');
-    html2 += row('N_Perioden', e.N_per, '');
-    html2 += row('f', `(${e.f_hz} ± ${e.Delta_f})`, 'Hz');
-    html2 += row('L_exp', `(${e.L_exp_m} ± ${e.Delta_L_m})`, 'm');
-  }
+df = df_raw[df_raw['valid']==1].copy() if 'valid' in cols else df_raw.copy()
+N = len(df)
 
-  if (e.b_h !== undefined) {
-    html2 += sec('Foucault-Drehrate [Mallick Gl. 22–28]');
-    html2 += row('ω_exp', `(${e.b_h} ± ${e.Delta_b_h})`, '°/h');
-    html2 += row('φ₀', e.phi0_deg, '°');
-    html2 += row('s_y', e.s_y, '°');
-    html2 += row('R²', e.R2, '', e.R2 < 0.9);
-    html2 += row('N_seg', `${e.N_seg} × ${e.seg_sz_s} s`, '');
-  }
+t_col = next((c for c in cols if c in ['t','time','zeit']), None)
+x_col = next((c for c in cols if c in ['x','x_pos','px_x','xpos']), None)
+y_col = next((c for c in cols if c in ['y','y_pos','px_y','ypos']), None)
+a_col = next((c for c in cols if c in ['area','flaeche','size']), None)
 
-  if (e.phi_exp !== null && e.phi_exp !== undefined) {
-    const badSig = e.abw_sigma > 5;
-    html2 += sec('Breitengrad [Mallick Gl. 14]');
-    html2 += row('φ_exp', `(${e.phi_exp} ± ${e.Delta_phi})`, '°');
-    html2 += row('φ_lit (Berlin)', e.phi_lit, '°');
-    html2 += row('Abweichung', `${e.abw_deg}° = ${e.abw_sigma}σ`, '', badSig);
-  } else if (e.hinweis_phi) {
-    html2 += sec('Breitengrad');
-    html2 += row('⚠', e.hinweis_phi, '', true);
-  }
+out = {'versuch': versuch_name, 'plots': {}, 'ergebnisse': {'N': N, 'spalten': cols}, 'tabellen': {}, 'pgfplots': {}}
 
-  if (e.area_mean) {
-    html2 += sec('Tracking-Qualität');
-    html2 += row('Ā', `(${e.area_mean} ± ${e.area_s})`, 'px²');
-    html2 += row('CV', e.area_cv, '%', e.area_cv > 5);
-  }
+if not t_col:
+    out['error'] = 'Keine Zeitspalte gefunden'
+else:
+    t=df[t_col].values; dt=float(np.median(np.diff(t))); fs=1/dt; T_ges=float(t[-1]-t[0])
+    out['ergebnisse'].update({'dt_s':round(dt,4),'fs_hz':round(fs,3),'T_ges_s':round(T_ges,2),'T_ges_min':round(T_ges/60,2)})
 
-  html2 += '</table>';
-  tbl.innerHTML = html2;
+    # Statistik [Mallick Gl. 6-9]
+    stat={}
+    arrs=[(t_col,t)]
+    if x_col: arrs.append((x_col,df[x_col].values))
+    if y_col: arrs.append((y_col,df[y_col].values))
+    if a_col: arrs.append((a_col,df[a_col].values))
+    for name,arr in arrs:
+        mu=float(np.mean(arr)); s=float(np.std(arr,ddof=1)); sem=float(s/np.sqrt(N))
+        stat[name]={'mu':round(mu,4),'s':round(s,4),'sem':round(sem,6),'min':round(float(arr.min()),4),'max':round(float(arr.max()),4)}
+    out['tabellen']['statistik']=stat
 
-  // Analysedaten für generate() speichern
-  window._analysisText = buildAnalysisText(r);
-}
+    if x_col and y_col:
+        x=df[x_col].values; y=df[y_col].values
+        x0,y0=float(np.mean(x)),float(np.mean(y))
+        Ax,Ay=float((x.max()-x.min())/2),float((y.max()-y.min())/2)
+        out['ergebnisse'].update({'x_mean':round(x0,2),'y_mean':round(y0,2),'Ax_px':round(Ax,2),'Ay_px':round(Ay,2),'elliptizitaet':round(Ay/Ax,3) if Ax>0 else None})
 
-function buildAnalysisText(r) {
-  const e = r.ergebnisse || {};
-  const lines = [
-    `=== PYTHON-AUSWERTUNG (numpy/scipy, alle ${e.N} Datenpunkte) ===`,
-    `Versuch: ${r.versuch}`,
-    `N = ${e.N}, T_ges = ${e.T_ges_s} s, fs = ${e.fs_hz} Hz`,
-    '',
-  ];
-  const t = r.tabellen || {};
-  if (t.statistik) {
-    lines.push('STATISTIK [Mallick Gl. 6-9]:');
-    for (const [col, s] of Object.entries(t.statistik)) {
-      lines.push(`  ${col}: mu=${s.mu}, s=${s.s}, SEM=${s.sem}, [${s.min}, ${s.max}]`);
-    }
-    lines.push('');
-  }
-  if (e.T_s) {
-    lines.push('SCHWINGUNGSDAUER:');
-    lines.push(`  T = (${e.T_s} +- ${e.Delta_T_s}) s  [SEM, N=${e.N_per}, s_T=${e.s_T_s}]`);
-    lines.push(`  f = (${e.f_hz} +- ${e.Delta_f}) Hz`);
-    lines.push(`  omega0 = (${e.omega0} +- ${e.Delta_om}) rad/s`);
-    lines.push(`  L_exp = (${e.L_exp_m} +- ${e.Delta_L_m}) m`);
-    lines.push('');
-  }
-  if (e.b_h !== undefined) {
-    lines.push('FOUCAULT-DREHRATE [Mallick Gl. 22-28]:');
-    lines.push(`  phi0 = ${e.phi0_deg} deg`);
-    lines.push(`  b = (${e.b_h} +- ${e.Delta_b_h}) deg/h`);
-    lines.push(`  s_y = ${e.s_y} deg, R2 = ${e.R2}`);
-    lines.push(`  N_seg = ${e.N_seg} (je ${e.seg_sz_s} s)`);
-    lines.push('');
-  }
-  if (e.phi_exp !== null && e.phi_exp !== undefined) {
-    lines.push('BREITENGRAD [Mallick Gl. 14]:');
-    lines.push(`  phi_exp = (${e.phi_exp} +- ${e.Delta_phi}) deg`);
-    lines.push(`  phi_lit = ${e.phi_lit} deg (Berlin)`);
-    lines.push(`  Abweichung = ${e.abw_deg} deg = ${e.abw_sigma} sigma`);
-    lines.push('');
-  }
-  if (t.segmente) {
-    lines.push('SEGMENTTABELLE:');
-    lines.push('t_mid/s  phi/deg');
-    for (const s of t.segmente) lines.push(`  ${s.t_mid}  ${s.phi}`);
-    lines.push('');
-  }
-  if (r.pgfplots) {
-    lines.push('PGFPLOTS-KOORDINATEN:');
-    lines.push(`  ${r.pgfplots.winkel_coords}`);
-    lines.push(`FIT: ${r.pgfplots.fit_formel}`);
-    lines.push(`  a=${r.pgfplots.fit_a}, b=${r.pgfplots.fit_b}`);
-  }
-  return lines.join('\n');
-}
+        # Trajektorie
+        fig,axes=plt.subplots(1,2,figsize=(11,4.5))
+        sc=axes[0].scatter(x,y,c=t,cmap='viridis',s=0.8,alpha=0.5)
+        plt.colorbar(sc,ax=axes[0],label='t / s',shrink=0.9)
+        axes[0].set_xlabel('x / px'); axes[0].set_ylabel('y / px'); axes[0].set_title('Trajektorie'); axes[0].set_aspect('equal')
+        axes[1].plot(t,x-x0,'b-',lw=0.3,alpha=0.7,label='x−x̄'); axes[1].plot(t,y-y0,'r-',lw=0.3,alpha=0.7,label='y−ȳ')
+        axes[1].set_xlabel('t / s'); axes[1].set_ylabel('Auslenkung / px'); axes[1].set_title('Zeitreihe'); axes[1].legend(fontsize=8)
+        plt.tight_layout(); out['plots']['trajektorie']=fig_b64(fig)
+
+        # Periode via Nulldurchgänge [Mallick Gl. 6-9]
+        xc=x-x0; cidx=np.where((xc[:-1]<0)&(xc[1:]>=0))[0]
+        tc_arr=[]
+        for i in cidx:
+            d=xc[i+1]-xc[i]; frac=(-xc[i]/d) if d!=0 else 0
+            tc_arr.append(t[i]+frac*(t[i+1]-t[i]))
+        tc_arr=np.array(tc_arr); T_arr=np.diff(tc_arr)
+        if len(T_arr)>=3:
+            Tm=float(np.mean(T_arr)); sT=float(np.std(T_arr,ddof=1)); semT=float(sT/np.sqrt(len(T_arr)))
+            fm=1/Tm; Df=semT/Tm**2; om=2*np.pi/Tm; Dom=2*np.pi*semT/Tm**2
+            g=9.810; Lexp=g*Tm**2/(4*np.pi**2); DL=2*g*Tm*semT/(4*np.pi**2)
+            out['ergebnisse'].update({'T_s':round(Tm,5),'Delta_T_s':round(semT,5),'s_T_s':round(sT,5),'N_per':int(len(T_arr)),'f_hz':round(fm,6),'Delta_f':round(Df,6),'omega0':round(om,6),'Delta_om':round(Dom,6),'L_exp_m':round(Lexp,4),'Delta_L_m':round(DL,4)})
+            fig,axes=plt.subplots(1,2,figsize=(11,4))
+            axes[0].plot(T_arr,'ko',ms=2,alpha=0.6); axes[0].axhline(Tm,color='r',lw=1.5,label=f'T̄={Tm:.4f} s')
+            axes[0].fill_between(range(len(T_arr)),Tm-semT,Tm+semT,alpha=0.2,color='r'); axes[0].set_xlabel('Index'); axes[0].set_ylabel('T / s'); axes[0].set_title('Einzelperioden'); axes[0].legend(fontsize=8)
+            axes[1].hist(T_arr,bins=20,color='steelblue',edgecolor='white'); axes[1].axvline(Tm,color='r',lw=2); axes[1].set_xlabel('T / s'); axes[1].set_ylabel('N'); axes[1].set_title('Verteilung')
+            plt.tight_layout(); out['plots']['perioden']=fig_b64(fig)
+
+        # Hauptachsentransformation [papula2018, Mallick Gl. 22-28]
+        N_SEG=n_segmente; seg_sz=N//N_SEG; seg_t=[]; seg_phi=[]
+        for s in range(N_SEG):
+            i0=s*seg_sz; xs=x[i0:i0+seg_sz]-np.mean(x[i0:i0+seg_sz]); ys=y[i0:i0+seg_sz]-np.mean(y[i0:i0+seg_sz])
+            Sxx=float(np.var(xs,ddof=1)); Syy=float(np.var(ys,ddof=1)); Sxy=float(np.mean(xs*ys))
+            seg_t.append(float(t[i0+seg_sz//2])); seg_phi.append(float(0.5*np.arctan2(2*Sxy,Sxx-Syy)*180/np.pi))
+        seg_t=np.array(seg_t); seg_phi=np.array(seg_phi)
+        for i in range(1,len(seg_phi)):
+            while seg_phi[i]-seg_phi[i-1]>90: seg_phi[i]-=180
+            while seg_phi[i]-seg_phi[i-1]<-90: seg_phi[i]+=180
+        out['tabellen']['segmente']=[{'t_mid':round(float(st),2),'phi':round(float(sp),4)} for st,sp in zip(seg_t,seg_phi)]
+
+        reg=stats.linregress(seg_t,seg_phi)
+        b=float(reg.slope); ai=float(reg.intercept); seb=float(reg.stderr); sea=float(reg.intercept_stderr); r2=float(reg.rvalue**2)
+        res=seg_phi-(ai+b*seg_t); sy=float(np.sqrt(np.sum(res**2)/max(N_SEG-2,1)))
+        bh=b*3600; sebh=seb*3600
+        out['ergebnisse'].update({'phi0_deg':round(ai,4),'b_deg_s':round(b,7),'Delta_b':round(seb,7),'b_h':round(bh,4),'Delta_b_h':round(sebh,4),'s_y':round(sy,4),'R2':round(r2,6),'N_seg':N_SEG,'seg_sz_s':round(seg_sz*dt,1)})
+
+        OMEGA_E=15.041; PHI_LIT=52.52
+        sinp=abs(bh)/OMEGA_E; out['ergebnisse']['sin_phi']=round(sinp,5)
+        if sinp<=1.0:
+            pe=float(np.degrees(np.arcsin(sinp))); Dp=sebh/(OMEGA_E*np.sqrt(max(1-sinp**2,1e-10)))
+            abw=abs(pe-PHI_LIT); sig=abw/Dp if Dp>0 else 999
+            out['ergebnisse'].update({'phi_exp':round(pe,2),'Delta_phi':round(Dp,2),'phi_lit':PHI_LIT,'abw_deg':round(abw,2),'abw_sigma':round(sig,1)})
+        else:
+            out['ergebnisse']['phi_exp']=None; out['ergebnisse']['hinweis_phi']=f'sin(phi)={sinp:.4f}>1'
+
+        coords=' '.join(f'({st:.1f},{sp:.4f})' for st,sp in zip(seg_t,seg_phi))
+        out['pgfplots'].update({'winkel_coords':coords,'fit_a':round(ai,4),'fit_b':round(b,7),'fit_formel':f'{ai:.4f}+{b:.7f}*x'})
+
+        t_fit=np.linspace(seg_t[0],seg_t[-1],300)
+        fig,axes=plt.subplots(1,2,figsize=(12,5))
+        axes[0].errorbar(seg_t,seg_phi,yerr=sy,fmt='o',ms=4,color='steelblue',capsize=3,label='Segmentwinkel')
+        axes[0].plot(t_fit,ai+b*t_fit,'r-',lw=2,label=f'Fit: b={bh:.3f}°/h, R²={r2:.4f}')
+        axes[0].set_xlabel('t / s'); axes[0].set_ylabel('φ / °'); axes[0].set_title('Schwingungsebene'); axes[0].legend(fontsize=8)
+        axes[1].plot(seg_t,res,'ko',ms=3,alpha=0.7); axes[1].axhline(0,color='r',lw=1)
+        axes[1].fill_between(seg_t,-sy,sy,alpha=0.15,color='r',label=f's_y={sy:.3f}°')
+        axes[1].set_xlabel('t / s'); axes[1].set_ylabel('Residuum / °'); axes[1].set_title('Residuen'); axes[1].legend(fontsize=8)
+        plt.tight_layout(); out['plots']['winkel']=fig_b64(fig)
+
+    if a_col:
+        area=df[a_col].values; mua=float(np.mean(area)); sa=float(np.std(area,ddof=1)); cv=sa/mua*100
+        out['ergebnisse'].update({'area_mean':round(mua,2),'area_s':round(sa,2),'area_cv':round(cv,2)})
+        fig,ax=plt.subplots(figsize=(10,3))
+        ax.plot(t,area,'k-',lw=0.3,alpha=0.5); ax.axhline(mua,color='r',lw=1.5,label=f'Ā={mua:.2f} px²')
+        ax.fill_between(t,mua-sa,mua+sa,alpha=0.15,color='r'); ax.set_xlabel('t / s'); ax.set_ylabel('Fläche / px²'); ax.set_title(f'Tracking-Qualität (CV={cv:.1f}%)'); ax.legend(fontsize=8)
+        plt.tight_layout(); out['plots']['tracking']=fig_b64(fig)
+
+out
+`;
 
 
 // ══ Download ══════════════════════════════════════════════════════════════════
