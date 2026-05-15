@@ -1399,8 +1399,8 @@ async function runAnalysis() {
     py.globals.set('versuch_name', versuchName());
     py.globals.set('n_segmente', 30);
 
-    const result = await py.runPythonAsync(PYTHON_SCRIPT);
-    const r = result.toJs({dict_converter: Object.fromEntries});
+    const jsonStr = await py.runPythonAsync(PYTHON_SCRIPT);
+    const r = JSON.parse(jsonStr);
 
     window._nbResult = r;
 
@@ -1418,8 +1418,14 @@ async function runAnalysis() {
   } catch(err) {
     document.getElementById('analyse-running').style.display = 'none';
     document.getElementById('analyse-idle').style.display = 'flex';
+    // Detailliertes Logging für Debugging
+    const msg = String(err.message || err);
+    const detail = err.stack ? err.stack.split('\n').slice(0,3).join(' | ') : '';
+    console.error('Auswertungsfehler:', msg, detail);
     document.getElementById('gen-err').innerHTML =
-      `<div class="box err">Fehler: ${escapeHtml(String(err.message||err))}</div>`;
+      `<div class="box err"><strong>Auswertungsfehler:</strong> ${escapeHtml(msg)}` +
+      (detail ? `<br><small style="opacity:.7">${escapeHtml(detail)}</small>` : '') +
+      `</div>`;
   }
 }
 
@@ -1555,7 +1561,8 @@ else:
         ax.fill_between(t,mua-sa,mua+sa,alpha=0.15,color='r'); ax.set_xlabel('t / s'); ax.set_ylabel('Fläche / px²'); ax.set_title(f'Tracking-Qualität (CV={cv:.1f}%)'); ax.legend(fontsize=8)
         plt.tight_layout(); out['plots']['tracking']=fig_b64(fig)
 
-out
+import json as _json
+_json.dumps(out)
 `;
 
 
