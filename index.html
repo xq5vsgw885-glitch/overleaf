@@ -517,7 +517,14 @@ function resetAnalysis() {
   document.getElementById('s2-results').style.display = 'none';
   document.getElementById('analyse-idle').style.display = 'flex';
   document.getElementById('analyse-running').style.display = 'none';
-  document.getElementById('analyse-output').textContent = '—';
+  const pc = document.getElementById('plots-container');
+  if (pc) pc.innerHTML = '';
+  const et = document.getElementById('ergebnisse-tabelle');
+  if (et) et.innerHTML = '';
+  const pk = document.getElementById('plots-card');
+  if (pk) pk.style.display = 'none';
+  window._nbResult = null;
+  window._analysisText = '';
 }
 
 // Analysiert Dateien und zeigt Ergebnisse zur Validierung
@@ -545,7 +552,7 @@ async function runAnalysis() {
     // Store for use in generate()
     window._analysisText = analysisText;
 
-    document.getElementById('analyse-output').textContent = analysisText.slice(0, 8000) +
+    // analyse-output entfernt —
       (analysisText.length > 8000 ? '\n\n[… gekürzt zur Anzeige, vollständiger Text wird an Claude übergeben]' : '');
 
     document.getElementById('s2-analyse').style.display = 'none';
@@ -554,7 +561,7 @@ async function runAnalysis() {
   } catch(err) {
     document.getElementById('analyse-running').style.display = 'none';
     document.getElementById('analyse-idle').style.display = 'flex';
-    document.getElementById('analyse-output').textContent = 'Fehler: ' + err.message;
+    
   }
 }
 
@@ -1772,8 +1779,8 @@ function resetAll() {
   window._fileDataForVision = [];
   document.getElementById('flist').innerHTML = '';
   document.getElementById('notizen').value = '';
-  const nbr = document.getElementById('notebook-results');
-  if (nbr) nbr.value = '';
+  
+  
   document.getElementById('push-result').innerHTML = '';
   document.getElementById('gen-err').innerHTML = '';
   document.getElementById('gen-running').style.display = 'none';
