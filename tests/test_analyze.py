@@ -71,3 +71,29 @@ def test_malformed_or_empty_csv_returns_clear_error():
     assert malformed.status_code == 400
     detail = malformed.json().get("detail", "")
     assert "konnte nicht" in detail or "CSV" in detail
+
+
+def test_semicolon_delimiter_with_decimal_commas():
+    """Test robust delimiter detection: semicolon-separated with decimal commas."""
+    csv = "time;angle\n0;0,0\n1;2,0\n2;4,0\n"
+    r = client.post("/api/analyze", json={"csv": csv, "filename": "semicolon.csv"})
+    assert r.status_code == 200
+    d = r.json()
+    
+    # Verify basic structure
+    assert d["used_all_rows"] is True
+    assert d["row_count"] == 3
+    
+    # Verify numeric columns detected
+    assert "time" in d["detected_numeric_columns"]
+    assert "angle" in d["detected_numeric_columns"]
+    
+    # Verify stats are computed correctly
+    stats_table = next(i for i in d["tables"] if i["id"] == "raw_statistics")
+    angle_stats = next(row for row in stats_table["data"] if row["column"] == "angle")
+    assert angle_stats["n"] == 3
+    assert math.isclose(angle_stats["mean"], 2.0, rel_tol=1e-9)
+    
+    # Verify regression is computed
+    regression = next(i for i in d["calculations"] if i["id"] == "angular_regression")
+    assert math.isclose(regression["data"]["slope"], 2.0, rel_tol=1e-12)
