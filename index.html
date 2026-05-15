@@ -2,7 +2,6 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<script src="https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PL Protokoll Generator · TU Berlin</title>
 <style>
@@ -212,11 +211,7 @@ a:hover{text-decoration:underline}
 <!-- ════════════════ SCHRITT 1: MESSDATEN ════════════════ -->
 <div id="s1" style="display:none">
   <div class="card">
-    <div class="card-title">Rohdaten hochladen</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:1rem">
-      CSV hochladen — der Server wertet alle Datenpunkte mit Python (numpy/scipy) aus
-      und zeigt die Ergebnisse zur Prüfung an, bevor das Protokoll generiert wird.
-    </p>
+    <div class="card-title">Messdaten hochladen</div>
     <div class="drop" id="dropzone"
          onclick="document.getElementById('finput').click()"
          ondragover="event.preventDefault();this.classList.add('drag')"
@@ -225,8 +220,8 @@ a:hover{text-decoration:underline}
       <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
       </svg>
-      <p>CSV-Datei hierher ziehen oder klicken</p>
-      <small>.csv · .txt — mehrere Dateien möglich · auch Fotos .jpg .png</small>
+      <p>CSV-Dateien oder Fotos des Messbuchs hierher ziehen</p>
+      <small>.csv · .txt · .jpg · .png — mehrere Dateien möglich</small>
     </div>
     <input type="file" id="finput" multiple accept=".csv,.txt,.jpg,.jpeg,.png,image/*"
            style="display:none" onchange="onFileInput(this.files)">
@@ -236,11 +231,12 @@ a:hover{text-decoration:underline}
   <div class="card">
     <div class="card-title">Beobachtungen &amp; Notizen</div>
     <div class="field">
-      <textarea id="notizen" placeholder="Stichpunkte, z.B.:
+      <textarea id="notizen" placeholder="Stichpunkte reichen, z.B.:
+– Frequenz: 320 Hz, Rohrlänge L = 1,48 m
+– Flammenmuster klar bei Resonanz sichtbar
 – Raumtemperatur: 22 °C, Gas: Methan
-– Rohrlänge L = 1,48 m
-– Geräte: Funktionsgenerator (PL-Nr. 123)
-– Besonderheiten: starke Dämpfung nach 15 min"></textarea>
+– Besonderheiten: Knoten 3 und 7 besonders ausgeprägt
+– Verwendete Geräte: Funktionsgenerator (PL-Nr. 123), Rubensrohr (PL-Nr. 378)"></textarea>
     </div>
   </div>
 
@@ -250,73 +246,31 @@ a:hover{text-decoration:underline}
   </div>
 </div>
 
-<!-- ════════════════ SCHRITT 2: PYTHON-AUSWERTUNG & VORSCHAU ════════════════ -->
+<!-- ════════════════ SCHRITT 2: GENERIEREN ════════════════ -->
 <div id="s2" style="display:none">
+  <div class="card">
+    <div class="card-title">Protokoll generieren</div>
+    <p style="font-size:12px;color:var(--muted)">Claude erstellt ein vollständiges Protokoll für <strong id="gen-name" style="color:var(--text)">—</strong>:</p>
+    <ul class="gen-list">
+      <li>Titelseite nach offizieller TU-Vorlage (SoSe 2025)</li>
+      <li>Vollständige Theorieherleitung mit Zitaten aus deiner Bibliothek</li>
+      <li>Gaußsche Fehlerfortpflanzung (Mallick et al. 2025, Gl. 14)</li>
+      <li>Alle Einheiten via <code>\qty{}{}</code> / <code>\num{}</code> (siunitx)</li>
+      <li>Fehler korrekt gerundet · Ergebnisse mit rel. + abs. Unsicherheit</li>
+      <li>Diskussion inkl. Abweichung vom Literaturwert in σ</li>
+      <li>Eigenkorrektur-Checkliste als LaTeX-Kommentar</li>
+    </ul>
+    <p class="gen-meta">Passiv · Präsens · Indikativ · Keine Modalverben · kein „wir/man/ich"</p>
 
-  <!-- Phase A: Auswertung starten -->
-  <div id="s2-analyse" class="card">
-    <div class="card-title">Python-Auswertung (numpy/scipy, alle Datenpunkte)</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:1rem">
-      Der Server führt die vollständige Auswertung mit Python durch —
-      kein Sampling, alle Datenpunkte, Mallick et al. (2025).
-      <strong style="color:var(--text)">Prüfe die Ergebnisse sorgfältig</strong> bevor du das Protokoll generierst.
-    </p>
-    <div id="analyse-idle" class="btn-row" style="margin-top:0">
+    <div id="gen-idle" class="btn-row" style="margin-top:1rem">
       <button class="btn" onclick="goStep(1)">← Zurück</button>
-      <button class="btn primary" onclick="runAnalysis()">Auswertung starten ▶</button>
+      <button class="btn primary" onclick="generate()">Protokoll generieren ✦</button>
     </div>
-    <div id="analyse-running" style="display:none;padding:1.5rem 0;text-align:center">
-      <span class="spinner"></span>
-      <span id="analyse-txt" style="font-size:12px;color:var(--muted)">Python läuft…</span>
-    </div>
-  </div>
-
-  <!-- Phase B: Vorschau der Ergebnisse -->
-  <div id="s2-results" style="display:none">
-
-    <!-- Plots -->
-    <div class="card" id="plots-card" style="display:none">
-      <div class="card-title">Abbildungen (Python/matplotlib)</div>
-      <div id="plots-container" style="display:flex;flex-direction:column;gap:1rem"></div>
-    </div>
-
-    <!-- Ergebnistabelle -->
-    <div class="card">
-      <div class="card-title">
-        Ergebnisse — Bitte prüfen
-        <span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px">Diese Werte gehen ins Protokoll ein</span>
-      </div>
-      <div class="box info" style="margin-bottom:1rem;font-size:11px">
-        <strong>Sorgfaltspflicht:</strong> Prüfe Plausibilität.
-        sin(φ) &gt; 1 oder R² &lt; 0,9 deuten auf Messprobleme hin — im Protokoll diskutieren.
-      </div>
-      <div id="ergebnisse-tabelle" style="font-size:12px"></div>
-    </div>
-
-    <!-- Ergänzungen -->
-    <div class="card">
-      <div class="card-title">Ergänzende Parameter (optional)</div>
-      <div class="field">
-        <textarea id="notizen-ergaenzung" style="height:70px"
-          placeholder="z.B.: Pendellänge L = 2,54 m · Kalibrierung: 1 px = 0,593 mm · Kamera: 10 Hz"></textarea>
-      </div>
-      <div class="btn-row" style="margin-top:0.5rem">
-        <button class="btn" onclick="goStep(1)">← Zurück</button>
-        <button class="btn sm" onclick="resetAnalysis()">Neu analysieren</button>
-        <button class="btn primary" onclick="generate()">Protokoll generieren ✦</button>
-      </div>
-    </div>
-
-    <!-- Generierung -->
-    <div id="gen-running" style="display:none" class="card">
-      <div class="gen-center">
-        <span class="spinner"></span>
-        <span id="gen-txt" style="font-size:12px;color:var(--muted)">Starte…</span>
-      </div>
+    <div id="gen-running" style="display:none" class="gen-center">
+      <span class="spinner"></span><span id="gen-txt" style="font-size:12px;color:var(--muted)">Starte…</span>
     </div>
     <div id="gen-err"></div>
   </div>
-
 </div>
 
 <!-- ════════════════ SCHRITT 3: EXPORT ════════════════ -->
@@ -338,17 +292,6 @@ a:hover{text-decoration:underline}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
         <span>literatur.bib<small>BibTeX-Datenbank</small></span>
       </button>
-    </div>
-
-    <!-- KI-Erklärung als separates Dokument -->
-    <div class="box info" style="margin-top:12px">
-      <strong>KI-Nutzungserklärung (DFG-Kodex Leitlinie 14)</strong><br>
-      Gehört <em>nicht</em> ins Protokoll — separat ausdrucken und beim Abgabegespräch vorlegen.
-      <div style="margin-top:8px">
-        <button class="btn sm" onclick="downloadKiErklaerung()">
-          Erklärung herunterladen (.tex)
-        </button>
-      </div>
     </div>
   </div>
 
@@ -508,61 +451,8 @@ function goStep(n) {
   step = n;
   document.getElementById('s'+n).style.display = 'block';
   document.getElementById('t'+n).className = 'stp active';
-  if (n===2) resetAnalysis();
+  if (n===2) document.getElementById('gen-name').textContent = versuchName();
   window.scrollTo(0,0);
-}
-
-function resetAnalysis() {
-  document.getElementById('s2-analyse').style.display = 'block';
-  document.getElementById('s2-results').style.display = 'none';
-  document.getElementById('analyse-idle').style.display = 'flex';
-  document.getElementById('analyse-running').style.display = 'none';
-  const pc = document.getElementById('plots-container');
-  if (pc) pc.innerHTML = '';
-  const et = document.getElementById('ergebnisse-tabelle');
-  if (et) et.innerHTML = '';
-  const pk = document.getElementById('plots-card');
-  if (pk) pk.style.display = 'none';
-  window._nbResult = null;
-  window._analysisText = '';
-}
-
-// Analysiert Dateien und zeigt Ergebnisse zur Validierung
-async function runAnalysis() {
-  document.getElementById('analyse-idle').style.display = 'none';
-  document.getElementById('analyse-running').style.display = 'block';
-
-  const setATxt = t => document.getElementById('analyse-txt').textContent = t;
-  setATxt('Dateien werden gelesen…');
-
-  try {
-    const fileData = await Promise.all(files.map(readFile));
-    const parts = [];
-
-    for (const fd of fileData) {
-      if (fd.type === 'image') {
-        parts.push(`[Bild: ${fd.name} — wird von Claude ausgewertet]`);
-      } else if (fd.data) {
-        parts.push(fd.data);
-      }
-    }
-
-    const analysisText = parts.join('\n\n') || '(Keine Dateien hochgeladen — nur Notizen werden verwendet)';
-
-    // Store for use in generate()
-    window._analysisText = analysisText;
-
-    // analyse-output entfernt —
-      (analysisText.length > 8000 ? '\n\n[… gekürzt zur Anzeige, vollständiger Text wird an Claude übergeben]' : '');
-
-    document.getElementById('s2-analyse').style.display = 'none';
-    document.getElementById('s2-results').style.display = 'block';
-
-  } catch(err) {
-    document.getElementById('analyse-running').style.display = 'none';
-    document.getElementById('analyse-idle').style.display = 'flex';
-    
-  }
 }
 
 // ══ Versuch ══════════════════════════════════════════════════════════════════
@@ -593,7 +483,7 @@ function renderFiles() {
   document.getElementById('flist').innerHTML = files.map((f,i) => {
     const icon = f.type.startsWith('image/') ? '🖼' : '📄';
     const sz = f.size < 1024 ? f.size+' B' : (f.size/1024).toFixed(1)+' KB';
-    return `<div class="fitem"><span>${icon}</span><span class="n">${f.name}</span><span class="s">${sz}</span><button onclick="removeFile(${i})">✕</button></div>`;
+    return `<div class="fitem"><span>${icon}</span><span class="n">${escapeHtml(f.name)}</span><span class="s">${sz}</span><button onclick="removeFile(${i})">✕</button></div>`;
   }).join('');
 }
 
@@ -625,78 +515,29 @@ function readFile(f) {
       const r = new FileReader();
       r.onload = async e => {
         const raw = String(e.target.result || '');
-        const RAW_TEXT_LIMIT = 350000; // harte Grenze: wenn größer, abbrechen statt heimlich kürzen
-
-        if (raw.length > RAW_TEXT_LIMIT) {
-          // Zu groß für direkte Übergabe — Server-Analyse verwenden
-          let analysis = '';
-          let analysisError = '';
-          try {
-            const proxyUrl = (JSON.parse(localStorage.getItem('pl-cfg')||'{}').proxyurl||'').replace(/\/$/,'');
-            if (proxyUrl) {
-              const resp = await fetch(`${proxyUrl}/api/analyze`, {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({csv: raw, filename: f.name}),
-              });
-              const d = await resp.json().catch(() => ({}));
-              analysis = d.summary || '';
-              analysisError = d.error || '';
-            }
-          } catch(err) {
-            analysisError = err.message || 'Serveranalyse fehlgeschlagen.';
-          }
-
-          res({
-            type: 'text',
-            data:
-`DATEI: ${f.name}
-STATUS: Datei zu gross fuer direkte Uebertragung (${raw.length} Zeichen). Vollstaendige Serveranalyse wird verwendet.
-SERVERANALYSE (deterministisch, alle ${raw.split('\n').length} Zeilen ausgewertet):
-${analysis || analysisError || 'Keine Analyse verfuegbar.'}`,
-            name: f.name,
-            tooLarge: false,
-          });
-          return;
-        }
-
-        let analysis = '';
-        let analysisError = '';
         try {
           const proxyUrl = (JSON.parse(localStorage.getItem('pl-cfg')||'{}').proxyurl||'').replace(/\/$/,'');
-          if (proxyUrl) {
-            const resp = await fetch(`${proxyUrl}/api/analyze`, {
-              method: 'POST',
-              headers: {'Content-Type':'application/json'},
-              body: JSON.stringify({csv: raw, filename: f.name}),
-            });
-            const d = await resp.json().catch(() => ({}));
-            analysis = d.summary || '';
-            analysisError = d.error || '';
-          }
+          if (!proxyUrl) throw new Error('Keine Proxy-URL konfiguriert.');
+          const resp = await fetch(`${proxyUrl}/api/analyze`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({csv: raw, filename: f.name}),
+          });
+          const d = await resp.json().catch(()=>({}));
+          if (!resp.ok) throw new Error(d.detail || d.error || `HTTP ${resp.status}`);
+          if (d.used_all_rows !== true) throw new Error('Analyse hat nicht alle Rohdaten verarbeitet.');
+          res({
+            type:'text',
+            data: d.summary || JSON.stringify(d, null, 2),
+            analysis: d,
+            name:f.name,
+            rawComplete:true,
+            rawLength:raw.length,
+            rawSha256:d.raw_sha256 || ''
+          });
         } catch(err) {
-          analysisError = err.message || 'Serveranalyse fehlgeschlagen.';
+          res({type:'text', data:'', name:f.name, rawComplete:false, rawLength:raw.length, error:err.message});
         }
-
-        // Wichtig: data enthält IMMER die vollständigen Rohdaten, niemals eine gekürzte Vorschau.
-        res({
-          type: 'text',
-          data:
-`DATEI: ${f.name}
-STATUS: vollständige Rohdaten vollständig übergeben.
-${analysis ? `SERVERANALYSE ZUR ORIENTIERUNG, NICHT ALS ERSATZ FÜR ROHDATEN:
-${analysis}
-
-` : ''}${analysisError ? `SERVERANALYSE-WARNUNG:
-${analysisError}
-
-` : ''}VOLLSTÄNDIGE ROHDATEN:
-${raw}`,
-          raw,
-          name: f.name,
-          tooLarge: false,
-          error: analysisError
-        });
       };
       r.readAsText(f);
     }
@@ -775,40 +616,63 @@ const BIB = `@book{nolting2023,
   url         = {https://pl-wiki.physik.tu-berlin.de/index.php/Rubensrohr},
   year        = {2026},
   note        = {Abgerufen am 12.05.2026},
-}
-@misc{dfg_kodex2024,
-  author      = {{Deutsche Forschungsgemeinschaft (DFG)}},
-  title       = {Leitlinien zur Sicherung guter wissenschaftlicher Praxis. Kodex},
-  year        = {2024},
-  note        = {Version~1.2, Stand September~2024},
-  doi         = {10.5281/zenodo.14281892},
-}
-@misc{pl_generator2026,
-  author      = {{PL Protokoll Generator}},
-  title       = {Automatisierte Rohdatenauswertung fuer Projektlabor-Protokolle, TU Berlin},
-  year        = {2026},
-  note        = {Methoden: Nulldurchgangsdetektion, segmentweise Hauptachsentransformation (30 Segmente), lineare Regression nach Mallick et al.\ (2025), Gl.~24--28},
 }`;
 
 // ══ System prompt ════════════════════════════════════════════════════════════
 function sysPrompt() {
-return `Du bist ein wissenschaftlicher Assistent am Projektlabor der TU Berlin (Fakultaet II).
-Generiere vollstaendige LaTeX-Protokolle nach der offiziellen PL-Vorlage.
+return `Du bist ein wissenschaftlicher Assistent am Projektlabor der TU Berlin (Fakultät II).
+Generiere vollständige LaTeX-Protokolle nach der offiziellen PL-Vorlage.
 
 STILREGELN:
-- Deutsch, Passiv, Praesens, Indikativ, keine Modalverben, kein "wir/man/ich"
-- Zahlen 1-12 ausschreiben. Jede Formel/Aussage mit \\cite[S.~X]{key} belegen.
+- Deutsch, Passiv, Präsens, Indikativ, keine Modalverben, kein "wir/man/ich"
+- Zahlen 1–12 ausschreiben
+- Jede Formel/Aussage mit \\cite[S.~X]{key} belegen
 
-FEHLERRECHNUNG (Mallick et al. 2025):
-- Mittelwert [Gl.6]: \\bar{x}=\\frac{1}{N}\\sum x_i
-- Standardabw. [Gl.7]: s=\\sqrt{\\frac{1}{N-1}\\sum(x_i-\\bar{x})^2}  (N-1 im Nenner)
-- Fehler MW [Gl.9]: \\Delta\\bar{x}=s/\\sqrt{n}
-- Gauss [Gl.14]: \\Delta\\bar{F}=\\sqrt{\\sum_i(\\frac{\\partial F}{\\partial x_i}\\Delta\\bar{x}_i)^2}
-- Regression [Gl.24-28]: b=(n\\sum x_iy_i-\\sum x_i\\sum y_i)/(n\\sum x_i^2-(\\sum x_i)^2)
-- Fehler Steigung [Gl.28]: \\Delta b=s_y\\sqrt{\\sum x_i^2/(n\\sum x_i^2-(\\sum x_i)^2)}
-- Rundung: 1 sig. Stelle Fehler aufgerundet; Ergebnis gleich viele Dezimalstellen
+══════════════════════════════════════════════════
+FEHLERRECHNUNG — EXAKTE METHODIK (Mallick et al. 2025)
+══════════════════════════════════════════════════
 
-PRAEMBEL (unveraendert uebernehmen):
+1. MITTELWERT [Mallick 2025, Gl. 6, S. 6]:
+   \\bar{x} = \\frac{1}{N}\\sum_{i=1}^{N} x_i
+
+2. STANDARDABWEICHUNG [Mallick 2025, Gl. 7, S. 7]:
+   s = \\sqrt{\\frac{1}{N-1}\\sum_{i=1}^{N}(x_i - \\bar{x})^2}
+   IMMER N-1 im Nenner (Stichproben-Standardabweichung).
+
+3. FEHLER DES MITTELWERTS [Mallick 2025, Gl. 9, S. 9]:
+   \\Delta\\bar{x} = \\frac{s}{\\sqrt{n}}
+
+4. GAUẞSCHE FEHLERFORTPFLANZUNG [Mallick 2025, Gl. 14, S. 14]:
+   \\Delta\\bar{F} = \\sqrt{\\left(\\frac{\\partial F}{\\partial x}\\Delta\\bar{x}\\right)^2 + \\left(\\frac{\\partial F}{\\partial y}\\Delta\\bar{y}\\right)^2 + \\cdots}
+   Voraussetzung: Messgrößen aus Messreihen, Standardabweichungen bestimmbar.
+   Bei Einzelmessungen: lineares Fehlerfortpflanzungsgesetz [Mallick 2025, Gl. 13]:
+   \\Delta F = \\left|\\frac{\\partial F}{\\partial x}\\right|\\Delta x + \\left|\\frac{\\partial F}{\\partial y}\\right|\\Delta y + \\cdots
+
+5. SPEZIALFÄLLE [Mallick 2025, Gl. 15–16, S. 14]:
+   Summe F = ax + by: \\Delta F = \\sqrt{(a\\Delta x)^2+(b\\Delta y)^2}
+   Potenzprodukt F = x^a y^b: \\frac{\\Delta F}{F} = \\sqrt{\\left(a\\frac{\\Delta x}{x}\\right)^2+\\left(b\\frac{\\Delta y}{y}\\right)^2}
+
+6. LINEARE REGRESSION [Mallick 2025, Gl. 22–28, S. 21–22]:
+   Modell: Y(x) = a + bx, minimiert Chi-Quadrat [Gl. 23].
+   Steigung: b = \\frac{n\\sum x_i y_i - (\\sum y_i)(\\sum x_i)}{n\\sum x_i^2-(\\sum x_i)^2} [Gl. 24]
+   Achsenabschnitt: a = \\frac{(\\sum y_i)(\\sum x_i^2)-(\\sum x_i)(\\sum x_i y_i)}{n\\sum x_i^2-(\\sum x_i)^2} [Gl. 25]
+   Streuung: s_y = \\sqrt{\\frac{1}{n-2}\\sum(Y(x_i)-y_i)^2} [Gl. 26]
+   Fehler Steigung: \\Delta b = s_y\\sqrt{\\frac{\\sum x_i^2}{n\\sum x_i^2-(\\sum x_i)^2}} [Gl. 28]
+   Fehler Achsenabschnitt: \\Delta a = s_y\\sqrt{\\frac{n}{n\\sum x_i^2-(\\sum x_i)^2}} [Gl. 27]
+
+7. RUNDUNGSREGELN [Mallick 2025, S. 2]:
+   - Fehler: 1 signifikante Stelle, IMMER aufrunden
+   - Ausnahme: 2 Stellen wenn Aufrunden den rel. Fehler ~verdoppelt (Beispiel: 0,11→0,2 verdoppelt 1,1%→2%)
+   - Ergebnis: gleich viele Nachkommastellen wie der Fehler
+   - Format absolut: \\qty{10.3 +- 0.8}{s}
+   - Format relativ: t = 10(1\\pm 0{,}1)\\,\\text{s}
+
+ALLE Fehlerrechnungen im Protokoll MÜSSEN diese Gleichungen explizit verwenden und
+mit [Mallick 2025, Gl. X, S. Y] zitieren.
+
+══════════════════════════════════════════════════
+LATEX-PRÄAMBEL (exakt so):
+══════════════════════════════════════════════════
 \\documentclass[a4paper,12pt]{article}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
@@ -819,100 +683,61 @@ PRAEMBEL (unveraendert uebernehmen):
 \\sisetup{locale=DE,uncertainty-mode=separate,exponent-product=\\ensuremath{\\cdot},per-mode=fraction}
 \\usepackage{booktabs}
 \\usepackage{graphicx}
-\\usepackage{tikz}
-\\usepackage{pgfplots}
-\\pgfplotsset{compat=1.18,width=0.85\\linewidth}
-\\usepackage[a4paper,margin=2.5cm]{geometry}
-\\setlength{\\marginparwidth}{2cm}
+\\usepackage[a4paper,margin=2.5cm,marginparwidth=2cm]{geometry}
+\\usepackage{todonotes}
 \\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
 \\usepackage[style=numeric,backend=biber]{biblatex}
 \\addbibresource{literatur.bib}
 
-STRIKTE LATEX-REGELN:
-1. Griechisch: IMMER LaTeX-Befehle: $\\varphi$ $\\omega$ $\\Delta$ -- NIEMALS Unicode
-2. Grad: $^{\\circ}$ in Mathe, \\qty{46.7}{\\degree} via siunitx -- NIEMALS \\degree allein
-3. Hochgestellt: $R^2$ -- NIEMALS Unicode-Hochzahlen
-4. In \\caption{}: NUR ASCII und LaTeX-Befehle, kein Unicode
-5. Tabellen: Spaltenanzahl MUSS exakt der Anzahl & entsprechen
-6. Mathe: equation oder align -- NIEMALS mischen
-7. KEINE \\bibliographystyle -- nur \\printbibliography
-8. KEIN \\missingfigure -- siehe Abbildungsregeln unten
+TITELSEITE: Kein \\includegraphics — nur Text:
+\\begin{center}{\\large\\textbf{Technische Universität Berlin}}\\\\[0.3cm]
+{\\large Projektlabor -- Fakultät II}\\end{center}
 
-ABBILDUNGEN -- PFLICHTREGELN (mind. 3, alle mit \\label und im Text referenziert):
+TABELLEN — STRIKTE REGELN:
+- NUR l, c, r Spalten — KEINE S-Spalten, KEINE Mehrspaltentabellen mit zu vielen &
+- Spaltenanzahl in \\begin{tabular}{lll} MUSS exakt der Anzahl der & pro Zeile entsprechen
+- Tabelle mit 2 Spalten: {ll}, mit 3 Spalten: {lll} — niemals mehr & als Spalten
+- Die Segmenttabelle (t_mid, phi) hat GENAU 2 Spalten: {lr} mit einer Kopfzeile $t_\\text{mid}$ [s] & $\\varphi$ [°]
+- KEINE mehrspaltige Darstellung (kein 3×2 Layout für eine 2-Spalten-Tabelle)
 
-TYP A -- AUFBAU-SKIZZEN (selbst zu zeichnende Skizzen):
-Erzeuge ein TikZ-Skelett mit leeren Achsen, Beschriftungen und Placeholder-Rechtecken.
-Beispiel Foucault-Pendel:
-\\begin{figure}[ht]\\centering
-\\begin{tikzpicture}
-  % Aufhaengepunkt
-  \\fill (0,4) circle (3pt) node[above]{Aufhaengepunkt};
-  % Draht
-  \\draw[thick] (0,4) -- (0,0);
-  % Pendelmasse
-  \\fill (0,0) circle (6pt) node[right]{\\;Pendelmasse};
-  % Kamera (schematisch)
-  \\draw[dashed,->] (0,-1) -- (0,-2) node[below]{Kamera (senkrecht)};
-  % Koordinatensystem
-  \\draw[->] (-2,-2.5) -- (2,-2.5) node[right]{$x$};
-  \\draw[->] (-2,-2.5) -- (-2,0) node[above]{$y$};
-  % TODO: Elliptische Trajektorie eintragen
-  \\node[draw,dashed,rounded corners] at (0,-2.5) {Trajektorie [selbst zeichnen]};
-\\end{tikzpicture}
-\\caption{\\textbf{Versuchsaufbau:} ...}\\label{fig:aufbau}
-\\end{figure}
+LATEX-ZEICHENREGELN — KRITISCH:
+- Grad-Symbol: IMMER $^\\circ$ in Mathe, \\textdegree{} im Text — NIEMALS ° als Unicode
+- Griechische Buchstaben: IMMER als LaTeX-Befehl: $\\varphi$, $\\omega$, $\\phi$, $\\Delta$ — NIEMALS φ, ω, Δ als Unicode-Zeichen direkt im Code
+- Umlaute: ä ö ü ß sind OK im Fließtext (UTF-8), aber NICHT in Mathe-Umgebungen
+- In \\missingfigure{}: NUR ASCII und LaTeX-Befehle, keine Unicode-Sonderzeichen
+- $R^2$ nicht R² — niemals hochgestellte Ziffern als Unicode
 
-TYP B -- DATENPLOTS (mit echten Messwerten aus Serveranalyse):
-Erzeuge pgfplots-Code mit den konkreten Zahlenwerten aus der Serveranalyse.
-Fehlerbalken mit \\addplot+[error bars/.cd,...], linearer Fit als \\addplot[domain=...].
+MATHE-UMGEBUNGEN — STRIKTE REGELN:
+- equation: eine einzelne Gleichung, endet mit \\end{equation}
+- align: mehrere Zeilen mit &=, endet mit \\end{align} — NIEMALS \\end{equation}
+- NIEMALS \\begin{align} mit \\end{equation} mischen
 
-Beispiel Winkel-Zeit-Plot (Foucault):
-\\begin{figure}[ht]\\centering
-\\begin{tikzpicture}
-\\begin{axis}[xlabel={$t$ / s}, ylabel={$\\varphi$ / \\textdegree},
-  grid=major, legend pos=north west]
-\\addplot+[only marks, error bars/.cd, y dir=both, y fixed=0.5]
-  coordinates {(20,21.47)(60,21.56)(100,21.65)...}; % echte Segmentwerte eintragen
-\\addplot[red,domain=0:1200] {21.474 + 0.003041*x}; % Regressionsgerade
-\\legend{Messwerte, Linearer Fit}
-\\end{axis}
-\\end{tikzpicture}
-\\caption{\\textbf{Zeitliche Entwicklung der Schwingungsebene:} ...}\\label{fig:winkel}
-\\end{figure}
+ABBILDUNGEN — PFLICHT (mind. 3):
+1. \\missingfigure{Selbst angefertigte Skizze: [konkreter Inhalt]}
+2. \\missingfigure{[Hauptergebnis-Plot]: x-Achse = [...], y-Achse = [...], mit Fehlerbalken und Fit}
+3. Weitere versuchsspezifisch
+Alle mit \\label{fig:x} und im Text referenziert: "...in Abbildung~\\ref{fig:x}..."
+Caption: \\caption{\\textbf{Name:} Beschreibung.}
 
-WICHTIG: Verwende IMMER die konkreten Zahlenwerte aus der Serveranalyse (Segmenttabelle,
-Regressionsgerade, Periode). Keine Platzhalter-Kommentare wie "% Werte eintragen" --
-die echten Werte sind in den Daten vorhanden und MUESSEN verwendet werden.
+ZITIERWEISE:
+- rubensrohr_wiki: NUR beim Rubensrohr
+- Breitengrad Berlin: demtroeder2021 oder meschede2015 (NICHT rubensrohr_wiki)
+- Erdrotation/Corioliskraft/Mechanik: nolting2023, landau1987, demtroeder2018
+- Regression/Hauptachse: papula2018
+- Fehlerrechnung: mallick2025 mit Gleichungsnummer
 
-ZITIERWEISE: rubensrohr_wiki nur beim Rubensrohr. Breitengrad Berlin: demtroeder2021.
-KI-Deklaration: pl_generator2026, dfg_kodex2024.
-Keys: nolting2023 meschede2015 papula2018 landau1987 pfeiler2020 demtroeder2018 demtroeder2021 mallick2025 rubensrohr_wiki dfg_kodex2024 pl_generator2026
-
-AUSGABE: Beginne mit \\documentclass. Kein Markdown. Ende: %%BIB%% dann .bib`;
+AUSGABE — KRITISCH:
+- Beginne DIREKT mit \\documentclass — KEINE Markdown-Fences, KEIN \`\`\`latex, KEIN \`\`\`
+- Erste Zeile MUSS sein: \\documentclass[a4paper,12pt]{article}
+- Mathe-Umgebungen: equation für einzelne Gleichungen, align für mehrzeilige — NIEMALS mischen
+- align endet mit \\end{align}, equation mit \\end{equation} — nie verwechseln
+- Ende: %%BIB%% dann .bib-Inhalt
+BibTeX-Keys: nolting2023, meschede2015, papula2018, landau1987, pfeiler2020, demtroeder2018, demtroeder2021, mallick2025, rubensrohr_wiki
+- Keine sichtbare Erwähnung von Generator, Proxy, localhost, SHA256, Python-Analyse, Claude oder Anthropic im Protokoll`;
 }
 
 function userPrompt(meta, csvText, notizen) {
-  const serverUrl = (JSON.parse(localStorage.getItem('pl-cfg')||'{}').proxyurl||'projektlabor.onrender.com');
-  return `Erstelle ein vollstaendiges LaTeX-Protokoll aus den folgenden Daten.
-
-DATENQUELLEN UND IHRE PRIORITAET:
-1. SERVERANALYSE (wenn vorhanden): Deterministisch aus ALLEN Rohdatenzeilen berechnet.
-   Die Serveranalyse enthaelt die korrekten numerischen Ergebnisse.
-   Diese Zahlen MUSS Claude direkt verwenden — nicht ignorieren, nicht neu berechnen.
-2. ROHDATEN (wenn kleiner als 350k Zeichen): Vollstaendige Messwerte.
-3. NOTIZEN: Ergaenzende Beobachtungen und Versuchsparameter.
-
-VERBOTEN:
-- Ergebnisse der Serveranalyse als "nicht vorhanden" markieren
-- Zahlenwerte als Messgrössen erfinden die nicht in Daten oder Serveranalyse stehen
-- "plausibel gewaehlt", "typischer Wert von X", "Korrekturfaktor = X" fuer Eingangsgroessen
-- Fehlende Messgroessen mit Literaturwerten ersetzen ohne das explizit zu kennzeichnen
-
-ERLAUBT (normaler wissenschaftlicher Sprachgebrauch):
-- "Es wird angenommen, dass..." fuer physikalische Modellierungsannahmen (z.B. kleine Winkel)
-- "Die Daempfung wird vernachlaessigt" als Naeherungsannahme
-- "wird abgeschaetzt" fuer Fehlerabschaetzungen
-- Fehlende Parameter als %TODO markieren
+  return `Erstelle ein vollständiges LaTeX-Protokoll.
 
 METADATEN:
 Versuch: ${meta.versuch}
@@ -925,54 +750,43 @@ Tutor*in: ${meta.tutor}
 Assistent*in: ${meta.assist}
 Version: ${meta.version}
 
-DATEN:
+NUMERISCHE AUSWERTUNG DER ROHDATEN:
+Die folgende Auswertung wurde deterministisch aus den vollständig eingelesenen Rohdaten erzeugt.
+Sie ist die einzige numerische Grundlage für Messwerte, Fitparameter, Unsicherheiten und abgeleitete Ergebnisse.
+
 ${csvText}
 
 NOTIZEN / BEOBACHTUNGEN:
 ${notizen || '(keine)'}
 
-AUSWERTUNGSAUFTRAG:
-- Serveranalyse-Ergebnisse direkt verwenden und als solche kennzeichnen
-- Fehlerrechnung explizit herleiten [mallick2025, Gl. 14]
-- Ergebnis mit Literaturwert vergleichen, Abweichung in sigma angeben
-- Eigenkorrektur-Checkliste als % Kommentar einfuegen
+VERBINDLICHE REGELN:
+- Keine Messwerte, Geräteparameter, Bildraten, Massen, Längen, Kalibrierungen, Korrekturfaktoren oder Fitparameter erfinden.
+- Wenn eine Größe nicht in der numerischen Auswertung oder in den Notizen steht, wird im Protokoll %TODO gesetzt.
+- Wenn eine Auswertung mathematisch nicht möglich ist, wird kein Ersatzwert und kein Korrekturfaktor eingeführt.
+- Interne Provenienzangaben dürfen im sichtbaren Protokoll nicht erscheinen: keine Erwähnung von Generator, Proxy, localhost, SHA256, Python-Analyse, Claude oder Anthropic.
+- Die Rohdatenbasis wird neutral formuliert als: "Die Auswertung basiert auf den vollständig eingelesenen Rohdaten."
+- Die separate KI-Erklärung ist nicht Bestandteil des Protokolls.
 
-PFLICHTABSCHNITTE fuer gute wissenschaftliche Praxis (DFG-Kodex):
-
-1. Im Abschnitt "Durchfuehrung" oder "Auswertung": Unterabschnitt "Auswertungssoftware"
-   mit folgendem Inhalt (als LaTeX, korrekt zitierbar):
-   - Die numerische Auswertung der Rohdaten erfolgt automatisiert durch den
-     PL Protokoll Generator (Proxy-Server: ${serverUrl}).
-   - Analysemethode: Nulldurchgangsdetektion fuer Periodendauer, segmentweise
-     Hauptachsentransformation der Kovarianzmatrix fuer Drehratenanalyse
-     (30 Segmente je ${Math.round(1200/30)} s), lineare Regression nach [mallick2025, Gl. 24-28].
-   - Alle Berechnungen sind deterministisch und reproduzierbar aus den Rohdaten.
-
-2. In der Bibliographie muss folgender Eintrag enthalten sein:
-@misc{pl_generator_2026,
-  author = {{PL Protokoll Generator}},
-  title  = {Automatisierte Rohdatenauswertung fuer Projektlabor-Protokolle},
-  year   = {2026},
-  note   = {Proxy-Server: ${serverUrl}; Methoden: Nulldurchgangsdetektion, Hauptachsentransformation, lineare Regression},
+Erstelle das Protokoll mit vollständigem Rechenweg, Fehlerrechnung nach Mallick und Eigenkorrektur-Checkliste als LaTeX-Kommentar.`;
 }
 
-WICHTIG: Die KI-Nutzungserklaerung gehoert NICHT ins Protokoll.
-Sie wird separat als eigenstaendiges Dokument ausgehaendigt.
-Kein \\section*{Erklaerung...} und kein Hinweis auf Claude/Anthropic im Protokolltext.
-
-- Ausgabe beginnt direkt mit \\documentclass, endet mit \\end{document}, dann %%BIB%%`;
-}
-
-
-// ══ Strict raw-data and LaTeX checks ═════════════════════════════════════════
+// ══ Scientific export guards ════════════════════════════════════════════════
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
   }[c]));
+}
+
+function removeInternalGeneratorReferences(tex) {
+  return String(tex || '')
+    .replace(/[^.\n]*(?:PL Generator|PL Protokoll Generator|pl_generator(?:_2026|2026)?|localhost|http:\/\/localhost:3000|Proxy|SHA256|SHA256-Hash|Python-Analyse|serverseitig verarbeitet|Anthropic|Claude)[^.\n]*\.\s*/gi, '')
+    .replace(/^.*(?:PL Generator|PL Protokoll Generator|pl_generator(?:_2026|2026)?|localhost|http:\/\/localhost:3000|Proxy|SHA256|SHA256-Hash|Python-Analyse|serverseitig verarbeitet).*$/gmi, '')
+    .replace(/Die vollständigen Rohdaten wurden lokal\/serverseitig verarbeitet/gi, 'Die Auswertung basiert auf den vollständig eingelesenen Rohdaten')
+    .replace(/Die vollständigen Rohdaten wurden serverseitig verarbeitet/gi, 'Die Auswertung basiert auf den vollständig eingelesenen Rohdaten')
+    .replace(/serverseitige Rohdatenanalyse/gi, 'Rohdatenanalyse')
+    .replace(/Python-Auswertung/gi, 'numerische Auswertung')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function validateCompleteness(tex, bib) {
@@ -981,76 +795,41 @@ function validateCompleteness(tex, bib) {
   const t = String(tex || '').trim();
   const b = String(bib || '').trim();
 
-  if (!t.startsWith('\\documentclass')) {
-    errors.push('Die Ausgabe beginnt nicht mit \\documentclass. Markdown, Vorrede oder defekte Bereinigung erkannt.');
-  }
-  if (!t.includes('\\begin{document}')) {
-    errors.push('LaTeX ist unvollständig: \\begin{document} fehlt.');
-  }
-  if (!t.includes('\\end{document}')) {
-    errors.push('LaTeX ist unvollständig: \\end{document} fehlt. Die Modellantwort wurde vermutlich abgeschnitten.');
-  }
-  if (!t.includes('\\printbibliography')) {
-    warnings.push('Bibliographie-Ausgabe fehlt: \\printbibliography.');
-  }
-  if (!b) {
-    errors.push('literatur.bib ist leer oder fehlt.');
-  }
-  if (/```/.test(t)) {
-    errors.push('Markdown-Codeblock ``` wurde nicht entfernt.');
-  }
-
-  return { errors, warnings };
+  if (!t.startsWith('\\documentclass')) errors.push('Die Ausgabe beginnt nicht mit \\documentclass.');
+  if (!t.includes('\\begin{document}')) errors.push('LaTeX ist unvollständig: \\begin{document} fehlt.');
+  if (!t.includes('\\end{document}')) errors.push('LaTeX ist unvollständig: \\end{document} fehlt.');
+  if (!t.includes('\\printbibliography')) warnings.push('Bibliographie-Ausgabe fehlt: \\printbibliography.');
+  if (!b) errors.push('literatur.bib ist leer oder fehlt.');
+  if (/```/.test(t)) errors.push('Markdown-Codeblock ``` wurde nicht entfernt.');
+  return {errors, warnings};
 }
 
 function validateNoUnsupportedAssumptions(tex) {
   const errors = [];
   const t = String(tex || '');
-
-  // Nur wirklich problematische Muster blockieren:
-  // erfundene Zahlenwerte als Eingangsgrößen, nicht physikalische Annahmen im Text
-  const forbiddenPatterns = [
-    // Korrekturfaktor mit Zahl = erfundener Korrekturwert
-    {re: /Korrekturfaktor\s*=\s*[\d]/i,
-     msg: 'Unzulässiger numerischer Korrekturfaktor gefunden. Korrekturfaktoren müssen aus Rohdaten stammen.'},
-    // "typischer Wert" gefolgt von Zahl = Literaturwert als Messwert ausgegeben
-    {re: /typischer Wert\s*(?:von|:)\s*[\d]/i,
-     msg: 'Unzulässiger "typischer Wert" als Messgröße gefunden. Fehlende Messwerte als %TODO markieren.'},
-    // "plausibel gewählt" = explizit erfundener Wert
-    {re: /plausibel gew[äa]hlt/i,
-     msg: 'Unzulässige Formulierung "plausibel gewählt". Fehlende Eingangsgrößen als %TODO markieren.'},
-  ];
-
-  for (const p of forbiddenPatterns) {
-    if (p.re.test(t)) errors.push(p.msg);
+  const internalRefs = [/PL\s+Generator/i, /PL\s+Protokoll\s+Generator/i, /pl_generator/i, /http:\/\/localhost:3000/i, /localhost/i, /SHA256/i, /SHA256-Hash/i, /Python-Analyse/i, /serverseitig verarbeitet/i, /Proxy/i, /Anthropic/i, /Claude/i];
+  for (const re of internalRefs) {
+    if (re.test(t)) { errors.push('Interner Generator-/Provenienz-Hinweis im sichtbaren Protokoll gefunden.'); break; }
   }
-
+  const forbiddenPatterns = [
+    {re: /Korrekturfaktor\s*(?:k\s*)?=\s*[\d]/i, msg: 'Unzulässiger numerischer Korrekturfaktor gefunden.'},
+    {re: /typischer Wert\s*(?:von|:)\s*[\d]/i, msg: 'Unzulässiger "typischer Wert" als Messgröße gefunden.'},
+    {re: /plausibel gew[äa]hlt/i, msg: 'Unbelegte Annahme gefunden: plausibel gewählt.'},
+    {re: /gesch[äa]tzt(?:er|e|es)?\s+Wert/i, msg: 'Unbelegte Schätzung gefunden.'},
+    {re: /wird\s+angenommen/i, msg: 'Unbelegte Annahme gefunden.'},
+    {re: /wurde\s+angenommen/i, msg: 'Unbelegte Annahme gefunden.'},
+    {re: /unter\s+der\s+Annahme/i, msg: 'Unbelegte Annahme gefunden.'}
+  ];
+  for (const item of forbiddenPatterns) if (item.re.test(t)) errors.push(item.msg);
   return errors;
 }
 
-function renderCheckReport(errors, warnings = []) {
+function renderValidationReport(report) {
   const parts = [];
-  if (errors.length) {
-    parts.push('<strong>Fehler:</strong>');
-    parts.push(...errors.map(e => `• ${escapeHtml(e)}`));
-  }
-  if (warnings.length) {
-    parts.push('<br><strong>Warnungen:</strong>');
-    parts.push(...warnings.map(w => `• ${escapeHtml(w)}`));
-  }
+  if (report.errors?.length) { parts.push('<strong>Fehler:</strong>'); parts.push(...report.errors.map(e => `• ${escapeHtml(e)}`)); }
+  if (report.warnings?.length) { parts.push('<br><strong>Warnungen:</strong>'); parts.push(...report.warnings.map(w => `• ${escapeHtml(w)}`)); }
   return parts.join('<br>');
 }
-
-function failGeneration(message, errors = [], warnings = []) {
-  document.getElementById('gen-running').style.display = 'none';
-  
-  document.getElementById('gen-err').innerHTML =
-    `<div class="box err">
-      ${escapeHtml(message)}<br>
-      ${renderCheckReport(errors, warnings)}
-    </div>`;
-}
-
 
 // ══ Generate ══════════════════════════════════════════════════════════════════
 async function generate() {
@@ -1058,35 +837,48 @@ async function generate() {
   const proxyUrl = (cfg.proxyurl || '').replace(/\/$/, '');
   if (!proxyUrl) {
     document.getElementById('gen-err').innerHTML =
-      '<div class="box err">Keine Proxy-URL gespeichert. Bitte unter ⚙ Einstellungen eintragen.</div>';
+      '<div class="box err">Keine Proxy-URL gespeichert. Bitte unter ⚙ Einstellungen eintragen (z.B. https://pl-proxy.onrender.com).</div>';
     return;
   }
 
+  document.getElementById('gen-idle').style.display = 'none';
   document.getElementById('gen-running').style.display = 'block';
   document.getElementById('gen-err').innerHTML = '';
 
   const setStatus = t => document.getElementById('gen-txt').textContent = t;
 
   try {
-    // Verwende vorberechnete Analyse aus runAnalysis()
-    const analysisText = window._analysisText || '';
-    const ergaenzung = get('notizen-ergaenzung');
-    const notizen = get('notizen');
-    const csvText = analysisText;
+    setStatus('CSV-Rohdaten werden auf dem Server ausgewertet…');
+    const fileData = await Promise.all(files.map(readFile));
 
-    // Bilder aus runAnalysis (bereits geladen)
+    if (!fileData.length) {
+      throw new Error('Keine Rohdaten hochgeladen. Ohne Rohdaten wird kein Protokoll erzeugt.');
+    }
+    const failedRaw = fileData.filter(f => f.type === 'text' && f.rawComplete !== true);
+    if (failedRaw.length) {
+      throw new Error('Rohdaten wurden nicht vollständig ausgewertet: ' + failedRaw.map(f => `${escapeHtml(f.name)}: ${f.error || 'unbekannter Fehler'}`).join('; '));
+    }
+
+    // Build message content
     const content = [];
-    for (const fd of (window._fileDataForVision || [])) {
-      content.push({type:'image', source:{type:'base64', media_type:fd.mime, data:fd.data}});
-      content.push({type:'text', text:`Bild "${fd.name}": Extrahiere nur eindeutig sichtbare Messwerte. Unsichere Werte als %TODO markieren.`});
+    for (const fd of fileData) {
+      if (fd.type === 'image') {
+        content.push({type:'image', source:{type:'base64', media_type:fd.mime, data:fd.data}});
+        content.push({type:'text', text:`Bild "${fd.name}": Extrahiere alle sichtbaren Messwerte, Achsenbeschriftungen und Einheiten.`});
+      }
     }
+    const csvText = fileData.filter(f=>f.type==='text').map(f=>{
+      const cleanedAnalysis = String(f.data || '')
+        .split('
+')
+        .filter(line => !/SHA256|localhost|Proxy|Generator/i.test(line))
+        .join('
+');
+      return `=== ${escapeHtml(f.name)} ===
+${cleanedAnalysis}`;
+    }).join('
 
-    const notizKombiniert = [notizen, ergaenzung].filter(Boolean).join('\n\n');
-
-    if (!csvText.trim() && content.length === 0) {
-      failGeneration('Keine Daten verfügbar. Bitte zuerst Analyse durchführen.');
-      return;
-    }
+');
 
     const meta = {
       versuch:  versuchName(),
@@ -1101,97 +893,34 @@ async function generate() {
       version:  get('m-version'),
     };
 
-    content.push({type:'text', text: userPrompt(meta, csvText, notizKombiniert)});
+    content.push({type:'text', text: userPrompt(meta, csvText, get('notizen'))});
 
-    setStatus('Claude generiert das Protokoll (30–120 s) …');
+    setStatus('Claude generiert das Protokoll (30–90 s) …');
 
-    // Hilfsfunktion: einzelner API-Call
-    const apiCall = async (messages) => {
-      const r = await fetch(`${proxyUrl}/api/generate`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
-          max_tokens: 16000,
-          system: sysPrompt(),
-          messages,
-        }),
-      });
-      if (!r.ok) {
-        const e = await r.json().catch(()=>({}));
-        throw new Error(e.error?.message || `HTTP ${r.status}`);
-      }
-      return r.json();
-    };
+    const resp = await fetch(`${proxyUrl}/api/generate`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 12000,
+        system: sysPrompt(),
+        messages: [{role:'user', content}],
+      }),
+    });
 
-    // Erster Call
-    let data = await apiCall([{role:'user', content}]);
-    let raw = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
-
-    // Automatische Fortsetzung wenn abgeschnitten (kein \end{document})
-    const isTruncated = d => d.stop_reason === 'max_tokens' ||
-      !d.content.filter(b=>b.type==='text').map(b=>b.text).join('').includes('\\end{document}');
-
-    if (isTruncated(data)) {
-      setStatus('Ausgabe zu lang — fordere Fortsetzung an …');
-      // Continuation: schicke bisherigen Output als Assistant-Antwort zurück
-      const contData = await apiCall([
-        {role:'user', content},
-        {role:'assistant', content: raw},
-        {role:'user',     content: 'Bitte fahre direkt fort wo du aufgehört hast. Schreibe NUR den fehlenden Rest des LaTeX-Dokuments, beginnend genau an der Stelle wo du abgebrochen hast. Kein Markdown, kein Kommentar.'},
-      ]);
-      const cont = contData.content.filter(b=>b.type==='text').map(b=>b.text).join('');
-      raw = raw + cont;
+    if (!resp.ok) {
+      const e = await resp.json().catch(()=>({}));
+      throw new Error(e.error?.message || `HTTP ${resp.status}`);
     }
 
-    const resp = {ok: true}; // dummy für Kompatibilität
+    const data = await resp.json();
+    const raw = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
     let cleaned = raw.trim();
     cleaned = cleaned.replace(/^`{1,4}(?:latex|tex)?\s*/i, '');
     cleaned = cleaned.replace(/\s*`{1,4}\s*$/, '');
     const dcIdx = cleaned.indexOf('\\documentclass');
     if (dcIdx > 0) cleaned = cleaned.slice(dcIdx);
     cleaned = cleaned.trim();
-
-    // ── Post-process: fix common LaTeX errors Claude makes ──
-    // Replace Unicode Greek/special chars with LaTeX equivalents
-    const unicodeFixes = [
-      // Greek letters
-      [/φ/g, '$\\varphi$'], [/ω/g, '$\\omega$'], [/Ω/g, '$\\Omega$'],
-      [/α/g, '$\\alpha$'],  [/β/g, '$\\beta$'],   [/γ/g, '$\\gamma$'],
-      [/δ/g, '$\\delta$'],  [/Δ/g, '$\\Delta$'],  [/θ/g, '$\\theta$'],
-      [/λ/g, '$\\lambda$'], [/μ/g, '$\\mu$'],      [/π/g, '$\\pi$'],
-      [/σ/g, '$\\sigma$'],  [/τ/g, '$\\tau$'],     [/ε/g, '$\\varepsilon$'],
-      [/η/g, '$\\eta$'],    [/ρ/g, '$\\rho$'],     [/κ/g, '$\\kappa$'],
-      [/ν/g, '$\\nu$'],     [/ξ/g, '$\\xi$'],      [/ζ/g, '$\\zeta$'],
-      // Unicode superscripts: handle ⁻⁵ / ⁺³ sequences FIRST (before individual digits)
-      [/[⁻⁺][⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, m => {
-        const supMap={'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
-        const sign=m[0]==='⁻'?'-':'+';
-        return '^{'+sign+[...m.slice(1)].map(c=>supMap[c]).join('')+'}';
-      }],
-      // Then individual superscript digits
-      [/⁰/g,'$^0$'],[/¹/g,'$^1$'],[/²/g,'$^2$'],[/³/g,'$^3$'],
-      [/⁴/g,'$^4$'],[/⁵/g,'$^5$'],[/⁶/g,'$^6$'],[/⁷/g,'$^7$'],
-      [/⁸/g,'$^8$'],[/⁹/g,'$^9$'],
-      // Unicode subscripts
-      [/₀/g,'_0'],[/₁/g,'_1'],[/₂/g,'_2'],[/₃/g,'_3'],
-      [/₄/g,'_4'],[/₅/g,'_5'],[/₆/g,'_6'],[/₇/g,'_7'],
-      // Degree: specific contexts first, then general
-      [/°\/h/g, '^{\\circ}/\\text{h}'],
-      [/°\/s/g,  '^{\\circ}/\\text{s}'],
-      [/([0-9.,])\s*°/g, '$1^{\\circ}'],
-      [/°/g, '^{\\circ}'],
-      // \degree doesn't exist in standard LaTeX
-      [/\\degree\b/g, '^{\\circ}'],
-      // Math symbols
-      [/±/g, '$\\pm$'],
-      [/·/g, '$\\cdot$'],
-      [/×/g, '$\\times$'],
-      [/∓/g, '$\\mp$'],
-    ];
-    for (const [pattern, replacement] of unicodeFixes) {
-      cleaned = cleaned.replace(pattern, replacement);
-    }
 
     const bibIdx = cleaned.indexOf('%%BIB%%');
     if (bibIdx !== -1) {
@@ -1202,25 +931,22 @@ async function generate() {
       bibContent = BIB;
     }
 
-    const completenessReport = validateCompleteness(texContent, bibContent);
-    const assumptionErrors = validateNoUnsupportedAssumptions(texContent);
-    const allErrors = [...completenessReport.errors, ...assumptionErrors];
+    texContent = removeInternalGeneratorReferences(texContent);
 
-    if (allErrors.length) {
-      failGeneration(
-        'Ausgabe blockiert: Das Protokoll ist unvollständig oder enthält nicht belegte Annahmen.',
-        allErrors,
-        completenessReport.warnings
-      );
+    const completenessReport = validateCompleteness(texContent, bibContent);
+    completenessReport.errors.push(...validateNoUnsupportedAssumptions(texContent));
+
+    if (completenessReport.errors.length) {
+      document.getElementById('gen-running').style.display = 'none';
+      document.getElementById('gen-idle').style.display = 'flex';
+      document.getElementById('gen-err').innerHTML =
+        `<div class="box err">Ausgabe blockiert: Das Protokoll ist unvollständig oder enthält nicht belegte Annahmen.<br>${renderValidationReport(completenessReport)}</div>`;
       return;
     }
 
     if (completenessReport.warnings.length) {
       document.getElementById('gen-err').innerHTML =
-        `<div class="box info">
-          Qualitätswarnung:<br>
-          ${renderCheckReport([], completenessReport.warnings)}
-        </div>`;
+        `<div class="box info">Qualitätswarnung:<br>${renderValidationReport(completenessReport)}</div>`;
     }
 
     setStatus('Fertig.');
@@ -1237,355 +963,24 @@ async function generate() {
     goStep(3);
   } catch(err) {
     document.getElementById('gen-running').style.display = 'none';
-    
+    document.getElementById('gen-idle').style.display = 'flex';
     document.getElementById('gen-err').innerHTML =
       `<div class="box err">Fehler: ${err.message}</div>`;
   }
 }
 
-// ══ Notebook ══════════════════════════════════════════════════════════════════
-
-// Notebook-Inhalt aus eingebettetem Base64 laden
-const NOTEBOOK_B64 = null; // wird beim Build gesetzt
-
-async function downloadNotebook() {
-  // Lade Notebook-Template vom Server
-  const cfg = JSON.parse(localStorage.getItem('pl-cfg')||'{}');
-  const proxyUrl = (cfg.proxyurl||'').replace(/\/$/,'');
-  const versuch = versuchName();
-
-  // Generiere versuchsspezifisches Notebook via Claude
-  if (!proxyUrl) {
-    alert('Bitte zuerst Proxy-URL in ⚙ Einstellungen eintragen.');
-    return;
-  }
-
-  const btn = event.currentTarget;
-  btn.textContent = 'Wird generiert…';
-  btn.disabled = true;
-
-  try {
-    const resp = await fetch(`${proxyUrl}/api/generate`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 8000,
-        system: `Du generierst Jupyter Notebooks als valides JSON.
-Antworte NUR mit dem vollstaendigen JSON des Notebooks, beginnend mit { und endend mit }.
-Kein Markdown, keine Erklaerungen, nur JSON.`,
-        messages: [{role:'user', content: notebookPrompt(versuch)}],
-      }),
-    });
-    const data = await resp.json();
-    let raw = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
-    // Strip markdown fences if present
-    raw = raw.replace(/^```(?:json|python)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
-    // Find JSON object
-    const start = raw.indexOf('{');
-    if (start > 0) raw = raw.slice(start);
-    // Validate JSON
-    JSON.parse(raw); // throws if invalid
-    dl(raw, `auswertung_${versuch.toLowerCase().replace(/\s+/g,'_')}.ipynb`);
-  } catch(err) {
-    alert('Notebook-Generierung fehlgeschlagen: ' + err.message + '\nBitte Fallback-Notebook verwenden.');
-    // Fallback: statisches Foucault-Notebook
-    dl(FALLBACK_NOTEBOOK, 'auswertung.ipynb');
-  } finally {
-    btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span>Notebook herunterladen<small>auswertung.ipynb</small></span>`;
-    btn.disabled = false;
-  }
-}
-
-function notebookPrompt(versuch) {
-  const meta = {
-    versuch,
-    datum: get('m-datum'),
-    pg: get('m-pg'),
-    semester: get('m-semester'),
-  };
-  return `Erstelle ein vollstaendiges Jupyter Notebook fuer den Versuch "${versuch}" am Projektlabor TU Berlin.
-
-Das Notebook soll:
-1. Alle Rohdaten aus einer CSV-Datei laden (KEIN Sampling, ALLE Zeilen)
-2. Statistik berechnen: Mittelwert [Mallick Gl.6], Standardabweichung N-1 [Gl.7], SEM [Gl.9]
-3. Versuchsspezifische Auswertung mit numpy/scipy durchfuehren
-4. Lineare Regression mit scipy.stats.linregress [Mallick Gl.22-28]
-5. Gauss-Fehlerfortpflanzung explizit berechnen [Mallick Gl.14]
-6. Abbildungen mit matplotlib speichern (PDF-Format fuer LaTeX)
-7. Alle Ergebnisse mit korrekter Rundung ausgeben
-8. pgfplots-Koordinaten fuer den Winkel-Zeit-Plot ausgeben
-
-Metadaten: ${JSON.stringify(meta)}
-
-Das Notebook muss als valides JSON zurueckgegeben werden.
-Erstelle ein vollstaendiges, ausfuehrbares Jupyter Notebook mit nbformat=4.`;
-}
-
-// Fallback-Notebook (statisch, Foucault-Pendel)
-const FALLBACK_NOTEBOOK = JSON.stringify({
-  nbformat: 4, nbformat_minor: 5,
-  metadata: {kernelspec: {display_name:'Python 3',language:'python',name:'python3'},
-              language_info: {name:'python',version:'3.10.0'}},
-  cells: [
-    {cell_type:'markdown',metadata:{},source:['# PL Auswertungs-Notebook\n','Bitte CSV_FILE anpassen und alle Zellen ausfuehren.']},
-    {cell_type:'code',execution_count:null,metadata:{},outputs:[],source:[
-      'CSV_FILE = "messdaten.csv"  # HIER ANPASSEN\n',
-      'import numpy as np, pandas as pd\n',
-      'from scipy import stats\n',
-      'import matplotlib.pyplot as plt\n',
-      'df = pd.read_csv(CSV_FILE)\n',
-      'print(f"Geladen: {len(df)} Zeilen")\n',
-      'display(df.describe())',
-    ]},
-  ]
-}, null, 1);
-
-// ══ Pyodide Auswertung (lokal, numpy/scipy) ════════════════════════════════
-
-let pyodideReady = null;
-
-async function getPyodide() {
-  if (!pyodideReady) {
-    pyodideReady = loadPyodide();
-  }
-  const py = await pyodideReady;
-  // Pakete nur einmal laden
-  if (!py._packagesLoaded) {
-    await py.loadPackage(['numpy', 'scipy', 'matplotlib', 'pandas']);
-    py._packagesLoaded = true;
-  }
-  return py;
-}
-
-function resetAnalysis() {
-  document.getElementById('s2-analyse').style.display = 'block';
-  document.getElementById('s2-results').style.display = 'none';
-  document.getElementById('analyse-idle').style.display = 'flex';
-  document.getElementById('analyse-running').style.display = 'none';
-  document.getElementById('plots-container').innerHTML = '';
-  document.getElementById('ergebnisse-tabelle').innerHTML = '';
-  document.getElementById('plots-card').style.display = 'none';
-  window._nbResult = null;
-  window._analysisText = '';
-}
-
-async function runAnalysis() {
-  document.getElementById('analyse-idle').style.display = 'none';
-  document.getElementById('analyse-running').style.display = 'block';
-  const setTxt = t => document.getElementById('analyse-txt').textContent = t;
-
-  try {
-    const csvFiles = files.filter(f => !f.type.startsWith('image/'));
-    const imgFiles = files.filter(f =>  f.type.startsWith('image/'));
-
-    if (!csvFiles.length) {
-      throw new Error('Keine CSV-Datei hochgeladen.');
-    }
-
-    setTxt('CSV wird gelesen…');
-    const csvContent = await new Promise((res, rej) => {
-      const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej;
-      r.readAsText(csvFiles[0]);
-    });
-
-    setTxt('Pyodide lädt (numpy/scipy) — einmalig ca. 30 s…');
-    const py = await getPyodide();
-
-    setTxt('Python-Auswertung läuft (alle Datenpunkte)…');
-
-    // CSV an Python übergeben
-    py.globals.set('csv_content', csvContent);
-    py.globals.set('versuch_name', versuchName());
-    py.globals.set('n_segmente', 30);
-
-    const jsonStr = await py.runPythonAsync(PYTHON_SCRIPT);
-    const r = JSON.parse(jsonStr);
-
-    window._nbResult = r;
-
-    // Bilder für Vision
-    const imgData = [];
-    for (const f of imgFiles) {
-      const d = await readFile(f); if (d.type==='image') imgData.push(d);
-    }
-    window._fileDataForVision = imgData;
-
-    renderPreview(r);
-    document.getElementById('s2-analyse').style.display = 'none';
-    document.getElementById('s2-results').style.display = 'block';
-
-  } catch(err) {
-    document.getElementById('analyse-running').style.display = 'none';
-    document.getElementById('analyse-idle').style.display = 'flex';
-    // Detailliertes Logging für Debugging
-    const msg = String(err.message || err);
-    const detail = err.stack ? err.stack.split('\n').slice(0,3).join(' | ') : '';
-    console.error('Auswertungsfehler:', msg, detail);
-    document.getElementById('gen-err').innerHTML =
-      `<div class="box err"><strong>Auswertungsfehler:</strong> ${escapeHtml(msg)}` +
-      (detail ? `<br><small style="opacity:.7">${escapeHtml(detail)}</small>` : '') +
-      `</div>`;
-  }
-}
-
-// ── Python-Skript als Template-String ────────────────────────────────────────
-const PYTHON_SCRIPT = `
-import numpy as np
-import pandas as pd
-from scipy import stats
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import json, io, base64, warnings
-warnings.filterwarnings('ignore')
-
-plt.rcParams.update({'figure.dpi':110,'font.size':10,
-  'axes.grid':True,'grid.alpha':0.3,
-  'axes.spines.top':False,'axes.spines.right':False})
-
-def fig_b64(fig):
-    buf=io.BytesIO(); fig.savefig(buf,format='png',bbox_inches='tight',dpi=110)
-    buf.seek(0); s=base64.b64encode(buf.read()).decode(); plt.close(fig); return s
-
-from io import StringIO
-df_raw = pd.read_csv(StringIO(csv_content), comment='#')
-df_raw.columns = [c.strip().lower() for c in df_raw.columns]
-cols = list(df_raw.columns)
-
-df = df_raw[df_raw['valid']==1].copy() if 'valid' in cols else df_raw.copy()
-N = len(df)
-
-t_col = next((c for c in cols if c in ['t','time','zeit']), None)
-x_col = next((c for c in cols if c in ['x','x_pos','px_x','xpos']), None)
-y_col = next((c for c in cols if c in ['y','y_pos','px_y','ypos']), None)
-a_col = next((c for c in cols if c in ['area','flaeche','size']), None)
-
-out = {'versuch': versuch_name, 'plots': {}, 'ergebnisse': {'N': N, 'spalten': cols}, 'tabellen': {}, 'pgfplots': {}}
-
-if not t_col:
-    out['error'] = 'Keine Zeitspalte gefunden'
-else:
-    t=df[t_col].values; dt=float(np.median(np.diff(t))); fs=1/dt; T_ges=float(t[-1]-t[0])
-    out['ergebnisse'].update({'dt_s':round(dt,4),'fs_hz':round(fs,3),'T_ges_s':round(T_ges,2),'T_ges_min':round(T_ges/60,2)})
-
-    # Statistik [Mallick Gl. 6-9]
-    stat={}
-    arrs=[(t_col,t)]
-    if x_col: arrs.append((x_col,df[x_col].values))
-    if y_col: arrs.append((y_col,df[y_col].values))
-    if a_col: arrs.append((a_col,df[a_col].values))
-    for name,arr in arrs:
-        mu=float(np.mean(arr)); s=float(np.std(arr,ddof=1)); sem=float(s/np.sqrt(N))
-        stat[name]={'mu':round(mu,4),'s':round(s,4),'sem':round(sem,6),'min':round(float(arr.min()),4),'max':round(float(arr.max()),4)}
-    out['tabellen']['statistik']=stat
-
-    if x_col and y_col:
-        x=df[x_col].values; y=df[y_col].values
-        x0,y0=float(np.mean(x)),float(np.mean(y))
-        Ax,Ay=float((x.max()-x.min())/2),float((y.max()-y.min())/2)
-        out['ergebnisse'].update({'x_mean':round(x0,2),'y_mean':round(y0,2),'Ax_px':round(Ax,2),'Ay_px':round(Ay,2),'elliptizitaet':round(Ay/Ax,3) if Ax>0 else None})
-
-        # Trajektorie
-        fig,axes=plt.subplots(1,2,figsize=(11,4.5))
-        sc=axes[0].scatter(x,y,c=t,cmap='viridis',s=0.8,alpha=0.5)
-        plt.colorbar(sc,ax=axes[0],label='t / s',shrink=0.9)
-        axes[0].set_xlabel('x / px'); axes[0].set_ylabel('y / px'); axes[0].set_title('Trajektorie'); axes[0].set_aspect('equal')
-        axes[1].plot(t,x-x0,'b-',lw=0.3,alpha=0.7,label='x−x̄'); axes[1].plot(t,y-y0,'r-',lw=0.3,alpha=0.7,label='y−ȳ')
-        axes[1].set_xlabel('t / s'); axes[1].set_ylabel('Auslenkung / px'); axes[1].set_title('Zeitreihe'); axes[1].legend(fontsize=8)
-        plt.tight_layout(); out['plots']['trajektorie']=fig_b64(fig)
-
-        # Periode via Nulldurchgänge [Mallick Gl. 6-9]
-        xc=x-x0; cidx=np.where((xc[:-1]<0)&(xc[1:]>=0))[0]
-        tc_arr=[]
-        for i in cidx:
-            d=xc[i+1]-xc[i]; frac=(-xc[i]/d) if d!=0 else 0
-            tc_arr.append(t[i]+frac*(t[i+1]-t[i]))
-        tc_arr=np.array(tc_arr); T_arr=np.diff(tc_arr)
-        if len(T_arr)>=3:
-            Tm=float(np.mean(T_arr)); sT=float(np.std(T_arr,ddof=1)); semT=float(sT/np.sqrt(len(T_arr)))
-            fm=1/Tm; Df=semT/Tm**2; om=2*np.pi/Tm; Dom=2*np.pi*semT/Tm**2
-            g=9.810; Lexp=g*Tm**2/(4*np.pi**2); DL=2*g*Tm*semT/(4*np.pi**2)
-            out['ergebnisse'].update({'T_s':round(Tm,5),'Delta_T_s':round(semT,5),'s_T_s':round(sT,5),'N_per':int(len(T_arr)),'f_hz':round(fm,6),'Delta_f':round(Df,6),'omega0':round(om,6),'Delta_om':round(Dom,6),'L_exp_m':round(Lexp,4),'Delta_L_m':round(DL,4)})
-            fig,axes=plt.subplots(1,2,figsize=(11,4))
-            axes[0].plot(T_arr,'ko',ms=2,alpha=0.6); axes[0].axhline(Tm,color='r',lw=1.5,label=f'T̄={Tm:.4f} s')
-            axes[0].fill_between(range(len(T_arr)),Tm-semT,Tm+semT,alpha=0.2,color='r'); axes[0].set_xlabel('Index'); axes[0].set_ylabel('T / s'); axes[0].set_title('Einzelperioden'); axes[0].legend(fontsize=8)
-            axes[1].hist(T_arr,bins=20,color='steelblue',edgecolor='white'); axes[1].axvline(Tm,color='r',lw=2); axes[1].set_xlabel('T / s'); axes[1].set_ylabel('N'); axes[1].set_title('Verteilung')
-            plt.tight_layout(); out['plots']['perioden']=fig_b64(fig)
-
-        # Hauptachsentransformation [papula2018, Mallick Gl. 22-28]
-        N_SEG=n_segmente; seg_sz=N//N_SEG; seg_t=[]; seg_phi=[]
-        for s in range(N_SEG):
-            i0=s*seg_sz; xs=x[i0:i0+seg_sz]-np.mean(x[i0:i0+seg_sz]); ys=y[i0:i0+seg_sz]-np.mean(y[i0:i0+seg_sz])
-            Sxx=float(np.var(xs,ddof=1)); Syy=float(np.var(ys,ddof=1)); Sxy=float(np.mean(xs*ys))
-            seg_t.append(float(t[i0+seg_sz//2])); seg_phi.append(float(0.5*np.arctan2(2*Sxy,Sxx-Syy)*180/np.pi))
-        seg_t=np.array(seg_t); seg_phi=np.array(seg_phi)
-        for i in range(1,len(seg_phi)):
-            while seg_phi[i]-seg_phi[i-1]>90: seg_phi[i]-=180
-            while seg_phi[i]-seg_phi[i-1]<-90: seg_phi[i]+=180
-        out['tabellen']['segmente']=[{'t_mid':round(float(st),2),'phi':round(float(sp),4)} for st,sp in zip(seg_t,seg_phi)]
-
-        reg=stats.linregress(seg_t,seg_phi)
-        b=float(reg.slope); ai=float(reg.intercept); seb=float(reg.stderr); sea=float(reg.intercept_stderr); r2=float(reg.rvalue**2)
-        res=seg_phi-(ai+b*seg_t); sy=float(np.sqrt(np.sum(res**2)/max(N_SEG-2,1)))
-        bh=b*3600; sebh=seb*3600
-        out['ergebnisse'].update({'phi0_deg':round(ai,4),'b_deg_s':round(b,7),'Delta_b':round(seb,7),'b_h':round(bh,4),'Delta_b_h':round(sebh,4),'s_y':round(sy,4),'R2':round(r2,6),'N_seg':N_SEG,'seg_sz_s':round(seg_sz*dt,1)})
-
-        OMEGA_E=15.041; PHI_LIT=52.52
-        sinp=abs(bh)/OMEGA_E; out['ergebnisse']['sin_phi']=round(sinp,5)
-        if sinp<=1.0:
-            pe=float(np.degrees(np.arcsin(sinp))); Dp=sebh/(OMEGA_E*np.sqrt(max(1-sinp**2,1e-10)))
-            abw=abs(pe-PHI_LIT); sig=abw/Dp if Dp>0 else 999
-            out['ergebnisse'].update({'phi_exp':round(pe,2),'Delta_phi':round(Dp,2),'phi_lit':PHI_LIT,'abw_deg':round(abw,2),'abw_sigma':round(sig,1)})
-        else:
-            out['ergebnisse']['phi_exp']=None; out['ergebnisse']['hinweis_phi']=f'sin(phi)={sinp:.4f}>1'
-
-        coords=' '.join(f'({st:.1f},{sp:.4f})' for st,sp in zip(seg_t,seg_phi))
-        out['pgfplots'].update({'winkel_coords':coords,'fit_a':round(ai,4),'fit_b':round(b,7),'fit_formel':f'{ai:.4f}+{b:.7f}*x'})
-
-        t_fit=np.linspace(seg_t[0],seg_t[-1],300)
-        fig,axes=plt.subplots(1,2,figsize=(12,5))
-        axes[0].errorbar(seg_t,seg_phi,yerr=sy,fmt='o',ms=4,color='steelblue',capsize=3,label='Segmentwinkel')
-        axes[0].plot(t_fit,ai+b*t_fit,'r-',lw=2,label=f'Fit: b={bh:.3f}°/h, R²={r2:.4f}')
-        axes[0].set_xlabel('t / s'); axes[0].set_ylabel('φ / °'); axes[0].set_title('Schwingungsebene'); axes[0].legend(fontsize=8)
-        axes[1].plot(seg_t,res,'ko',ms=3,alpha=0.7); axes[1].axhline(0,color='r',lw=1)
-        axes[1].fill_between(seg_t,-sy,sy,alpha=0.15,color='r',label=f's_y={sy:.3f}°')
-        axes[1].set_xlabel('t / s'); axes[1].set_ylabel('Residuum / °'); axes[1].set_title('Residuen'); axes[1].legend(fontsize=8)
-        plt.tight_layout(); out['plots']['winkel']=fig_b64(fig)
-
-    if a_col:
-        area=df[a_col].values; mua=float(np.mean(area)); sa=float(np.std(area,ddof=1)); cv=sa/mua*100
-        out['ergebnisse'].update({'area_mean':round(mua,2),'area_s':round(sa,2),'area_cv':round(cv,2)})
-        fig,ax=plt.subplots(figsize=(10,3))
-        ax.plot(t,area,'k-',lw=0.3,alpha=0.5); ax.axhline(mua,color='r',lw=1.5,label=f'Ā={mua:.2f} px²')
-        ax.fill_between(t,mua-sa,mua+sa,alpha=0.15,color='r'); ax.set_xlabel('t / s'); ax.set_ylabel('Fläche / px²'); ax.set_title(f'Tracking-Qualität (CV={cv:.1f}%)'); ax.legend(fontsize=8)
-        plt.tight_layout(); out['plots']['tracking']=fig_b64(fig)
-
-import json as _json
-_json.dumps(out)
-`;
-
-
 // ══ Download ══════════════════════════════════════════════════════════════════
-
 function safeDownload(content, filename) {
-  const completenessReport = validateCompleteness(texContent, bibContent);
-  const assumptionErrors = validateNoUnsupportedAssumptions(texContent);
-  const allErrors = [...completenessReport.errors, ...assumptionErrors];
-
-  if (filename.endsWith('.tex') && allErrors.length) {
-    alert(
-      'Export blockiert: Die LaTeX-Ausgabe ist unvollständig oder enthält nicht belegte Annahmen.\\n\\n' +
-      allErrors.join('\\n')
-    );
+  const report = validateCompleteness(texContent, bibContent);
+  report.errors.push(...validateNoUnsupportedAssumptions(texContent));
+  if (filename.endsWith('.tex') && report.errors.length) {
+    alert('Export blockiert:\n\n' + report.errors.join('\n'));
     return;
   }
-
   if (filename.endsWith('.bib') && !String(bibContent || '').trim()) {
     alert('Export blockiert: literatur.bib ist leer.');
     return;
   }
-
   dl(content, filename);
 }
 
@@ -1598,79 +993,6 @@ function dl(content, filename) {
 }
 function downloadTex() { dl(texContent,'protokoll.tex'); }
 function downloadBib() { dl(bibContent,'literatur.bib'); }
-
-function downloadKiErklaerung() {
-  const meta = {
-    versuch:  versuchName(),
-    datum:    get('m-datum'),
-    pg:       get('m-pg'),
-    semester: get('m-semester'),
-    members:  get('m-members'),
-    proto:    get('m-proto'),
-  };
-  const content =
-`\\documentclass[a4paper,12pt]{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage[T1]{fontenc}
-\\usepackage[ngerman]{babel}
-\\usepackage[a4paper,margin=2.5cm]{geometry}
-\\begin{document}
-
-\\begin{center}
-  {\\large\\textbf{Erkl{\\"a}rung zur Nutzung von KI-Werkzeugen}}\\\\[0.5cm]
-  {\\large Projektlabor -- Fakult{\\"a}t II, Technische Universit{\\"a}t Berlin}
-\\end{center}
-
-\\vspace{0.5cm}
-
-\\noindent
-\\textbf{Versuch:} ${meta.versuch}\\\\
-\\textbf{Projektgruppe:} ${meta.pg}, ${meta.semester}\\\\
-\\textbf{Versuchsdatum:} ${meta.datum}\\\\
-\\textbf{Protokollierende:} ${meta.proto || meta.members}
-
-\\vspace{1cm}
-
-\\noindent
-Der Protokolltext des oben genannten Versuchs wurde mithilfe des
-KI-Sprachmodells Claude (Anthropic, Modell: claude-sonnet-4-5)
-auf Basis einer automatisierten Rohdatenanalyse generiert
-(PL Protokoll Generator, ${new Date().getFullYear()}).
-
-\\vspace{0.5cm}
-
-\\noindent
-Die inhaltliche Verantwortung f{\\"u}r Korrektheit, Vollst{\\"a}ndigkeit
-und wissenschaftliche Redlichkeit liegt bei den unterzeichnenden
-Protokollierenden. S{\\"a}mtliche numerischen Ergebnisse wurden vor
-der Protokollerstellung durch die Unterzeichnenden gepr{\\"u}ft und
-best{\\"a}tigt.
-
-\\vspace{0.5cm}
-
-\\noindent
-Die Nutzung erfolgt in {\\"U}bereinstimmung mit:
-\\begin{itemize}
-  \\item Leitlinien zur Sicherung guter wissenschaftlicher Praxis
-        der DFG, Kodex Version~1.2 (Leitlinie~14: Autorschaft), DOI: 10.5281/zenodo.14281892
-  \\item den Regelungen des Projektlabors der TU~Berlin
-\\end{itemize}
-
-\\vspace{2cm}
-
-\\noindent
-\\begin{tabular}{p{7cm} p{7cm}}
-  Datum, Unterschrift & Datum, Unterschrift \\\\[2cm]
-  \\hline & \\hline \\\\
-  & \\\\[2cm]
-  \\hline & \\hline \\\\
-  & \\\\[2cm]
-  \\hline & \\hline
-\\end{tabular}
-
-\\end{document}`;
-  dl(content, 'ki_erklaerung.tex');
-}
 
 function copyTex() {
   navigator.clipboard.writeText(texContent).then(()=>{
@@ -1687,14 +1009,6 @@ async function pushGitHub() {
   const repo   = get('gh-repo');
   const branch = get('gh-branch') || 'main';
   const res    = document.getElementById('push-result');
-
-  const pushCompleteness = validateCompleteness(texContent, bibContent);
-  const pushAssumptionErrors = validateNoUnsupportedAssumptions(texContent);
-  const pushErrors = [...pushCompleteness.errors, ...pushAssumptionErrors];
-  if (pushErrors.length) {
-    res.innerHTML = `<div class="box err">Push blockiert:<br>${renderCheckReport(pushErrors, pushCompleteness.warnings)}</div>`;
-    return;
-  }
 
   if (!token || !owner || !repo) {
     res.innerHTML = '<div class="box err">Bitte GitHub Owner, Repo und Token ausfüllen.</div>';
@@ -1736,7 +1050,7 @@ async function pushGitHub() {
       {path:`${folder}/literatur.bib`, content: bibContent, binary: false},
       {path:`${folder}/tu-berlin-logo.png`, content: TU_LOGO_B64, binary: true},
       {path:`${folder}/pl-logo.png`, content: TU_LOGO_B64, binary: true},
-      {path:`${folder}/README.md`, content: `# ${versuchName()}\n\nProtokoll vom ${date}\n\nGeneriert mit dem PL Protokoll Generator.`, binary: false},
+      {path:`${folder}/README.md`, content: `# ${versuchName()}\n\nProtokoll vom ${date}\n\nProtokolldateien.`, binary: false},
     ];
     const blobs = await Promise.all(filesToPush.map(async f => {
       const body = f.binary
@@ -1782,15 +1096,13 @@ async function pushGitHub() {
 // ══ Reset ══════════════════════════════════════════════════════════════════
 function resetAll() {
   texContent = ''; bibContent = ''; files = [];
-  window._analysisText = '';
-  window._fileDataForVision = [];
   document.getElementById('flist').innerHTML = '';
   document.getElementById('notizen').value = '';
-  
-  
   document.getElementById('push-result').innerHTML = '';
   document.getElementById('gen-err').innerHTML = '';
   document.getElementById('gen-running').style.display = 'none';
+  document.getElementById('gen-idle').style.display = 'flex';
+  // reset stepper visually
   for(let i=1;i<=3;i++) document.getElementById('t'+i).className='stp';
   goStep(0);
 }
