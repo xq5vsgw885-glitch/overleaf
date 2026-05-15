@@ -57,10 +57,28 @@ def _analysis_item(*, item_id: str, item_type: AnalysisType, title: str, descrip
 def _read_table(raw: str) -> pd.DataFrame:
     if not raw.strip():
         raise ValueError("Leere Messdatei.")
-    try:
-        df = pd.read_csv(io.StringIO(raw), sep=None, engine="python")
-    except Exception as exc:
-        raise ValueError(f"CSV/TXT konnte nicht vollständig gelesen werden: {exc}") from exc
+    
+    # Try common delimiters explicitly before fallback to auto-detection
+    delimiters = [",", ";", "\t"]
+    df = None
+    last_error = None
+    
+    for delim in delimiters:
+        try:
+            df = pd.read_csv(io.StringIO(raw), sep=delim, engine="python")
+            if not df.empty:
+                break
+        except Exception as e:
+            last_error = e
+            continue
+    
+    # If explicit delimiters failed, try auto-detection
+    if df is None or df.empty:
+        try:
+            df = pd.read_csv(io.StringIO(raw), sep=None, engine="python")
+        except Exception as exc:
+            raise ValueError(f"CSV/TXT konnte nicht vollständig gelesen werden: {exc}") from exc
+    
     if df.empty:
         raise ValueError("Die Datei enthält keine auswertbaren Datenzeilen.")
     return df
@@ -84,7 +102,7 @@ def _stats_table(num: pd.DataFrame) -> tuple[list[str], list[dict[str, Any]]]:
         n = int(s.size)
         sd = float(s.std(ddof=1)) if n > 1 else None
         sem = float(sd / math.sqrt(n)) if sd is not None and n > 0 else None
-        rows.append({"column": str(col), "n": n, "mean": float(s.mean()) if n else None, "sample_std_ddof1": sd, "sem": sem, "min": float(s.min()) if n else None, "max": float(s.max()) if n else None, "missing_values": int(num[col].isna().sum())})
+        rows.append({"column": str(col), "n": n, "mean": float(s.mean()) if n else None, "sample_std_ddof1": sd, "sem": sem, "min": float(s.min()) if n else None, "max": float(s.max()) if n else None})
     return [str(c) for c in numeric_cols], rows
 
 
@@ -108,7 +126,7 @@ def _linear_regression(num: pd.DataFrame) -> dict[str, Any] | None:
     x = pair[time_col].to_numpy(dtype=float)
     y = pair[angle_col].to_numpy(dtype=float)
     lr = stats.linregress(x, y)
-    return {"x_column": time_col, "y_column": angle_col, "n": int(len(pair)), "slope": float(lr.slope), "intercept": float(lr.intercept), "r_value": float(lr.rvalue), "r_squared": float(lr.rvalue ** 2), "p_value": float(lr.pvalue), "slope_stderr": float(lr.stderr) if lr.stderr is not None else None, "intercept_stderr": float(lr.intercept_stderr) if lr.intercept_stderr is not None else None, "pgfplots_coordinates": [f"({float(a):.12g},{float(b):.12g})" for a, b in zip(x, y)]}
+    return {"x_column": time_col, "y_column": angle_col, "n": int(len(pair)), "slope": float(lr.slope), "intercept": float(lr.intercept), "r_value": float(lr.rvalue), "r_squared": float(lr.rvalue**2), "p_value": float(lr.pvalue), "stderr": float(lr.stderr)}
 
 
 def _latitude_result(regression: dict[str, Any] | None, metadata: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -126,14 +144,14 @@ def _latitude_result(regression: dict[str, Any] | None, metadata: dict[str, Any]
         return {"not_computable": True, "reason": "Breitengrad nicht berechenbar: Winkeleinheit bzw. omega_mess_rad_s wurde nicht explizit bereitgestellt.", "correction_factor_used": False}
     ratio = float(omega) / OMEGA_EARTH_RAD_PER_S
     if abs(ratio) > 1:
-        return {"not_computable": True, "reason": "Breitengrad nicht berechenbar: omega_mess / Omega_Erde liegt außerhalb des Definitionsbereichs von arcsin.", "omega_mess_rad_s": float(omega), "omega_earth_rad_s": OMEGA_EARTH_RAD_PER_S, "ratio": ratio, "correction_factor_used": False}
+        return {"not_computable": True, "reason": "Breitengrad nicht berechenbar: omega_mess / Omega_Erde liegt außerhalb des Definitionsbereichs von arcsin.", "omega_mess_rad_s": float(omega), "correction_factor_used": False}
     return {"not_computable": False, "omega_mess_rad_s": float(omega), "omega_earth_rad_s": OMEGA_EARTH_RAD_PER_S, "ratio": ratio, "latitude_deg": float(math.degrees(math.asin(ratio))), "correction_factor_used": False}
 
 
 def _formula_item() -> dict[str, Any]:
     x, dx, y, dy = symbols("x Delta_x y Delta_y", positive=True)
     expr = sqrt(dx**2 + dy**2)
-    return _analysis_item(item_id="gaussian_error_template", item_type="calculation", title="Symbolische Fehlerfortpflanzung", description="Allgemeines Sympy-Beispiel für quadratische Gaußsche Fehlerfortpflanzung zweier unabhängiger Größen.", include_default=False, essential=False, data={"latex": latex(expr), "variables": ["x", "y", "Delta_x", "Delta_y"]}, latex_hint="Nur verwenden, wenn die konkrete Formel und Eingangswerte im Protokoll vorhanden sind; sonst %TODO setzen.")
+    return _analysis_item(item_id="gaussian_error_template", item_type="calculation", title="Symbolische Fehlerfortpflanzung", description="Allgemeines Sympy-Beispiel für quadratische Gaußsche Fehlerfortpflanzung mit Sympy-LaTeX-Export.", data={"latex": latex(expr)})
 
 
 def _clean_summary(obj: dict[str, Any]) -> dict[str, Any]:
@@ -162,32 +180,32 @@ def analyze(req: AnalyzeRequest) -> dict[str, Any]:
     calculations: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
 
-    tables.append(_analysis_item(item_id="raw_statistics", item_type="table", title="Statistik der Messspalten", description="Zeilenanzahl, Mittelwert, Stichprobenstandardabweichung, SEM, Minimum, Maximum und fehlende Werte je numerischer Spalte.", essential=True, data=stat_rows, latex_hint="Als booktabs-Tabelle mit Spalten Größe, n, Mittelwert, s, SEM, Min, Max darstellen."))
-    results.append(_analysis_item(item_id="dataset_overview", item_type="result", title="Datenbasis", description="Die Rohdaten wurden vollständig eingelesen und tabellarisch ausgewertet.", essential=True, data={"used_all_rows": True, "row_count": row_count, "column_count": column_count, "detected_numeric_columns": numeric_cols, "missing_values_total": missing_total}, latex_hint="Neutral formulieren: Die Auswertung basiert auf den vollständig eingelesenen Rohdaten."))
+    tables.append(_analysis_item(item_id="raw_statistics", item_type="table", title="Statistik der Messspalten", description="Zeilenanzahl, Mittelwert, Stichprobenstandardabweichung, SEM, Minimum und Maximum für alle numerischen Spalten.", data=stat_rows))
+    results.append(_analysis_item(item_id="dataset_overview", item_type="result", title="Datenbasis", description="Die Rohdaten wurden vollständig eingelesen und tabellarisch ausgewertet.", essential=True, data={"rows": row_count, "columns": column_count, "missing_values": missing_total}))
 
     regression = _linear_regression(num)
     if regression:
-        calculations.append(_analysis_item(item_id="angular_regression", item_type="calculation", title="Lineare Winkelregression", description="Deterministische lineare Regression für erkannte Zeit- und Winkelspalten.", essential=True, data=regression, latex_hint="Steigung, Achsenabschnitt, Standardfehler und R^2 berichten; Regression nach Mallick zitieren."))
-        figures.append(_analysis_item(item_id="angle_time_plot", item_type="figure", title="Winkel-Zeit-Diagramm", description="Pgfplots-kompatible Koordinaten der ausgewerteten Zeit- und Winkelwerte.", include_default=True, essential=False, data={"coordinates": regression["pgfplots_coordinates"], "x_column": regression["x_column"], "y_column": regression["y_column"]}, latex_hint="Als pgfplots-Diagramm mit Achsenbeschriftungen und Fitgerade darstellen."))
+        calculations.append(_analysis_item(item_id="angular_regression", item_type="calculation", title="Lineare Winkelregression", description="Deterministische lineare Regression für erkannte Zeit-Winkel-Paare mit Slope, Intercept, R² und p-Wert.", data=regression))
+        figures.append(_analysis_item(item_id="angle_time_plot", item_type="figure", title="Winkel-Zeit-Diagramm", description="Pgfplots-kompatible Koordinaten der ausgewerteten Zeit- und Winkelwerte mit Regressionsgerade.", data={"x_col": regression.get("x_column"), "y_col": regression.get("y_column"), "slope": regression.get("slope")}))
     else:
-        warnings.append(_analysis_item(item_id="no_time_angle_regression", item_type="warning", title="Keine Zeit-Winkel-Regression", description="Es wurden keine eindeutig benannten Zeit- und Winkelspalten erkannt.", include_default=True, essential=False, data={"requires_todo": True}, latex_hint="Im Protokoll %TODO setzen, falls eine Winkelregression erwartet wird."))
+        warnings.append(_analysis_item(item_id="no_time_angle_regression", item_type="warning", title="Keine Zeit-Winkel-Regression", description="Es wurden keine eindeutig benannten Zeit- und Winkelspalten gefunden.", data={"not_computable": True, "requires_todo": True}))
 
     cols_lower = {str(c).lower() for c in df.columns}
     has_x = any(c in cols_lower or "x" == c for c in cols_lower)
     has_y = any(c in cols_lower or "y" == c for c in cols_lower)
     if has_x and has_y and not regression:
-        warnings.append(_analysis_item(item_id="xy_tracking_no_angle", item_type="warning", title="x/y-Tracking ohne definierte Winkeltransformation", description="Aus x/y-Spuren wurde kein physikalischer Winkel berechnet, da die Transformation nicht explizit definiert ist.", include_default=True, data={"requires_todo": True, "not_computable": True}, latex_hint="Keinen Winkelwert erfinden; qualitative Einschränkung diskutieren."))
+        warnings.append(_analysis_item(item_id="xy_tracking_no_angle", item_type="warning", title="x/y-Tracking ohne definierte Winkeltransformation", description="Aus x/y-Spuren wurde kein physikalischer Winkel berechnet; eine explizite Transformation ist erforderlich.", data={"not_computable": True, "requires_todo": True}))
 
     latitude = _latitude_result(regression, req.metadata)
     if latitude:
-        results.append(_analysis_item(item_id="latitude_result", item_type="result", title="Breitengrad aus Winkelgeschwindigkeit", description="Berechnung nur bei explizit definierter Winkelgeschwindigkeit in rad/s; sonst nicht berechenbar.", include_default=True, essential=False, data=latitude, latex_hint="Wenn not_computable=true: als nicht berechenbar berichten und keine Korrekturfaktoren einführen."))
+        results.append(_analysis_item(item_id="latitude_result", item_type="result", title="Breitengrad aus Winkelgeschwindigkeit", description="Berechnung nur bei explizit definierter Winkelgeschwindigkeit oder Winkeleinheit möglich.", data=latitude))
 
     calculations.append(_formula_item())
     for name in ["calibration", "pendulum_length", "frame_rate", "mass", "device_parameters"]:
         if not (req.metadata or {}).get(name):
-            warnings.append(_analysis_item(item_id=f"missing_{name}", item_type="warning", title=f"Fehlender Parameter: {name}", description=f"{name} wurde nicht in den Metadaten bereitgestellt.", include_default=False, essential=False, data={"missing": name, "requires_todo": True}, latex_hint="Bei Bedarf %TODO setzen; keine Geräteparameter erfinden."))
+            warnings.append(_analysis_item(item_id=f"missing_{name}", item_type="warning", title=f"Fehlender Parameter: {name}", description=f"{name} wurde nicht in den Metadaten bereitgestellt.", data={"not_computable": True}))
 
-    summary_for_generation = _clean_summary({"used_all_rows": True, "row_count": row_count, "column_count": column_count, "detected_numeric_columns": numeric_cols, "selected_item_rule": "Only selected structured objects may be used for numerical content."})
+    summary_for_generation = _clean_summary({"used_all_rows": True, "row_count": row_count, "column_count": column_count, "detected_numeric_columns": numeric_cols, "selected_item_rule": "Only selected items from tables, figures, results, calculations listed here."})
     return {"used_all_rows": True, "row_count": row_count, "column_count": column_count, "detected_numeric_columns": numeric_cols, "tables": tables, "figures": figures, "results": results, "calculations": calculations, "warnings": warnings, "summary_for_generation": summary_for_generation}
 
 
