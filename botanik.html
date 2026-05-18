@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Botanik API Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 900px; }
+    input, button { font-size: 1rem; padding: .6rem; }
+    input { width: 320px; }
+    pre { background: #f3f3f3; padding: 1rem; overflow:auto; }
+  </style>
+</head>
+<body>
+  <h1>Botanik API Test</h1>
+
+  <p>Taxon suchen:</p>
+  <input id="q" value="Acer">
+  <button onclick="searchTaxa()">Suchen</button>
+
+  <pre id="out">Noch keine Abfrage.</pre>
+
+  <script>
+    const API_BASE = "https://overleaf-tdkd.onrender.com";
+
+    async function searchTaxa() {
+      const q = document.getElementById("q").value.trim();
+      const res = await fetch(`${API_BASE}/api/botanik/taxa?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      document.getElementById("out").textContent = JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>
