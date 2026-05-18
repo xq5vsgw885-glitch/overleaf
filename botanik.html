@@ -4,10 +4,16 @@
   <meta charset="utf-8">
   <title>Botanik API Test</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 900px; }
+    body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 1000px; }
     input, button { font-size: 1rem; padding: .6rem; }
     input { width: 320px; }
-    pre { background: #f3f3f3; padding: 1rem; overflow:auto; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background: #fafafa; }
+    .taxon { padding: .6rem; border-bottom: 1px solid #ddd; cursor: pointer; }
+    .taxon:hover { background: #eef3ff; }
+    .muted { color: #666; font-size: .9rem; }
+    pre { background: #f3f3f3; padding: 1rem; overflow:auto; white-space: pre-wrap; }
+    h2 { margin-top: 0; }
   </style>
 </head>
 <body>
@@ -17,17 +23,85 @@
   <input id="q" value="Acer">
   <button onclick="searchTaxa()">Suchen</button>
 
-  <pre id="out">Noch keine Abfrage.</pre>
+  <div class="grid">
+    <div class="card">
+      <h2>Suchergebnisse</h2>
+      <div id="results">Noch keine Abfrage.</div>
+    </div>
+
+    <div class="card">
+      <h2>Taxon-Details</h2>
+      <div id="details">Noch kein Taxon ausgewählt.</div>
+    </div>
+  </div>
 
   <script>
     const API_BASE = "https://overleaf-tdkd.onrender.com";
 
     async function searchTaxa() {
       const q = document.getElementById("q").value.trim();
+      const box = document.getElementById("results");
+      box.textContent = "Lade Suchergebnisse…";
+
       const res = await fetch(`${API_BASE}/api/botanik/taxa?q=${encodeURIComponent(q)}`);
       const data = await res.json();
-      document.getElementById("out").textContent = JSON.stringify(data, null, 2);
+
+      if (!data.rows || data.rows.length === 0) {
+        box.textContent = "Keine Treffer.";
+        return;
+      }
+
+      box.innerHTML = data.rows.map(row => `
+        <div class="taxon" onclick="loadTaxon('${row.taxon_id}')">
+          <strong>${escapeHtml(row.scientific_name || "")}</strong><br>
+          <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · ${escapeHtml(row.taxon_id || "")}</span>
+        </div>
+      `).join("");
     }
+
+    async function loadTaxon(taxonId) {
+      const box = document.getElementById("details");
+      box.textContent = "Lade Details…";
+
+      const res = await fetch(`${API_BASE}/api/botanik/taxon/${encodeURIComponent(taxonId)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        box.textContent = JSON.stringify(data, null, 2);
+        return;
+      }
+
+      const t = data.taxon;
+      const features = data.features || [];
+
+      box.innerHTML = `
+        <h3>${escapeHtml(t.scientific_name || "")}</h3>
+        <p><strong>Deutsch:</strong> ${escapeHtml(t.german_name || "")}</p>
+        <p><strong>Rang:</strong> ${escapeHtml(t.rank || "")}</p>
+        <p><strong>Familie:</strong> ${escapeHtml(t.family || "")}</p>
+        <p><strong>Quelle:</strong> ${escapeHtml(t.source_pdf || "")}</p>
+        <p><strong>Merkmale:</strong> ${features.length}</p>
+        ${features.length ? `
+          <ul>
+            ${features.map(f => `
+              <li>
+                <strong>${escapeHtml(f.character || "")}</strong>:
+                ${escapeHtml(f.state || "")}
+                <br><span class="muted">Organ: ${escapeHtml(f.organ || "")}; diagnostisches Gewicht: ${escapeHtml(f.diagnostic_weight || "")}</span>
+              </li>
+            `).join("")}
+          </ul>
+        ` : `<p class="muted">Für dieses Taxon sind noch keine Merkmale hinterlegt.</p>`}
+      `;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[c]));
+    }
+
+    searchTaxa();
   </script>
 </body>
 </html>
