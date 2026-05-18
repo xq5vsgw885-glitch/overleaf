@@ -80,7 +80,7 @@
       box.innerHTML = `
         <p class="muted">Treffer: ${data.count} · vorbereitete Taxa: ${data.include_stubs ? "ein" : "aus"}</p>
         ${data.rows.map(row => `
-          <div class="taxon" onclick="loadTaxon(${row.taxon_id})">
+          <div class="taxon" onclick="loadTaxon('${row.taxon_id}')">
             <strong>${escapeHtml(row.scientific_name || "")}</strong><br>
             <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · Status: ${escapeHtml(row.status || "")} · ${escapeHtml(row.taxon_id || "")}</span>
           </div>
