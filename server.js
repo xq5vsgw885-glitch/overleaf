@@ -24,6 +24,27 @@ app.get("/api/botanik/health", (_, res) => {
 });
 
 
+
+app.get("/api/botanik/features/photo", (req, res) => {
+  const visibility = String(req.query.visibility || "high").trim();
+  const weight = String(req.query.weight || "high").trim();
+
+  const sql = `
+    SELECT f.*, t.scientific_name, t.german_name, t.rank
+    FROM botanik_features f
+    LEFT JOIN botanik_taxa t ON t.taxon_id = f.taxon_id
+    WHERE f.visibility_in_photo = ?
+      AND f.diagnostic_weight = ?
+    ORDER BY t.scientific_name, f.organ, f.character
+    LIMIT 100
+  `;
+
+  botanikDb.all(sql, [visibility, weight], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ count: rows.length, filters: { visibility, weight }, rows });
+  });
+});
+
 app.get("/api/botanik/taxon/:id", (req, res) => {
   const taxonId = String(req.params.id || "").trim();
 
