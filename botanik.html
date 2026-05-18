@@ -4,14 +4,16 @@
   <meta charset="utf-8">
   <title>Botanik API Test</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 1000px; }
-    input, button { font-size: 1rem; padding: .6rem; }
+    body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 1100px; }
+    input, button, select { font-size: 1rem; padding: .6rem; }
     input { width: 320px; }
+    button { cursor: pointer; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
     .card { border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background: #fafafa; }
-    .taxon { padding: .6rem; border-bottom: 1px solid #ddd; cursor: pointer; }
-    .taxon:hover { background: #eef3ff; }
+    .taxon, .feature { padding: .6rem; border-bottom: 1px solid #ddd; cursor: pointer; }
+    .taxon:hover, .feature:hover { background: #eef3ff; }
     .muted { color: #666; font-size: .9rem; }
+    .row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
     pre { background: #f3f3f3; padding: 1rem; overflow:auto; white-space: pre-wrap; }
     h2 { margin-top: 0; }
   </style>
@@ -19,13 +21,15 @@
 <body>
   <h1>Botanik API Test</h1>
 
-  <p>Taxon suchen:</p>
-  <input id="q" value="Acer">
-  <button onclick="searchTaxa()">Suchen</button>
+  <div class="row">
+    <input id="q" value="Acer">
+    <button onclick="searchTaxa()">Taxa suchen</button>
+    <button onclick="loadPhotoFeatures()">Foto-Merkmale anzeigen</button>
+  </div>
 
   <div class="grid">
     <div class="card">
-      <h2>Suchergebnisse</h2>
+      <h2>Suchergebnisse / Foto-Merkmale</h2>
       <div id="results">Noch keine Abfrage.</div>
     </div>
 
@@ -92,6 +96,30 @@
             `).join("")}
           </ul>
         ` : `<p class="muted">Für dieses Taxon sind noch keine Merkmale hinterlegt.</p>`}
+      `;
+    }
+
+    async function loadPhotoFeatures() {
+      const box = document.getElementById("results");
+      box.textContent = "Lade foto-diagnostische Merkmale…";
+
+      const res = await fetch(`${API_BASE}/api/botanik/features/photo`);
+      const data = await res.json();
+
+      if (!data.rows || data.rows.length === 0) {
+        box.textContent = "Keine foto-diagnostischen Merkmale gefunden.";
+        return;
+      }
+
+      box.innerHTML = `
+        <p class="muted">Filter: visibility=${escapeHtml(data.filters.visibility)}, weight=${escapeHtml(data.filters.weight)} · Treffer: ${data.count}</p>
+        ${data.rows.map(f => `
+          <div class="feature" onclick="loadTaxon('${f.taxon_id}')">
+            <strong>${escapeHtml(f.scientific_name || f.taxon_id)}</strong><br>
+            ${escapeHtml(f.character || "")}: ${escapeHtml(f.state || "")}
+            <br><span class="muted">${escapeHtml(f.german_name || "")} · Organ: ${escapeHtml(f.organ || "")} · ${escapeHtml(f.taxon_id || "")}</span>
+          </div>
+        `).join("")}
       `;
     }
 
