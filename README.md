@@ -6,6 +6,7 @@ Dieses Repository enthält den Protokollgenerator und die produktive Botanik-Tes
 
 - Produktive Testseite: https://overleaf-tdkd.onrender.com/botanik.html
 - API-Dokumentation: [BOTANIK_API.md](BOTANIK_API.md)
+- Release-Notiz: [BOTANIK_RELEASE_v1.md](BOTANIK_RELEASE_v1.md)
 
 ## Wichtige Botanik-Endpunkte
 
