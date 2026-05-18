@@ -47,3 +47,26 @@ Offene fachliche Qualitätskontrollen:
 - Ausbau artspezifischer Merkmale für häufige Fototaxa
 - Prüfung von Quellenhinweisen mit Rothmaler und Strasburger
 - Trennung sicherer Foto-Merkmale von Merkmalen, die Präparation oder Mikroskopie benötigen
+
+## Update: Stub-Taxa im Frontend optional sichtbar
+
+Status: Produktiv ausgerollt.
+
+Commit:
+- ee1545f: Add Botanik stub toggle to frontend
+
+Änderung:
+- Die Taxon-Suche blendet `status=stub` standardmäßig aus.
+- Über `include_stubs=1` beziehungsweise die Frontend-Checkbox „vorbereitete Taxa anzeigen“ können vorbereitete Taxa zusätzlich angezeigt werden.
+- Die Ergebnisliste zeigt Trefferzahl, Suchmodus und Taxon-Status.
+- Der Detailklick in der Taxon-Liste wurde repariert.
+- Der automatische Botanik-API-Check prüft beide Suchmodi.
+
+Produktive Validierung:
+- `/api/botanik/taxa?q=Acer` liefert 2 Treffer.
+- `/api/botanik/taxa?q=Acer&include_stubs=1` liefert 5 Treffer.
+- `npm run check:botanik` endet mit `All Botanik API checks passed.`
+
+Fachliche Bedeutung:
+- Der Standardmodus bleibt auf diagnostisch ausgearbeitete Taxa beschränkt.
+- Der Experten-/Datenpflege-Modus erlaubt Sicht auf vorbereitete, noch nicht vollständig ausgearbeitete Taxa.
