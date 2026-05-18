@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
+app.use(express.static(__dirname));
 
 const dbPath = path.join(__dirname, "database", "botanik_v4_0_production_ready.db");
 const botanikDb = new sqlite3.Database(dbPath);
