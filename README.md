@@ -13,3 +13,18 @@ Dieses Repository enthält den Protokollgenerator und die produktive Botanik-Tes
 - `/api/botanik/taxa?q=Acer`
 - `/api/botanik/taxon/berberis_vulgaris`
 - `/api/botanik/features/photo`
+
+## Produktivtest
+
+Alle produktiven Botanik-Endpunkte können mit einem Befehl geprüft werden:
+
+    ./scripts/check_botanik_api.sh
+
+Optional kann eine andere Basis-URL übergeben werden:
+
+    ./scripts/check_botanik_api.sh http://localhost:3000
+
+Erwartete Schlusszeile:
+
+    All Botanik API checks passed.
+
