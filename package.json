@@ -4,7 +4,8 @@
   "description": "Anthropic API proxy for PL Protokoll Generator",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check:botanik": "./scripts/check_botanik_api.sh"
   },
   "dependencies": {
     "cors": "^2.8.5",
