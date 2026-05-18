@@ -28,4 +28,15 @@ Optional kann eine andere Basis-URL übergeben werden:
 Erwartete Schlusszeile:
 
     All Botanik API checks passed.
+## Botanik-Suchmodi
+
+Die Taxon-Suche nutzt standardmäßig nur fachlich ausgearbeitete Taxa:
+
+    /api/botanik/taxa?q=Acer
+
+Vorbereitete Taxa mit `status=stub` können für Datenpflege oder Expertenansicht zusätzlich eingeblendet werden:
+
+    /api/botanik/taxa?q=Acer&include_stubs=1
+
+`deprecated` und `reference_only` bleiben in der Suche ausgeschlossen.
 
