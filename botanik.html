@@ -37,6 +37,8 @@
       <option value="low">Diagnosegewicht: low</option>
     </select>
 
+    <input id="featureSearch" placeholder="Merkmale filtern: Blatt, Frucht, giftig …">
+
     <button onclick="loadPhotoFeatures()">Foto-Merkmale anzeigen</button>
   </div>
 
@@ -118,17 +120,27 @@
 
       const visibility = document.getElementById("visibility").value;
       const weight = document.getElementById("weight").value;
+      const term = document.getElementById("featureSearch").value.trim().toLowerCase();
+
       const res = await fetch(`${API_BASE}/api/botanik/features/photo?visibility=${encodeURIComponent(visibility)}&weight=${encodeURIComponent(weight)}`);
       const data = await res.json();
 
-      if (!data.rows || data.rows.length === 0) {
-        box.textContent = "Keine foto-diagnostischen Merkmale gefunden.";
+      let rows = data.rows || [];
+      if (term) {
+        rows = rows.filter(f => [
+          f.scientific_name, f.german_name, f.character, f.state, f.organ,
+          f.feature_group, f.taxon_id, f.source_note
+        ].join(" ").toLowerCase().includes(term));
+      }
+
+      if (!rows.length) {
+        box.textContent = "Keine passenden foto-diagnostischen Merkmale gefunden.";
         return;
       }
 
       box.innerHTML = `
-        <p class="muted">Filter: visibility=${escapeHtml(data.filters.visibility)}, weight=${escapeHtml(data.filters.weight)} · Treffer: ${data.count}</p>
-        ${data.rows.map(f => `
+        <p class="muted">Filter: visibility=${escapeHtml(data.filters.visibility)}, weight=${escapeHtml(data.filters.weight)} · Treffer: ${rows.length} von ${data.count}</p>
+        ${rows.map(f => `
           <div class="feature" onclick="loadTaxon('${f.taxon_id}')">
             <strong>${escapeHtml(f.scientific_name || f.taxon_id)}</strong><br>
             ${escapeHtml(f.character || "")}: ${escapeHtml(f.state || "")}
