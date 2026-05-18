@@ -24,6 +24,19 @@
   <div class="row">
     <input id="q" value="Acer">
     <button onclick="searchTaxa()">Taxa suchen</button>
+
+    <select id="visibility">
+      <option value="high">Sichtbarkeit: high</option>
+      <option value="medium">Sichtbarkeit: medium</option>
+      <option value="low">Sichtbarkeit: low</option>
+    </select>
+
+    <select id="weight">
+      <option value="high">Diagnosegewicht: high</option>
+      <option value="medium">Diagnosegewicht: medium</option>
+      <option value="low">Diagnosegewicht: low</option>
+    </select>
+
     <button onclick="loadPhotoFeatures()">Foto-Merkmale anzeigen</button>
   </div>
 
@@ -103,7 +116,9 @@
       const box = document.getElementById("results");
       box.textContent = "Lade foto-diagnostische Merkmale…";
 
-      const res = await fetch(`${API_BASE}/api/botanik/features/photo`);
+      const visibility = document.getElementById("visibility").value;
+      const weight = document.getElementById("weight").value;
+      const res = await fetch(`${API_BASE}/api/botanik/features/photo?visibility=${encodeURIComponent(visibility)}&weight=${encodeURIComponent(weight)}`);
       const data = await res.json();
 
       if (!data.rows || data.rows.length === 0) {
