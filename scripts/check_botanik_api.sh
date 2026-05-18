@@ -65,4 +65,32 @@ check "Taxon detail Berberis vulgaris" "$BASE_URL/api/botanik/taxon/berberis_vul
 check "Photo features high/high" "$BASE_URL/api/botanik/features/photo"
 check "Photo features medium/medium" "$BASE_URL/api/botanik/features/photo?visibility=medium&weight=medium"
 
+
+echo "== Local DB quality: active direct taxa have features =="
+QC_COUNT=$(sqlite3 database/botanik_v4_0_production_ready.db "
+WITH taxon_feature_counts AS (
+  SELECT
+    t.taxon_id,
+    t.rank,
+    t.status,
+    COUNT(f.feature_id) AS feature_count
+  FROM botanik_taxa t
+  LEFT JOIN botanik_features f ON f.taxon_id = t.taxon_id
+  WHERE t.status = 'active'
+    AND t.rank IN ('species','genus','hybrid')
+  GROUP BY t.taxon_id
+)
+SELECT COUNT(*)
+FROM taxon_feature_counts
+WHERE feature_count = 0;
+")
+
+if [ "$QC_COUNT" != "0" ]; then
+  echo "FAIL: active species/genus/hybrid without diagnostic features: $QC_COUNT"
+  exit 1
+fi
+
+echo "OK"
+echo
+
 echo "All Botanik API checks passed."
