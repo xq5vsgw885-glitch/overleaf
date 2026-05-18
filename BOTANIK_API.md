@@ -22,6 +22,21 @@ Test:
 
 curl "https://overleaf-tdkd.onrender.com/api/botanik/taxa?q=Acer"
 
+
+#### Stub-Taxa einschließen
+
+Standardmäßig blendet `/api/botanik/taxa` vorbereitete, aber noch nicht diagnostisch ausgearbeitete Taxa mit `status=stub` aus.
+
+Mit folgendem Parameter werden sie zusätzlich angezeigt:
+
+    GET /api/botanik/taxa?q=Acer&include_stubs=1
+
+Interpretation:
+
+- `include_stubs=false`: Standardmodus für normale Bestimmung; nur ausgearbeitete Taxa.
+- `include_stubs=true`: Datenpflege-/Expertenmodus; vorbereitete Taxa werden zusätzlich angezeigt.
+- `deprecated` und `reference_only` bleiben ausgeschlossen.
+
 ### Taxon-Details
 
 GET /api/botanik/taxon/berberis_vulgaris
