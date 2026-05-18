@@ -23,6 +23,21 @@ app.get("/api/botanik/health", (_, res) => {
   });
 });
 
+
+app.get("/api/botanik/taxon/:id", (req, res) => {
+  const taxonId = String(req.params.id || "").trim();
+
+  botanikDb.get("SELECT * FROM botanik_taxa WHERE taxon_id = ?", [taxonId], (err, taxon) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!taxon) return res.status(404).json({ error: "Taxon not found" });
+
+    botanikDb.all("SELECT * FROM botanik_features WHERE taxon_id = ? ORDER BY organ, feature_group, character", [taxonId], (err2, features) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ taxon, features_count: features.length, features });
+    });
+  });
+});
+
 app.get("/api/botanik/taxa", (req, res) => {
   const q = String(req.query.q || "").trim();
   const sql = q
