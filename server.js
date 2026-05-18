@@ -61,10 +61,22 @@ app.get("/api/botanik/taxon/:id", (req, res) => {
 
 app.get("/api/botanik/taxa", (req, res) => {
   const q = String(req.query.q || "").trim();
+
   const sql = q
-    ? "SELECT * FROM botanik_taxa WHERE scientific_name LIKE ? OR german_name LIKE ? LIMIT 50"
-    : "SELECT * FROM botanik_taxa LIMIT 50";
-  const params = q ? [`%${q}%`, `%${q}%`] : [];
+    ? `SELECT * FROM botanik_taxa
+       WHERE COALESCE(status, "") != ?
+         AND COALESCE(app_scope, "") != ?
+         AND (scientific_name LIKE ? OR german_name LIKE ? OR taxon_id LIKE ?)
+       LIMIT 50`
+    : `SELECT * FROM botanik_taxa
+       WHERE COALESCE(status, "") != ?
+         AND COALESCE(app_scope, "") != ?
+       LIMIT 50`;
+
+  const params = q
+    ? ["deprecated", "exclude_from_identification", `%${q}%`, `%${q}%`, `%${q}%`]
+    : ["deprecated", "exclude_from_identification"];
+
   botanikDb.all(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ count: rows.length, rows });
