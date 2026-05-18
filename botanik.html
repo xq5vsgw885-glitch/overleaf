@@ -25,6 +25,11 @@
     <input id="q" value="Acer">
     <button onclick="searchTaxa()">Taxa suchen</button>
 
+    <label class="muted">
+      <input id="includeStubs" type="checkbox" onchange="searchTaxa()" style="width:auto">
+      vorbereitete Taxa anzeigen
+    </label>
+
     <select id="visibility">
       <option value="high">Sichtbarkeit: high</option>
       <option value="medium">Sichtbarkeit: medium</option>
@@ -62,7 +67,9 @@
       const box = document.getElementById("results");
       box.textContent = "Lade Suchergebnisse…";
 
-      const res = await fetch(`${API_BASE}/api/botanik/taxa?q=${encodeURIComponent(q)}`);
+      const includeStubs = document.getElementById("includeStubs").checked;
+      const stubParam = includeStubs ? "&include_stubs=1" : "";
+      const res = await fetch(`${API_BASE}/api/botanik/taxa?q=${encodeURIComponent(q)}${stubParam}`);
       const data = await res.json();
 
       if (!data.rows || data.rows.length === 0) {
@@ -70,12 +77,15 @@
         return;
       }
 
-      box.innerHTML = data.rows.map(row => `
-        <div class="taxon" onclick="loadTaxon('${row.taxon_id}')">
-          <strong>${escapeHtml(row.scientific_name || "")}</strong><br>
-          <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · ${escapeHtml(row.taxon_id || "")}</span>
-        </div>
-      `).join("");
+      box.innerHTML = `
+        <p class="muted">Treffer: ${data.count} · vorbereitete Taxa: ${data.include_stubs ? "ein" : "aus"}</p>
+        ${data.rows.map(row => `
+          <div class="taxon" onclick="loadTaxon(${row.taxon_id})">
+            <strong>${escapeHtml(row.scientific_name || "")}</strong><br>
+            <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · Status: ${escapeHtml(row.status || "")} · ${escapeHtml(row.taxon_id || "")}</span>
+          </div>
+        `).join("")}
+      `;
     }
 
     async function loadTaxon(taxonId) {
