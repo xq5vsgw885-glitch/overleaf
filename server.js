@@ -4,12 +4,38 @@ const { execFile } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const sqlite3 = require("sqlite3").verbose();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
+
+const dbPath = path.join(__dirname, "database", "botanik_v4_0_production_ready.db");
+const botanikDb = new sqlite3.Database(dbPath);
+
+app.get("/api/botanik/health", (_, res) => {
+  botanikDb.get("SELECT version, release_stage FROM botanik_release_manifest", [], (err, row) => {
+    if (err) return res.status(500).json({ ok: false, error: err.message });
+    res.json({ ok: true, database: "botanik_v4_0_production_ready.db", release: row });
+  });
+});
+
+app.get("/api/botanik/taxa", (req, res) => {
+  const q = String(req.query.q || "").trim();
+  const sql = q
+    ? "SELECT * FROM botanik_taxa WHERE scientific_name LIKE ? OR german_name LIKE ? LIMIT 50"
+    : "SELECT * FROM botanik_taxa LIMIT 50";
+  const params = q ? [`%${q}%`, `%${q}%`] : [];
+  botanikDb.all(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ count: rows.length, rows });
+  });
+});
+
+
+
 
 // ── Health ───────────────────────────────────────────────────────────────────
 app.get("/health", (_, res) => res.json({ ok: true, python: true }));
