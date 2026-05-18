@@ -61,25 +61,37 @@ app.get("/api/botanik/taxon/:id", (req, res) => {
 
 app.get("/api/botanik/taxa", (req, res) => {
   const q = String(req.query.q || "").trim();
+  const includeStubs = String(req.query.include_stubs || "") === "1";
+
+  const statusFilter = includeStubs
+    ? `COALESCE(status, "") NOT IN (?, ?)`
+    : `COALESCE(status, "") NOT IN (?, ?, ?)`;
+
+  const baseFilter = `
+    ${statusFilter}
+    AND COALESCE(app_scope, "") != ?
+  `;
 
   const sql = q
     ? `SELECT * FROM botanik_taxa
-       WHERE COALESCE(status, "") != ?
-         AND COALESCE(app_scope, "") != ?
+       WHERE (${baseFilter})
          AND (scientific_name LIKE ? OR german_name LIKE ? OR taxon_id LIKE ?)
        LIMIT 50`
     : `SELECT * FROM botanik_taxa
-       WHERE COALESCE(status, "") != ?
-         AND COALESCE(app_scope, "") != ?
+       WHERE (${baseFilter})
        LIMIT 50`;
 
+  const statusParams = includeStubs
+    ? ["deprecated", "reference_only"]
+    : ["deprecated", "reference_only", "stub"];
+
   const params = q
-    ? ["deprecated", "exclude_from_identification", `%${q}%`, `%${q}%`, `%${q}%`]
-    : ["deprecated", "exclude_from_identification"];
+    ? [...statusParams, "exclude_from_identification", `%${q}%`, `%${q}%`, `%${q}%`]
+    : [...statusParams, "exclude_from_identification"];
 
   botanikDb.all(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ count: rows.length, rows });
+    res.json({ count: rows.length, include_stubs: includeStubs, rows });
   });
 });
 
