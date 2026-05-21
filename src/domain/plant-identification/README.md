@@ -254,7 +254,21 @@ Testet alle sechs Funktionen aus `identificationResult.ts`. Die produktive Domä
 
 **Methodische Prüfbestätigung:** Alle `buildIdentificationResult`-Tests prüfen explizit `isFinalSpeciesIdentification === false` und `visualControlPending === true`.
 
-**Gesamtstand Unit-Tests: 103/103 bestanden (5 Testdateien)**
+#### Unit-Tests visualControl.ts (visualControl.test.ts)
+
+Testet alle fünf Funktionen aus `visualControl.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten enthalten keine echten Pflanzenarten oder Taxa. Es wurde keine Bildanalyse und keine Bildähnlichkeit implementiert.
+
+**Getestete Funktionen:** `createNotPerformedVisualControlResult`, `createInsufficientVisualMaterialResult`, `createVisualSupportResult`, `createVisualConflictResult`, `attachVisualControlResult`
+
+**Testumfang (6 Tests, alle bestanden):**
+- `createNotPerformedVisualControlResult` – status, leere checkedPhotoTypes, kein Support, keine Review-Pflicht
+- `createInsufficientVisualMaterialResult` – status, checkedPhotoTypes, Review-Pflicht
+- `createVisualSupportResult` – status, checkedPhotoTypes, Support ohne Review-Pflicht
+- `createVisualConflictResult` – status, checkedPhotoTypes, Review-Pflicht
+- `attachVisualControlResult` – verbindet IdentificationResult und VisualControlResult korrekt
+- Methodische Sicherung: auch bei visual_support bleibt `isFinalSpeciesIdentification === false`
+
+**Gesamtstand Unit-Tests: 109/109 bestanden (6 Testdateien)**
 
 ## Noch nicht implementiert
 
@@ -263,11 +277,11 @@ Testet alle sechs Funktionen aus `identificationResult.ts`. Die produktive Domä
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Unit-Tests für visualControl.ts, identificationPipeline.ts
+- Unit-Tests für identificationPipeline.ts
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für visualControl.ts**.
+Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für identificationPipeline.ts**.
 
-Diese Tests sollen `createNotPerformedVisualControlResult`, `createInsufficientVisualMaterialResult`, `createVisualSupportResult`, `createVisualConflictResult` und `attachVisualControlResult` prüfen.
+Diese Tests sollen `runIdentificationPipeline` prüfen: Pipeline mit leerer Taxonliste, Pipeline mit einem Kandidaten und Übergang des visuellen Kontrollstatus auf `not_performed`.
