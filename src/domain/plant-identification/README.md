@@ -29,8 +29,6 @@ Die Merkmalsmatrix ist abgeschlossen. Es gibt keine offenen Merkmalsgruppen.
 
 #### Scoring-Modell (featureScoring.ts)
 
-Ein erstes generisches Scoring-/Vergleichsmodell ist implementiert.
-
 **Typen:** `ObservedFeature`, `TaxonFeatureProfile`, `FeatureComparisonResult`
 
 **Funktionen:** `diagnosticWeightToNumber`, `compareFeature`, `compareFeatureSet`, `calculateFeatureScore`
@@ -38,8 +36,6 @@ Ein erstes generisches Scoring-/Vergleichsmodell ist implementiert.
 **Fachliche Einordnung:** Hilfsmodell zur merkmalsbasierten Eingrenzung, keine abschließende Artbestimmung.
 
 #### Taxon-Profil-Schema (taxonProfile.ts)
-
-Ein Schema für spätere Familien-, Gattungs- und Artprofile ist definiert.
 
 **Typen:** `TaxonomicRank`, `FloristicStatus`, `GermanyRelevance`, `TaxonomicIdentity`, `EcologyProfile`, `PhenologyProfile`, `VisualReferenceProfile`, `PlantTaxonProfile`
 
@@ -51,33 +47,34 @@ Ein Schema für spätere Familien-, Gattungs- und Artprofile ist definiert.
 
 **Funktionen:** `determineTaxonComparisonStatus`, `getTaxonComparisonReason`, `compareObservedFeaturesWithTaxon`
 
-**Fachliche Einordnung:** Bewertet ausschließlich morphologische Merkmalsübereinstimmung. Ein Status `high_match` bedeutet keine sichere Artbestimmung.
+**Fachliche Einordnung:** Bewertet ausschließlich morphologische Merkmalsübereinstimmung. Ein Status `high_match` ist keine sichere Artbestimmung.
 
 #### Plausibilitätsmodell (plausibilityScoring.ts)
 
-Ein erstes Deutschland-/Status-/Standort-/Phänologie-Plausibilitätsmodell ist implementiert.
+**Typen:** `ObservationContext`, `PlausibilityComponent`, `PlausibilityCheckResult`, `PlausibilityStatus`, `TaxonPlausibilityResult`
+
+**Funktionen:** `floristicStatusToWeight`, `checkGermanyRelevance`, `checkFloristicStatus`, `checkHabitat`, `checkMoisture`, `checkLight`, `checkPhenology`, `calculatePlausibilityScore`, `determinePlausibilityStatus`, `getPlausibilityReason`, `evaluateTaxonPlausibility`
+
+**Fachliche Einordnung:** Prüft Kontext- und Verbreitungsplausibilität. Deutschland-Relevanz ist harter Anker. Ein Status `high_plausibility` ist keine sichere Artbestimmung.
+
+#### Kombinierte Gesamtbewertung (combinedAssessment.ts)
+
+Kombiniert morphologische Taxon-Übereinstimmung und Kontextplausibilität zu einer Gesamtbewertung.
 
 **Typen:**
-- `ObservationContext` – Beobachtungskontext mit optionalen Standort-, Feuchte-, Licht- und Monatsangaben
-- `PlausibilityComponent` – germany_relevance, floristic_status, habitat, moisture, light, phenology
-- `PlausibilityCheckResult` – Ergebnis einer einzelnen Plausibilitätsprüfung
-- `PlausibilityStatus` – not_plausible, low_plausibility, moderate_plausibility, high_plausibility
-- `TaxonPlausibilityResult` – Gesamtergebnis der Plausibilitätsbewertung
+- `CombinedAssessmentStatus` – insufficient_data, unlikely_candidate, possible_candidate, probable_candidate, strong_candidate_requires_review
+- `CombinedAssessmentResult` – Gesamtergebnis mit Morphologie, Plausibilität, combinedScore, Status und Begründung
 
 **Funktionen:**
-- `floristicStatusToWeight` – übersetzt FloristicStatus in einen numerischen Gewichtungsfaktor
-- `checkGermanyRelevance` – prüft, ob ein Taxon für Deutschland relevant ist
-- `checkFloristicStatus` – gewichtet nach floristischem Status
-- `checkHabitat` – prüft Standorttyp-Übereinstimmung
-- `checkMoisture` – prüft Feuchte-Übereinstimmung
-- `checkLight` – prüft Licht-Übereinstimmung
-- `checkPhenology` – prüft phänologische Plausibilität
-- `calculatePlausibilityScore` – berechnet Gesamtplausibilität zwischen 0 und 1
-- `determinePlausibilityStatus` – leitet Status ab; not_plausible wenn Taxon nicht in Deutschland vorkommt
-- `getPlausibilityReason` – liefert textuelle Begründung zum Status
-- `evaluateTaxonPlausibility` – führt alle Checks aus und gibt TaxonPlausibilityResult zurück
+- `calculateCombinedScore` – Morphologie × 0.75 + Plausibilität × 0.25
+- `determineCombinedAssessmentStatus` – leitet Status aus combinedScore, Morphologie und Plausibilität ab
+- `getCombinedAssessmentReason` – liefert textuelle Begründung zum Status
+- `assessTaxonCandidate` – bewertet einen einzelnen Taxon-Kandidaten
+- `assessTaxonCandidates` – bewertet eine Liste von Taxa und sortiert absteigend nach combinedScore
 
-**Fachliche Einordnung:** `plausibilityScoring.ts` prüft Kontext- und Verbreitungsplausibilität, keine Artidentität. Deutschland-Relevanz ist harter Anker. Fehlende Kontextangaben werden neutral behandelt (maxScore = 0). Standort, Feuchte, Licht und Phänologie schwächen oder stützen Kandidaten, schließen sie aber nicht hart aus. Ein Status `high_plausibility` ist keine sichere Artbestimmung.
+**Gewichtung:** Morphologie 0.75 · Plausibilität 0.25. Morphologische Merkmale bleiben primär. Kontext- und Verbreitungsplausibilität stabilisieren die Bewertung, dominieren sie aber nicht.
+
+**Fachliche Einordnung:** Die höchste Statusklasse `strong_candidate_requires_review` bedeutet ausdrücklich keine sichere Artbestimmung. Ein Kandidat ist stark unterstützt, muss aber weiterhin taxonomisch geprüft und später visuell kontrolliert werden. Es gibt keine finale Artbestimmung, keine Taxon-Datenbank, keine Bildanalyse und keinen visuellen Fotoabgleich in dieser Datei.
 
 ### Technische Hinweise
 
@@ -87,19 +84,18 @@ Ein erstes Deutschland-/Status-/Standort-/Phänologie-Plausibilitätsmodell ist 
 
 ## Noch nicht implementiert
 
-- Kombinierte Gesamtbewertung aus Morphologie und Plausibilität
+- Finale Bestimmungsausgabe-Struktur
 - Echte Pflanzenarten oder Taxon-Datenbank
-- Taxonomische Entscheidungslogik
+- Taxonomische Hierarchielogik
 - Visueller Fotoabgleich
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Entwicklung einer **kombinierten Gesamtbewertung**, die folgende Teilmodelle zusammenführt:
+Der nächste fachliche Schritt ist die Entwicklung einer **finalen Bestimmungsausgabe-Struktur**.
 
-- morphologische Taxon-Übereinstimmung aus `taxonComparison.ts`
-- Kontext- und Verbreitungsplausibilität aus `plausibilityScoring.ts`
+Diese Struktur soll das Ergebnis einer vollständigen Bestimmungsanfrage repräsentieren: geordnete Kandidatenliste, Konfidenz-Einschätzung, Hinweise auf fehlende Merkmale und Anforderungen für den abschließenden visuellen Kontrollschritt.
 
-Diese kombinierte Gesamtbewertung ist noch nicht implementiert.
+Die finale Bestimmungsausgabe-Struktur ist noch nicht implementiert.
 
-Der visuelle Fotoabgleich bleibt weiterhin ein späterer abschließender Kontrollschritt und ist noch nicht implementiert.
+Der visuelle Fotoabgleich bleibt weiterhin ein späterer abschließender Kontrollschritt und ist nicht implementiert.
