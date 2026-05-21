@@ -37,13 +37,17 @@
 9. **Blütenfarbe**
    - bluetenfarbe
 
-### Technischer Hinweis
+10. **Blütensymmetrie**
+    - bluetensymmetrie
+
+### Technische Hinweise
+
+`DiagnosticWeight` enthält die Werte: `"sehr_hoch"`, `"hoch"`, `"mittel"`, `"niedrig"`.
 
 `RequiredPhotoType` enthält die Werte: `"habitus"`, `"standort"`, `"detail"`, `"blatt"`, `"bluete"`.
 
 ### Noch geplant
 
-10. Blütensymmetrie
 11. Blütenstand
 12. Frucht
 13. Samen/Ausbreitung
