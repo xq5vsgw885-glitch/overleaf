@@ -31,7 +31,7 @@ export const PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT: DomainQualityReport = {
   imageAnalysisImplemented: false,
   realTaxaImplemented: false,
   testFramework: "vitest",
-  passingUnitTests: 158,
+  passingUnitTests: 168,
   modules: [
     {
       moduleName: "morphologicalFeatureMatrix",
@@ -123,12 +123,21 @@ export const PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT: DomainQualityReport = {
       performsImageAnalysis: false,
       usesRealTaxa: false,
     },
+    {
+      moduleName: "taxonSeedSchema",
+      purpose: "Schema und Policy-Validierung für spätere Taxon-Seed-Einträge",
+      implemented: true,
+      hasUnitTests: true,
+      createsFinalIdentification: false,
+      performsImageAnalysis: false,
+      usesRealTaxa: false,
+    },
   ],
   openNextSteps: [
-    "README.md mit aktualisiertem DomainQualityReport nach taxonSeedPolicy synchronisieren",
+    "README.md mit aktualisiertem DomainQualityReport nach taxonSeedSchema synchronisieren",
     "Entscheidung über Aufbau erster fachlich kontrollierter Taxon-Seed-Daten treffen",
     "Taxon-Seed-Daten nur quellenbasiert und schrittweise ergänzen",
-    "Taxon-Seed-Daten nur nach taxonSeedPolicy ergänzen",
+    "Taxon-Seed-Daten nur nach taxonSeedPolicy und taxonSeedSchema ergänzen",
     "Alternativ weitere technische Härtung der Testinfrastruktur durchführen",
     "Visuellen Kontrollschritt erst nach stabiler merkmalsbasierter Taxon-Datenbasis implementieren",
     "Keine finale sichere Artbestimmung ohne konsistente Morphologie, Taxonomie, Deutschland-Plausibilität und visuellen Kontrollschritt",
