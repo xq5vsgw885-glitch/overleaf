@@ -301,9 +301,12 @@ Enthält ausschließlich einen maschinenlesbaren Architektur- und Qualitätsstat
 
 **Konstante:** `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT`
 
-**Inhalt des Reports:**
+**Inhalt des Reports (aktueller Stand):**
 - 9 Domänenmodule mit Implementierungs- und Teststatus
-- 114 bestandene Unit-Tests dokumentiert
+- 145 bestandene Unit-Tests dokumentiert (`passingUnitTests: 145`)
+- `morphologicalFeatureMatrix.hasUnitTests: true`
+- `taxonProfile.hasUnitTests: true`
+- Alle 9 Module im Report: `hasUnitTests: true`
 - `finalSpeciesIdentificationImplemented: false`
 - `imageAnalysisImplemented: false`
 - `realTaxaImplemented: false`
@@ -316,23 +319,25 @@ Enthält ausschließlich einen maschinenlesbaren Architektur- und Qualitätsstat
 Testet `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT` aus `domainQualityReport.ts`. Keine echten Taxa, keine Bildanalyse, keine neue Bestimmungslogik.
 
 **Testumfang (10 Tests, alle bestanden):**
-1. Grundstatus – domain, scope, primaryMethod, visualControlRole, testFramework, passingUnitTests
+1. Grundstatus – domain, scope, primaryMethod, visualControlRole, testFramework, `passingUnitTests === 145`
 2. Methodische Sicherungen – `finalSpeciesIdentificationImplemented === false`, `imageAnalysisImplemented === false`, `realTaxaImplemented === false`
 3. 9 Domänenmodule vorhanden
 4. Alle Module `implemented === true`
 5. Kein Modul `createsFinalIdentification === true`
 6. Kein Modul `performsImageAnalysis === true`
 7. Kein Modul `usesRealTaxa === true`
-8. Teststatus: morphologicalFeatureMatrix und taxonProfile `hasUnitTests: false`, alle übrigen `hasUnitTests: true`
+8. Teststatus: alle 9 Module `hasUnitTests: true` (morphologicalFeatureMatrix und taxonProfile auf true aktualisiert)
 9. Alle 9 erwarteten Modulnamen vorhanden
-10. Alle 5 offenen nächsten Schritte vorhanden
+10. Alle 6 offenen nächsten Schritte vorhanden (openNextSteps an aktuellen Stand angepasst)
 
-**Testabdeckung der Domäne vollständig für:**
-`featureScoring` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport`
+**Synchronisierung:** `domainQualityReport.ts` und `domainQualityReport.test.ts` wurden in zwei separaten Schritten synchronisiert: erst die Produktionsdatei, dann die Testdatei.
 
-**Noch nicht testabgedeckt:** `morphologicalFeatureMatrix`, `taxonProfile`
+**Testabdeckung der Domäne vollständig für alle 10 Module:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport`
 
-**Gesamtstand Unit-Tests: 124/124 bestanden (8 Testdateien)**
+**Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
+
+**Gesamtstand Unit-Tests: 145/145 bestanden (10 Testdateien)**
 
 #### Unit-Tests morphologicalFeatureMatrix.ts (morphologicalFeatureMatrix.test.ts)
 
@@ -404,8 +409,9 @@ Testet alle acht exportierten Typen und Strukturen aus `taxonProfile.ts` durch t
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Entwicklungsschritt erfordert eine externe Entscheidung zwischen folgenden Optionen:
+Der nächste fachliche Entwicklungsschritt ist ein **fachliches Review der Merkmalsgewichtungen in der Merkmalsmatrix**, insbesondere die Klärung des Befunds zu `bluetensymmetrie`:
 
-1. **Aufbau erster fachlich kontrollierter Taxon-Seed-Daten** – Grundlage für spätere merkmalsbasierte Bestimmung mit künstlichen Testtaxa
-2. **Weitere technische Härtung der Testinfrastruktur** – z. B. Integrationstests, Grenzfallabdeckung oder CI-Einbindung
-3. **Review der Gewichtungen in der Merkmalsmatrix** – insbesondere Klärung des Befunds zu `bluetensymmetrie`, das aktuell nicht mit `"hoch"` oder `"sehr_hoch"` gewichtet ist
+- `bluetensymmetrie` ist aktuell nicht mit `"hoch"` oder `"sehr_hoch"` gewichtet.
+- Die Tests folgen dem Ist-Zustand der Matrix.
+- Es wurde keine fachliche Umgewichtung vorgenommen.
+- Eine Umgewichtung darf ausschließlich durch externe fachliche Vorgabe erfolgen.
