@@ -52,6 +52,11 @@
 14. **Unterirdische Organe**
     - unterirdisches_organ
 
+15. **Standortkontext**
+    - standorttyp
+    - feuchte
+    - licht
+
 ### Technische Hinweise
 
 `DiagnosticWeight` enthält die Werte: `"sehr_hoch"`, `"hoch"`, `"mittel"`, `"niedrig"`.
@@ -60,5 +65,4 @@
 
 ### Noch geplant
 
-15. Standortkontext
 16. Phänologie
