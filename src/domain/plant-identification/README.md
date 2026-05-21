@@ -16,9 +16,12 @@
 3. **Blattstellung**
    - blattstellung
 
+4. **Blattform**
+   - blattform
+   - blattgliederung
+
 ### Noch geplant
 
-4. Blattform
 5. Blattrand
 6. Blattnervatur
 7. Blattoberfläche/Behaarung
