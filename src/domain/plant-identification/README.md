@@ -137,6 +137,27 @@ Der visuelle Kontrollschritt darf eine merkmalsbasierte Bestimmung nur stützen,
 
 Eine sichere Artbestimmung darf nur entstehen, wenn morphologische Konsistenz, taxonomische Plausibilität, Deutschland-/Status-/Standortprüfung und visueller Kontrollschritt konsistent sind.
 
+#### Pipeline-Klammerung (identificationPipeline.ts)
+
+Verbindet die bestehenden Bausteine zu einer ersten merkmalsbasierten Pipeline.
+
+**Typen:**
+- `IdentificationPipelineInput` – observedFeatures, observationContext, candidateTaxa
+- `IdentificationPipelineResult` – assessments, identification, identificationWithVisualControl
+
+**Funktion:**
+- `runIdentificationPipeline` – führt kombinierte Bewertung, Ausgabestrukturierung und visuellen Kontrollstatus in einem Aufruf zusammen
+
+**Fachliche Einordnung:**
+
+Die Pipeline arbeitet ausschließlich mit übergebenen `candidateTaxa`. Es werden keine echten Pflanzenarten oder Taxon-Datenbanken angelegt. Die Pipeline implementiert keine Bildanalyse und keinen echten visuellen Fotoabgleich.
+
+Der visuelle Kontrollstatus ist aktuell immer `not_performed`: Der Kontrollschritt ist strukturell vorgesehen, aber noch nicht durchgeführt.
+
+Wenn `candidateTaxa` leer ist, läuft die Pipeline typkonform und erzeugt eine `IdentificationResult` ohne `primaryCandidate`.
+
+Die Pipeline erzeugt keine finale sichere Artbestimmung. Eine sichere Artbestimmung darf nur entstehen, wenn morphologische Konsistenz, taxonomische Plausibilität, Deutschland-/Status-/Standortprüfung und visueller Kontrollschritt konsistent sind.
+
 ## Noch nicht implementiert
 
 - Echte Bildanalyse
@@ -144,13 +165,13 @@ Eine sichere Artbestimmung darf nur entstehen, wenn morphologische Konsistenz, t
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Pipeline-Klammerung
+- Unit-Tests
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die **technische Klammerung der gesamten Pipeline**.
+Der nächste fachliche Schritt ist die **Qualitätssicherung der Domänenlogik durch Unit-Tests**.
 
-Diese Pipeline-Klammerung soll alle Stufen der Bestimmungsarchitektur zusammenführen: Deutschland-Florenraum, morphologische Merkmalsanalyse, taxonomische Eingrenzung, Verbreitungs- und Statusprüfung sowie visueller Kontrollschritt.
+Unit-Tests sollen die Kernfunktionen der Pipeline prüfen: Scoring-Modell, Taxon-Vergleich, Plausibilitätsbewertung, kombinierte Bewertung und Bestimmungsausgabe.
 
-Die Pipeline-Klammerung ist noch nicht implementiert.
+Unit-Tests sind noch nicht implementiert.
