@@ -184,6 +184,24 @@ Spätere Taxon-Seed-Daten dürfen nur mit zugelassener Quellenangabe (Rothmaler,
 
 `requiresSourceCitation: true`, `requiresGermanyRelevance: true`, `allowsUncitedTaxa: false`, `allowsImageOnlyTaxa: false`, `allowsFinalSpeciesIdentificationFromSeedAlone: false` sind als TypeScript-Literal-Typen definiert und können nicht auf andere Werte gesetzt werden.
 
+#### Taxon-Seed-Schema (taxonSeedSchema.ts)
+
+Definiert ausschließlich Schema und Policy-Validierung für spätere Taxon-Seed-Einträge. Enthält keine Taxa, keine echten Pflanzenarten, keine Seed-Daten, keine Taxon-Datenbank, keine Bildanalyse und keine finale sichere Artbestimmung.
+
+**Typen:**
+- `TaxonSeedCitation` – source, reference, page?, note?
+- `TaxonSeedEntry` – taxon, citation, germanyRelevant, createdFromImageOnly: false, createsFinalIdentification: false
+- `TaxonSeedValidationResult` – valid, checks, reason
+
+**Funktionen:**
+- `hasUsableCitation` – prüft, ob eine Quellenangabe einen nicht-leeren `reference`-String enthält
+- `validateTaxonSeedEntry` – führt drei Policy-Checks durch (Quelle, Zitation, Deutschland-Relevanz) und liefert `TaxonSeedValidationResult`
+- `createBlockedTaxonSeedValidationResult` – erzeugt ein blockiertes Ergebnis mit leerem checks-Array
+
+**Fachliche Einordnung:**
+
+`TaxonSeedEntry.createdFromImageOnly` ist ein TypeScript-Literal-Typ `false` und kann nicht auf `true` gesetzt werden. `TaxonSeedEntry.createsFinalIdentification` ist ebenfalls ein Literal-Typ `false`. Die Validierung nutzt `checkTaxonSeedSource`, `checkTaxonSeedCitation` und `checkTaxonSeedGermanyRelevance` aus `taxonSeedPolicy.ts`. Ein Eintrag ist nur `valid`, wenn alle drei Checks `status === "allowed"` liefern.
+
 ### Test-Infrastruktur
 
 **Test-Framework:** Vitest (`vitest run`)
@@ -462,7 +480,4 @@ Testet `PLANT_TAXON_SEED_POLICY`, `isAllowedTaxonSeedSource`, `checkTaxonSeedSou
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Entwicklungsschritt erfordert eine externe Entscheidung zwischen folgenden Optionen:
-
-1. **Aufbau erster fachlich kontrollierter Taxon-Seed-Daten** – ausschließlich quellenbasiert nach `taxonSeedPolicy` (Rothmaler, Strasburger), schrittweise, mit Deutschland-Relevanz
-2. **Weitere technische Härtung der Testinfrastruktur** – z. B. Integrationstests oder CI-Einbindung
+Der nächste fachliche Entwicklungsschritt ist die Ergänzung von Unit-Tests für `taxonSeedSchema.ts`.
