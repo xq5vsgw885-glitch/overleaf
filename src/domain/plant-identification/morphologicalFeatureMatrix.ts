@@ -1,4 +1,4 @@
-export type DiagnosticWeight = "hoch" | "mittel" | "niedrig";
+export type DiagnosticWeight = "sehr_hoch" | "hoch" | "mittel" | "niedrig";
 
 export type PhotoVisibility = "true" | "bedingt" | "false";
 
@@ -334,6 +334,25 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     requiredPhotoTypes: ["bluete"],
     userExplanation:
       "Beschreibt die auffällige Grundfarbe der Blüte. Die Blütenfarbe ist für Nutzer leicht erfassbar, kann aber innerhalb einer Art variieren und wird deshalb niedrig gewichtet.",
+  },
+
+  // Gruppe 10: Blütensymmetrie
+  {
+    id: "bluetensymmetrie",
+    group: "Blütensymmetrie",
+    name: "Blütensymmetrie",
+    possibleValues: [
+      "radiärsymmetrisch",
+      "zygomorph",
+      "asymmetrisch",
+      "scheinbar_radiärsymmetrisch",
+      "unscheinbar_nicht_beurteilbar",
+    ],
+    diagnosticWeight: "sehr_hoch",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["bluete", "detail"],
+    userExplanation:
+      "Beschreibt, ob eine Blüte radiärsymmetrisch, zweiseitig symmetrisch oder asymmetrisch aufgebaut ist. Die Blütensymmetrie ist ein sehr wichtiges diagnostisches Merkmal, muss aber mit weiteren Blüten- und Pflanzenmerkmalen kombiniert werden.",
   },
 ];
 
