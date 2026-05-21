@@ -57,12 +57,25 @@
     - feuchte
     - licht
 
+16. **Phänologie**
+    - bluetezeit
+    - fruchtzeit
+
+Alle 16 geplanten Merkmalsgruppen der ersten Merkmalsmatrix sind umgesetzt.
+Es gibt keine offenen Merkmalsgruppen in diesem Bereich.
+
 ### Technische Hinweise
 
 `DiagnosticWeight` enthält die Werte: `"sehr_hoch"`, `"hoch"`, `"mittel"`, `"niedrig"`.
 
 `RequiredPhotoType` enthält die Werte: `"habitus"`, `"standort"`, `"detail"`, `"blatt"`, `"bluete"`, `"frucht"`.
 
-### Noch geplant
+## Nächster Entwicklungsschritt
 
-16. Phänologie
+Der nächste fachliche Schritt ist die Entwicklung eines **Scoring-/Vergleichsmodells** auf Basis der vorhandenen Merkmalsmatrix.
+
+Dieses Modell ist noch nicht implementiert.
+
+Es soll erfasste Merkmalswerte gewichten, kombinieren und mit Referenzdaten abgleichen, um eine merkmalsbasierte Pflanzenbestimmung zu ermöglichen.
+
+Der **visuelle Fotoabgleich** bleibt weiterhin ausschließlich ein abschließender Kontrollschritt und ist noch nicht Teil der aktuellen Implementierung.
