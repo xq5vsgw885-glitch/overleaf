@@ -203,6 +203,27 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     userExplanation:
       "Beschreibt die Ausgestaltung des Blattrandes, zum Beispiel ob er glatt, gesägt, gezähnt, gekerbt, gelappt oder dornig ist. Der Blattrand unterstützt die Eingrenzung, ist aber allein nicht artentscheidend.",
   },
+
+  // Gruppe 6: Blattnervatur
+  {
+    id: "nervatur",
+    group: "Blattnervatur",
+    name: "Blattnervatur",
+    possibleValues: [
+      "parallelnervig",
+      "bogennervig",
+      "fiedernervig",
+      "handnervig",
+      "netznervig",
+      "einnervig",
+      "mehrnervig",
+    ],
+    diagnosticWeight: "mittel",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["blatt", "detail"],
+    userExplanation:
+      "Beschreibt den Verlauf der Blattadern. Die Blattnervatur hilft besonders bei der groben Einordnung von Pflanzengruppen, ist aber allein nicht artentscheidend.",
+  },
 ];
 
 export function getFeaturesByGroup(group: string): MorphologicalFeature[] {
