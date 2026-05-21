@@ -43,15 +43,17 @@
 11. **Blütenstand**
     - bluetenstand
 
+12. **Frucht**
+    - fruchttyp
+
 ### Technische Hinweise
 
 `DiagnosticWeight` enthält die Werte: `"sehr_hoch"`, `"hoch"`, `"mittel"`, `"niedrig"`.
 
-`RequiredPhotoType` enthält die Werte: `"habitus"`, `"standort"`, `"detail"`, `"blatt"`, `"bluete"`.
+`RequiredPhotoType` enthält die Werte: `"habitus"`, `"standort"`, `"detail"`, `"blatt"`, `"bluete"`, `"frucht"`.
 
 ### Noch geplant
 
-12. Frucht
 13. Samen/Ausbreitung
 14. Unterirdische Organe
 15. Standortkontext
