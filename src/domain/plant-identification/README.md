@@ -158,6 +158,33 @@ Wenn `candidateTaxa` leer ist, läuft die Pipeline typkonform und erzeugt eine `
 
 Die Pipeline erzeugt keine finale sichere Artbestimmung. Eine sichere Artbestimmung darf nur entstehen, wenn morphologische Konsistenz, taxonomische Plausibilität, Deutschland-/Status-/Standortprüfung und visueller Kontrollschritt konsistent sind.
 
+### Test-Infrastruktur
+
+**Test-Framework:** Vitest (`vitest run`)
+
+**Test-Script in package.json:** `"test": "vitest run"`
+
+#### Unit-Tests featureScoring.ts (featureScoring.test.ts)
+
+Testet alle vier Kernfunktionen aus `featureScoring.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert.
+
+**Getestete Funktionen:** `diagnosticWeightToNumber`, `compareFeature`, `compareFeatureSet`, `calculateFeatureScore`
+
+**Testumfang (13 Tests, alle bestanden):**
+1. Gewichtung niedrig → 1
+2. Gewichtung mittel → 2
+3. Gewichtung hoch → 3
+4. Gewichtung sehr_hoch → 4
+5. `compareFeature` mit passendem Wert → matched, score, reason
+6. `compareFeature` mit nicht passendem Wert → value_mismatch
+7. `compareFeature` mit nicht sichtbarem Merkmal → feature_not_visible
+8. `compareFeature` mit unbekanntem Merkmal → unknown_feature
+9. `compareFeatureSet` mit zwei passenden Merkmalen → 2 Ergebnisse, alle matched
+10. `compareFeatureSet` ignoriert fehlendes beobachtetes Merkmal
+11. `calculateFeatureScore` mit normalen Werten → 0.5
+12. `calculateFeatureScore` mit leerer Liste → 0
+13. `calculateFeatureScore` mit maxScore-Summe 0 → 0
+
 ## Noch nicht implementiert
 
 - Echte Bildanalyse
@@ -165,13 +192,11 @@ Die Pipeline erzeugt keine finale sichere Artbestimmung. Eine sichere Artbestimm
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Unit-Tests
+- Unit-Tests für taxonComparison.ts, plausibilityScoring.ts, combinedAssessment.ts, identificationResult.ts, visualControl.ts, identificationPipeline.ts
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die **Qualitätssicherung der Domänenlogik durch Unit-Tests**.
+Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für taxonComparison.ts**.
 
-Unit-Tests sollen die Kernfunktionen der Pipeline prüfen: Scoring-Modell, Taxon-Vergleich, Plausibilitätsbewertung, kombinierte Bewertung und Bestimmungsausgabe.
-
-Unit-Tests sind noch nicht implementiert.
+Diese Tests sollen `determineTaxonComparisonStatus`, `getTaxonComparisonReason` und `compareObservedFeaturesWithTaxon` prüfen.
