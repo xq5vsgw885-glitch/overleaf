@@ -49,6 +49,9 @@
 13. **Samen/Ausbreitung**
     - ausbreitungseinheit
 
+14. **Unterirdische Organe**
+    - unterirdisches_organ
+
 ### Technische Hinweise
 
 `DiagnosticWeight` enthält die Werte: `"sehr_hoch"`, `"hoch"`, `"mittel"`, `"niedrig"`.
@@ -57,6 +60,5 @@
 
 ### Noch geplant
 
-14. Unterirdische Organe
 15. Standortkontext
 16. Phänologie
