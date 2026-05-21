@@ -116,10 +116,10 @@ export const PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT: DomainQualityReport = {
     },
   ],
   openNextSteps: [
-    "README.md mit aktualisiertem DomainQualityReport synchronisieren",
-    "Fachliches Review der Merkmalsgewichtungen durchführen, insbesondere bluetensymmetrie",
+    "README.md mit aktualisiertem Stand nach getHighDiagnosticFeatures-Korrektur synchronisieren",
     "Entscheidung über Aufbau erster fachlich kontrollierter Taxon-Seed-Daten treffen",
     "Taxon-Seed-Daten nur quellenbasiert und schrittweise ergänzen",
+    "Alternativ weitere technische Härtung der Testinfrastruktur durchführen",
     "Visuellen Kontrollschritt erst nach stabiler merkmalsbasierter Taxon-Datenbasis implementieren",
     "Keine finale sichere Artbestimmung ohne konsistente Morphologie, Taxonomie, Deutschland-Plausibilität und visuellen Kontrollschritt",
   ],
