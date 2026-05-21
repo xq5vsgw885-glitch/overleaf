@@ -35,7 +35,7 @@ Ein erstes generisches Scoring-/Vergleichsmodell ist implementiert.
 
 **Funktionen:** `diagnosticWeightToNumber`, `compareFeature`, `compareFeatureSet`, `calculateFeatureScore`
 
-**Fachliche Einordnung:** Das Scoring ist ein Hilfsmodell zur merkmalsbasierten Eingrenzung, keine abschließende Artbestimmung.
+**Fachliche Einordnung:** Hilfsmodell zur merkmalsbasierten Eingrenzung, keine abschließende Artbestimmung.
 
 #### Taxon-Profil-Schema (taxonProfile.ts)
 
@@ -47,18 +47,37 @@ Ein Schema für spätere Familien-, Gattungs- und Artprofile ist definiert.
 
 #### Taxon-Vergleichsfunktion (taxonComparison.ts)
 
-Eine erste Taxon-Vergleichsfunktion ist implementiert.
+**Typen:** `TaxonComparisonStatus`, `TaxonComparisonResult`
+
+**Funktionen:** `determineTaxonComparisonStatus`, `getTaxonComparisonReason`, `compareObservedFeaturesWithTaxon`
+
+**Fachliche Einordnung:** Bewertet ausschließlich morphologische Merkmalsübereinstimmung. Ein Status `high_match` bedeutet keine sichere Artbestimmung.
+
+#### Plausibilitätsmodell (plausibilityScoring.ts)
+
+Ein erstes Deutschland-/Status-/Standort-/Phänologie-Plausibilitätsmodell ist implementiert.
 
 **Typen:**
-- `TaxonComparisonStatus` – no_observable_features, low_match, moderate_match, high_match
-- `TaxonComparisonResult` – Vergleichsergebnis mit Score, Status und Begründung
+- `ObservationContext` – Beobachtungskontext mit optionalen Standort-, Feuchte-, Licht- und Monatsangaben
+- `PlausibilityComponent` – germany_relevance, floristic_status, habitat, moisture, light, phenology
+- `PlausibilityCheckResult` – Ergebnis einer einzelnen Plausibilitätsprüfung
+- `PlausibilityStatus` – not_plausible, low_plausibility, moderate_plausibility, high_plausibility
+- `TaxonPlausibilityResult` – Gesamtergebnis der Plausibilitätsbewertung
 
 **Funktionen:**
-- `determineTaxonComparisonStatus` – leitet den Status aus Score und Vergleichsergebnissen ab
-- `getTaxonComparisonReason` – liefert eine textuelle Begründung zum Status
-- `compareObservedFeaturesWithTaxon` – vergleicht beobachtete Merkmale mit einem PlantTaxonProfile
+- `floristicStatusToWeight` – übersetzt FloristicStatus in einen numerischen Gewichtungsfaktor
+- `checkGermanyRelevance` – prüft, ob ein Taxon für Deutschland relevant ist
+- `checkFloristicStatus` – gewichtet nach floristischem Status
+- `checkHabitat` – prüft Standorttyp-Übereinstimmung
+- `checkMoisture` – prüft Feuchte-Übereinstimmung
+- `checkLight` – prüft Licht-Übereinstimmung
+- `checkPhenology` – prüft phänologische Plausibilität
+- `calculatePlausibilityScore` – berechnet Gesamtplausibilität zwischen 0 und 1
+- `determinePlausibilityStatus` – leitet Status ab; not_plausible wenn Taxon nicht in Deutschland vorkommt
+- `getPlausibilityReason` – liefert textuelle Begründung zum Status
+- `evaluateTaxonPlausibility` – führt alle Checks aus und gibt TaxonPlausibilityResult zurück
 
-**Fachliche Einordnung:** `taxonComparison.ts` bewertet ausschließlich morphologische Merkmalsübereinstimmung. Sie führt keine taxonomische Entscheidung allein herbei, keine Deutschland-/Status-/Standortprüfung und keinen visuellen Fotoabgleich. Ein Status `high_match` bedeutet nur hohe morphologische Übereinstimmung – er darf nicht automatisch als sichere Artbestimmung ausgegeben werden.
+**Fachliche Einordnung:** `plausibilityScoring.ts` prüft Kontext- und Verbreitungsplausibilität, keine Artidentität. Deutschland-Relevanz ist harter Anker. Fehlende Kontextangaben werden neutral behandelt (maxScore = 0). Standort, Feuchte, Licht und Phänologie schwächen oder stützen Kandidaten, schließen sie aber nicht hart aus. Ein Status `high_plausibility` ist keine sichere Artbestimmung.
 
 ### Technische Hinweise
 
@@ -68,17 +87,19 @@ Eine erste Taxon-Vergleichsfunktion ist implementiert.
 
 ## Noch nicht implementiert
 
+- Kombinierte Gesamtbewertung aus Morphologie und Plausibilität
 - Echte Pflanzenarten oder Taxon-Datenbank
-- Deutschland-/Status-/Standort-Plausibilitätsmodell
 - Taxonomische Entscheidungslogik
-- Verbreitungs- und Statusprüfung
 - Visueller Fotoabgleich
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Entwicklung eines **Deutschland-/Status-/Standort-Plausibilitätsmodells**.
+Der nächste fachliche Schritt ist die Entwicklung einer **kombinierten Gesamtbewertung**, die folgende Teilmodelle zusammenführt:
 
-Dieses Modell soll prüfen, ob ein Taxon für den deutschen Bestimmungsraum relevant ist, welchen floristischen Status es hat und ob der beobachtete Standort zur Art plausibel ist.
+- morphologische Taxon-Übereinstimmung aus `taxonComparison.ts`
+- Kontext- und Verbreitungsplausibilität aus `plausibilityScoring.ts`
 
-Das Deutschland-/Status-/Standort-Plausibilitätsmodell ist noch nicht implementiert.
+Diese kombinierte Gesamtbewertung ist noch nicht implementiert.
+
+Der visuelle Fotoabgleich bleibt weiterhin ein späterer abschließender Kontrollschritt und ist noch nicht implementiert.
