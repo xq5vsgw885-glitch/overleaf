@@ -34,13 +34,15 @@
    - bluetentyp
    - bluetengroesse
 
+9. **Blütenfarbe**
+   - bluetenfarbe
+
 ### Technischer Hinweis
 
-`RequiredPhotoType` enthält jetzt auch den Wert `"bluete"`.
+`RequiredPhotoType` enthält die Werte: `"habitus"`, `"standort"`, `"detail"`, `"blatt"`, `"bluete"`.
 
 ### Noch geplant
 
-9. Blütenfarbe
 10. Blütensymmetrie
 11. Blütenstand
 12. Frucht
