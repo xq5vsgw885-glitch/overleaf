@@ -158,6 +158,32 @@ Wenn `candidateTaxa` leer ist, läuft die Pipeline typkonform und erzeugt eine `
 
 Die Pipeline erzeugt keine finale sichere Artbestimmung. Eine sichere Artbestimmung darf nur entstehen, wenn morphologische Konsistenz, taxonomische Plausibilität, Deutschland-/Status-/Standortprüfung und visueller Kontrollschritt konsistent sind.
 
+#### Taxon-Seed-Policy (taxonSeedPolicy.ts)
+
+Definiert ausschließlich die Mindestregeln für spätere Taxon-Seed-Daten. Enthält keine Taxa, keine echten Pflanzenarten, keine Seed-Daten, keine Bestimmungslogik und keine Bildanalyse.
+
+**Typen:**
+- `TaxonSeedSourceType` – "Rothmaler" | "Strasburger" | "extern_nicht_zugelassen"
+- `TaxonSeedPolicyStatus` – "allowed" | "blocked"
+- `TaxonSeedPolicyCheck` – status, reason
+- `TaxonSeedPolicy` – allowedSources, requiresSourceCitation, requiresGermanyRelevance, allowsUncitedTaxa, allowsImageOnlyTaxa, allowsFinalSpeciesIdentificationFromSeedAlone
+
+**Konstante:** `PLANT_TAXON_SEED_POLICY`
+
+Zugelassene Quellen aktuell: **Rothmaler**, **Strasburger**
+
+**Funktionen:**
+- `isAllowedTaxonSeedSource` – prüft, ob eine Quelle zugelassen ist
+- `checkTaxonSeedSource` – liefert `TaxonSeedPolicyCheck` für eine Quellenangabe
+- `checkTaxonSeedCitation` – liefert `TaxonSeedPolicyCheck` für das Vorhandensein einer Quellenangabe
+- `checkTaxonSeedGermanyRelevance` – liefert `TaxonSeedPolicyCheck` für die Deutschland-Relevanz
+
+**Fachliche Einordnung:**
+
+Spätere Taxon-Seed-Daten dürfen nur mit zugelassener Quellenangabe (Rothmaler, Strasburger) ergänzt werden. Nicht zitierte Taxa sind nicht zulässig. Taxon-Seed-Daten müssen Deutschland-Relevanz besitzen. Reine Bildähnlichkeit darf kein Taxon begründen. Taxon-Seed-Daten dürfen keine finale sichere Artbestimmung allein erzeugen.
+
+`requiresSourceCitation: true`, `requiresGermanyRelevance: true`, `allowsUncitedTaxa: false`, `allowsImageOnlyTaxa: false`, `allowsFinalSpeciesIdentificationFromSeedAlone: false` sind als TypeScript-Literal-Typen definiert und können nicht auf andere Werte gesetzt werden.
+
 ### Test-Infrastruktur
 
 **Test-Framework:** Vitest (`vitest run`)
@@ -393,7 +419,7 @@ Testet alle acht exportierten Typen und Strukturen aus `taxonProfile.ts` durch t
 **Testabdeckung der Domäne vollständig für alle 10 Module:**
 `morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport`
 
-**Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
+**Noch nicht testabgedeckt:** `taxonSeedPolicy`
 
 **Gesamtstand Unit-Tests: 145/145 bestanden (10 Testdateien)**
 
@@ -408,7 +434,4 @@ Testet alle acht exportierten Typen und Strukturen aus `taxonProfile.ts` durch t
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Entwicklungsschritt erfordert eine externe Entscheidung zwischen folgenden Optionen:
-
-1. **Aufbau erster fachlich kontrollierter Taxon-Seed-Daten** – Grundlage für spätere merkmalsbasierte Bestimmung; Taxon-Seed-Daten dürfen nur quellenbasiert und schrittweise ergänzt werden
-2. **Weitere technische Härtung der Testinfrastruktur** – z. B. Integrationstests oder CI-Einbindung
+Der nächste fachliche Entwicklungsschritt ist die Ergänzung von Unit-Tests für `taxonSeedPolicy.ts`.
