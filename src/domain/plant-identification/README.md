@@ -76,6 +76,36 @@ Kombiniert morphologische Taxon-Übereinstimmung und Kontextplausibilität zu ei
 
 **Fachliche Einordnung:** Die höchste Statusklasse `strong_candidate_requires_review` bedeutet ausdrücklich keine sichere Artbestimmung. Ein Kandidat ist stark unterstützt, muss aber weiterhin taxonomisch geprüft und später visuell kontrolliert werden. Es gibt keine finale Artbestimmung, keine Taxon-Datenbank, keine Bildanalyse und keinen visuellen Fotoabgleich in dieser Datei.
 
+#### Finale Bestimmungsausgabe-Struktur (identificationResult.ts)
+
+Strukturiert die Ausgabe der merkmalsbasierten Pipeline vor dem visuellen Kontrollschritt. Trennt die Begründung methodisch in Beobachtung, Berechnung, Interpretation und Unsicherheit.
+
+**Typen:**
+- `IdentificationConfidence` – insufficient, low, moderate, high_but_not_final
+- `IdentificationOutputRank` – familie, gattung, art, nicht_bestimmbar
+- `EvidenceSection` – Felder: observations, calculations, interpretation, uncertainty
+- `MissingEvidenceHint` – featureId, message, recommendedPhotoType?
+- `IdentificationCandidate` – taxon, assessment, confidence, outputRank, evidence, missingEvidence
+- `IdentificationResult` – primaryCandidate?, alternativeCandidates, resultSummary, isFinalSpeciesIdentification, visualControlPending
+
+**Funktionen:**
+- `confidenceFromCombinedStatus` – mappt CombinedAssessmentStatus auf IdentificationConfidence
+- `outputRankFromTaxonRank` – mappt TaxonomicRank auf IdentificationOutputRank
+- `buildEvidenceSection` – erzeugt EvidenceSection aus CombinedAssessmentResult
+- `buildMissingEvidenceHints` – liefert Hinweise auf fehlende Merkmale
+- `buildIdentificationCandidate` – erzeugt IdentificationCandidate aus CombinedAssessmentResult
+- `buildIdentificationResult` – erzeugt sortierte IdentificationResult aus Kandidatenliste
+
+**Fachliche Einordnung:**
+
+`isFinalSpeciesIdentification` ist immer `false`. Dieser Wert kann nie `true` sein.
+
+`visualControlPending` ist immer `true`, weil der visuelle Fotoabgleich noch nicht durchgeführt wurde.
+
+Ein `outputRank` „art" bedeutet ausschließlich, dass ein Kandidatenprofil auf Art-Rang liegt. Es bedeutet nicht, dass die Art sicher bestimmt wurde.
+
+Die Datei erzeugt keine finale sichere Artbestimmung. Die Datei führt keinen visuellen Fotoabgleich durch. Die Datei führt keine Bildanalyse durch. Die Datei enthält keine echten Pflanzenarten und keine Taxon-Datenbank.
+
 ### Technische Hinweise
 
 `DiagnosticWeight` enthält die Werte: `"sehr_hoch"`, `"hoch"`, `"mittel"`, `"niedrig"`.
@@ -84,18 +114,17 @@ Kombiniert morphologische Taxon-Übereinstimmung und Kontextplausibilität zu ei
 
 ## Noch nicht implementiert
 
-- Finale Bestimmungsausgabe-Struktur
 - Echte Pflanzenarten oder Taxon-Datenbank
-- Taxonomische Hierarchielogik
+- Finale sichere Artbestimmung
+- Visuelles Kontrollschritt-Schema
 - Visueller Fotoabgleich
+- Bildanalyse
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Entwicklung einer **finalen Bestimmungsausgabe-Struktur**.
+Der nächste fachliche Schritt ist die Entwicklung eines **visuellen Kontrollschritt-Schemas**.
 
-Diese Struktur soll das Ergebnis einer vollständigen Bestimmungsanfrage repräsentieren: geordnete Kandidatenliste, Konfidenz-Einschätzung, Hinweise auf fehlende Merkmale und Anforderungen für den abschließenden visuellen Kontrollschritt.
+Dieses Schema soll den abschließenden visuellen Kontrollschritt strukturieren: Anforderungen an Referenzbilder, Kontrollkriterien und Ausgabeformat des Fotoabgleichs. Der visuelle Fotoabgleich darf nur kontrollieren, aber niemals allein bestimmen.
 
-Die finale Bestimmungsausgabe-Struktur ist noch nicht implementiert.
-
-Der visuelle Fotoabgleich bleibt weiterhin ein späterer abschließender Kontrollschritt und ist nicht implementiert.
+Das visuelle Kontrollschritt-Schema ist noch nicht implementiert.
