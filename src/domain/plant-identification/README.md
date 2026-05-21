@@ -346,41 +346,41 @@ Enthält ausschließlich einen maschinenlesbaren Architektur- und Qualitätsstat
 **Konstante:** `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT`
 
 **Inhalt des Reports (aktueller Stand):**
-- 10 Domänenmodule mit Implementierungs- und Teststatus
-- 158 bestandene Unit-Tests dokumentiert (`passingUnitTests: 158`)
-- Alle 10 Module im Report: `hasUnitTests: true` – inkl. `taxonSeedPolicy`
+- 11 Domänenmodule mit Implementierungs- und Teststatus
+- 168 bestandene Unit-Tests dokumentiert (`passingUnitTests: 168`)
+- Alle 11 Module im Report: `hasUnitTests: true` – inkl. `taxonSeedPolicy` und `taxonSeedSchema`
 - `finalSpeciesIdentificationImplemented: false`
 - `imageAnalysisImplemented: false`
 - `realTaxaImplemented: false`
 - Kein Modul erzeugt eine finale sichere Artbestimmung
 - Kein Modul führt Bildanalyse aus
 - Kein Modul verwendet echte Taxa
-- `openNextSteps` nach taxonSeedPolicy-Ergänzung synchronisiert (7 Einträge)
+- `openNextSteps` nach taxonSeedSchema-Ergänzung synchronisiert (7 Einträge)
 
 #### Unit-Tests domainQualityReport.ts (domainQualityReport.test.ts)
 
 Testet `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT` aus `domainQualityReport.ts`. Keine echten Taxa, keine Bildanalyse, keine neue Bestimmungslogik.
 
 **Testumfang (10 Tests, alle bestanden):**
-1. Grundstatus – domain, scope, primaryMethod, visualControlRole, testFramework, `passingUnitTests === 158`
+1. Grundstatus – domain, scope, primaryMethod, visualControlRole, testFramework, `passingUnitTests === 168`
 2. Methodische Sicherungen – `finalSpeciesIdentificationImplemented === false`, `imageAnalysisImplemented === false`, `realTaxaImplemented === false`
-3. 10 Domänenmodule vorhanden
+3. 11 Domänenmodule vorhanden
 4. Alle Module `implemented === true`
 5. Kein Modul `createsFinalIdentification === true`
 6. Kein Modul `performsImageAnalysis === true`
 7. Kein Modul `usesRealTaxa === true`
-8. Teststatus: alle 10 Module `hasUnitTests: true` – inkl. `taxonSeedPolicy`
-9. Alle 10 erwarteten Modulnamen vorhanden – inkl. `taxonSeedPolicy`
-10. Alle 7 offenen nächsten Schritte vorhanden (openNextSteps nach taxonSeedPolicy-Ergänzung aktualisiert)
+8. Teststatus: alle 11 Module `hasUnitTests: true` – inkl. `taxonSeedPolicy` und `taxonSeedSchema`
+9. Alle 11 erwarteten Modulnamen vorhanden – inkl. `taxonSeedPolicy` und `taxonSeedSchema`
+10. Alle 7 offenen nächsten Schritte vorhanden (openNextSteps nach taxonSeedSchema-Ergänzung aktualisiert)
 
-**Synchronisierung:** `domainQualityReport.ts` und `domainQualityReport.test.ts` wurden nach Ergänzung von `taxonSeedPolicy` erneut synchronisiert: `taxonSeedPolicy` als 10. Modul ergänzt, `passingUnitTests` auf 158 aktualisiert, `openNextSteps` angepasst, anschließend Testerwartungen nachgezogen.
+**Synchronisierung:** `domainQualityReport.ts` und `domainQualityReport.test.ts` wurden nach Ergänzung von `taxonSeedSchema` erneut synchronisiert: `taxonSeedSchema` als 11. Modul ergänzt, `passingUnitTests` auf 168 aktualisiert, `openNextSteps` angepasst, anschließend Testerwartungen nachgezogen.
 
-**Testabdeckung der Domäne vollständig für alle 11 Module:**
-`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy`
+**Testabdeckung der Domäne vollständig für alle 12 Module:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy` · `taxonSeedSchema`
 
 **Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
 
-**Gesamtstand Unit-Tests: 158/158 bestanden (11 Testdateien)**
+**Gesamtstand Unit-Tests: 168/168 bestanden (12 Testdateien)**
 
 #### Unit-Tests morphologicalFeatureMatrix.ts (morphologicalFeatureMatrix.test.ts)
 
@@ -505,4 +505,6 @@ Testet `hasUsableCitation`, `validateTaxonSeedEntry` und `createBlockedTaxonSeed
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Entwicklungsschritt ist die Synchronisierung von `domainQualityReport.ts` mit dem aktuellen Stand: Aufnahme von `taxonSeedSchema` als Domänenmodul und Aktualisierung auf 168 bestandene Tests.
+`domainQualityReport.ts` ist nach Ergänzung von `taxonSeedSchema` synchronisiert. `passingUnitTests` steht auf 168. Alle 11 Domänenmodule sind im Qualitätsreport mit `hasUnitTests: true` geführt. Es wurden keine Taxa, keine Seed-Daten, keine Bildanalyse, kein visueller Fotoabgleich und keine finale sichere Artbestimmung ergänzt.
+
+Der nächste fachliche Entwicklungsschritt ist eine Entscheidung über den Aufbau erster fachlich kontrollierter Taxon-Seed-Daten oder alternativ weitere technische Härtung der Testinfrastruktur. Falls Taxon-Seed-Daten aufgebaut werden, müssen sie ausschließlich nach `taxonSeedPolicy` und `taxonSeedSchema` ergänzt werden: mit zugelassener Quellenangabe (Rothmaler oder Strasburger), vollständiger Zitation und nachgewiesener Deutschland-Relevanz.
