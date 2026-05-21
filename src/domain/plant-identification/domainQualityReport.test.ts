@@ -68,16 +68,16 @@ describe("PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT", () => {
 
   it("documents all expected open next steps", () => {
     expect(report.openNextSteps).toContain(
-      "README.md mit aktualisiertem DomainQualityReport synchronisieren"
-    );
-    expect(report.openNextSteps).toContain(
-      "Fachliches Review der Merkmalsgewichtungen durchführen, insbesondere bluetensymmetrie"
+      "README.md mit aktualisiertem Stand nach getHighDiagnosticFeatures-Korrektur synchronisieren"
     );
     expect(report.openNextSteps).toContain(
       "Entscheidung über Aufbau erster fachlich kontrollierter Taxon-Seed-Daten treffen"
     );
     expect(report.openNextSteps).toContain(
       "Taxon-Seed-Daten nur quellenbasiert und schrittweise ergänzen"
+    );
+    expect(report.openNextSteps).toContain(
+      "Alternativ weitere technische Härtung der Testinfrastruktur durchführen"
     );
     expect(report.openNextSteps).toContain(
       "Visuellen Kontrollschritt erst nach stabiler merkmalsbasierter Taxon-Datenbasis implementieren"
