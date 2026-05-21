@@ -35,23 +35,30 @@ Ein erstes generisches Scoring-/Vergleichsmodell ist implementiert.
 
 **Funktionen:** `diagnosticWeightToNumber`, `compareFeature`, `compareFeatureSet`, `calculateFeatureScore`
 
-**Fachliche Einordnung:** Das Scoring ist ein Hilfsmodell zur merkmalsbasierten Eingrenzung, keine abschließende Artbestimmung. Eine sichere Bestimmung erfordert morphologische Konsistenz, taxonomische Plausibilität, Deutschland-/Status-/Standortprüfung und visuellen Fotoabgleich als abschließenden Kontrollschritt.
+**Fachliche Einordnung:** Das Scoring ist ein Hilfsmodell zur merkmalsbasierten Eingrenzung, keine abschließende Artbestimmung.
 
 #### Taxon-Profil-Schema (taxonProfile.ts)
 
 Ein Schema für spätere Familien-, Gattungs- und Artprofile ist definiert.
 
-**Typen:**
-- `TaxonomicRank` – Hierarchieebene: familie, gattung, art
-- `FloristicStatus` – wildwachsend, etablierter_neophyt, haeufig_verwildernd, kulturpflanze_nachrangig
-- `GermanyRelevance` – Deutschland-Relevanz und floristische Statusgewichtung
-- `TaxonomicIdentity` – wissenschaftlicher Name, Deutschname, Familie, Gattung, Art, Rang
-- `EcologyProfile` – Habitattypen, Feuchte, Licht, Hinweise
-- `PhenologyProfile` – Blüte- und Fruchtmonate
-- `VisualReferenceProfile` – Platzhalter für spätere Referenzbilder (nur für visuellen Kontrollschritt)
-- `PlantTaxonProfile` – Gesamtprofil: verbindet Identität, Deutschland-Relevanz, Morphologie, Ökologie, Phänologie und optionale Referenzbilder
+**Typen:** `TaxonomicRank`, `FloristicStatus`, `GermanyRelevance`, `TaxonomicIdentity`, `EcologyProfile`, `PhenologyProfile`, `VisualReferenceProfile`, `PlantTaxonProfile`
 
-**Fachliche Einordnung:** `taxonProfile.ts` ist nur ein Schema. Es enthält keine echten Pflanzenarten, keine Artenliste und keine Bestimmungslogik. Es dient als Grundlage für spätere strukturierte Familien-, Gattungs- und Artprofile.
+**Fachliche Einordnung:** Nur ein Schema. Keine echten Pflanzenarten, keine Artenliste, keine Bestimmungslogik.
+
+#### Taxon-Vergleichsfunktion (taxonComparison.ts)
+
+Eine erste Taxon-Vergleichsfunktion ist implementiert.
+
+**Typen:**
+- `TaxonComparisonStatus` – no_observable_features, low_match, moderate_match, high_match
+- `TaxonComparisonResult` – Vergleichsergebnis mit Score, Status und Begründung
+
+**Funktionen:**
+- `determineTaxonComparisonStatus` – leitet den Status aus Score und Vergleichsergebnissen ab
+- `getTaxonComparisonReason` – liefert eine textuelle Begründung zum Status
+- `compareObservedFeaturesWithTaxon` – vergleicht beobachtete Merkmale mit einem PlantTaxonProfile
+
+**Fachliche Einordnung:** `taxonComparison.ts` bewertet ausschließlich morphologische Merkmalsübereinstimmung. Sie führt keine taxonomische Entscheidung allein herbei, keine Deutschland-/Status-/Standortprüfung und keinen visuellen Fotoabgleich. Ein Status `high_match` bedeutet nur hohe morphologische Übereinstimmung – er darf nicht automatisch als sichere Artbestimmung ausgegeben werden.
 
 ### Technische Hinweise
 
@@ -62,7 +69,7 @@ Ein Schema für spätere Familien-, Gattungs- und Artprofile ist definiert.
 ## Noch nicht implementiert
 
 - Echte Pflanzenarten oder Taxon-Datenbank
-- Taxon-Vergleichsfunktion
+- Deutschland-/Status-/Standort-Plausibilitätsmodell
 - Taxonomische Entscheidungslogik
 - Verbreitungs- und Statusprüfung
 - Visueller Fotoabgleich
@@ -70,6 +77,8 @@ Ein Schema für spätere Familien-, Gattungs- und Artprofile ist definiert.
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Entwicklung einer **Taxon-Vergleichsfunktion**, die ein `PlantTaxonProfile` mit einer Menge von `ObservedFeature[]` vergleicht und einen Ähnlichkeitsscore zurückgibt.
+Der nächste fachliche Schritt ist die Entwicklung eines **Deutschland-/Status-/Standort-Plausibilitätsmodells**.
 
-Diese Taxon-Vergleichsfunktion ist noch nicht implementiert.
+Dieses Modell soll prüfen, ob ein Taxon für den deutschen Bestimmungsraum relevant ist, welchen floristischen Status es hat und ob der beobachtete Standort zur Art plausibel ist.
+
+Das Deutschland-/Status-/Standort-Plausibilitätsmodell ist noch nicht implementiert.
