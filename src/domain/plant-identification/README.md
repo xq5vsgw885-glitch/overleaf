@@ -4,65 +4,46 @@
 
 ### Bereits umgesetzt
 
-1. **Wuchsform**
-   - wuchsform
-   - lebensform
+#### Merkmalsmatrix (morphologicalFeatureMatrix.ts)
 
-2. **Spross/Stängel**
-   - sprossform
-   - sprossoberflaeche
-   - milchsaft
+Alle 16 geplanten Merkmalsgruppen sind vollständig implementiert:
 
-3. **Blattstellung**
-   - blattstellung
+1. **Wuchsform** – wuchsform, lebensform
+2. **Spross/Stängel** – sprossform, sprossoberflaeche, milchsaft
+3. **Blattstellung** – blattstellung
+4. **Blattform** – blattform, blattgliederung
+5. **Blattrand** – blattrand
+6. **Blattnervatur** – nervatur
+7. **Blattoberfläche/Behaarung** – blattoberflaeche, behaarung
+8. **Blüte** – bluetentyp, bluetengroesse
+9. **Blütenfarbe** – bluetenfarbe
+10. **Blütensymmetrie** – bluetensymmetrie
+11. **Blütenstand** – bluetenstand
+12. **Frucht** – fruchttyp
+13. **Samen/Ausbreitung** – ausbreitungseinheit
+14. **Unterirdische Organe** – unterirdisches_organ
+15. **Standortkontext** – standorttyp, feuchte, licht
+16. **Phänologie** – bluetezeit, fruchtzeit
 
-4. **Blattform**
-   - blattform
-   - blattgliederung
+Die Merkmalsmatrix ist abgeschlossen. Es gibt keine offenen Merkmalsgruppen.
 
-5. **Blattrand**
-   - blattrand
+#### Scoring-Modell (featureScoring.ts)
 
-6. **Blattnervatur**
-   - nervatur
+Ein erstes generisches Scoring-/Vergleichsmodell ist implementiert.
 
-7. **Blattoberfläche/Behaarung**
-   - blattoberflaeche
-   - behaarung
+**Typen:**
+- `ObservedFeature` – ein beobachtetes Merkmal aus Foto, Nutzerangabe oder Ableitung
+- `TaxonFeatureProfile` – Merkmalsangabe eines späteren Art- oder Gattungsprofils
+- `FeatureComparisonResult` – Ergebnis eines einzelnen Merkmalsvergleichs
 
-8. **Blüte**
-   - bluetentyp
-   - bluetengroesse
+**Funktionen:**
+- `diagnosticWeightToNumber` – übersetzt DiagnosticWeight in einen numerischen Wert
+- `compareFeature` – vergleicht ein beobachtetes Merkmal mit einem Profil-Eintrag
+- `compareFeatureSet` – vergleicht eine Menge beobachteter Merkmale mit einem Taxon-Profil
+- `calculateFeatureScore` – berechnet einen Gesamtscore zwischen 0 und 1
 
-9. **Blütenfarbe**
-   - bluetenfarbe
-
-10. **Blütensymmetrie**
-    - bluetensymmetrie
-
-11. **Blütenstand**
-    - bluetenstand
-
-12. **Frucht**
-    - fruchttyp
-
-13. **Samen/Ausbreitung**
-    - ausbreitungseinheit
-
-14. **Unterirdische Organe**
-    - unterirdisches_organ
-
-15. **Standortkontext**
-    - standorttyp
-    - feuchte
-    - licht
-
-16. **Phänologie**
-    - bluetezeit
-    - fruchtzeit
-
-Alle 16 geplanten Merkmalsgruppen der ersten Merkmalsmatrix sind umgesetzt.
-Es gibt keine offenen Merkmalsgruppen in diesem Bereich.
+**Fachliche Einordnung:**
+Das Scoring ist ein Hilfsmodell zur merkmalsbasierten Eingrenzung, keine abschließende Artbestimmung. Fehlende Merkmale werden nicht negativ bewertet. Sichtbare, passende Merkmale werden nach diagnostischem Gewicht und Beobachtungssicherheit gewichtet. Eine sichere Bestimmung erfordert morphologische Konsistenz, taxonomische Plausibilität, Deutschland-/Status-/Standortprüfung und visuellen Fotoabgleich als abschließenden Kontrollschritt.
 
 ### Technische Hinweise
 
@@ -70,12 +51,19 @@ Es gibt keine offenen Merkmalsgruppen in diesem Bereich.
 
 `RequiredPhotoType` enthält die Werte: `"habitus"`, `"standort"`, `"detail"`, `"blatt"`, `"bluete"`, `"frucht"`.
 
+## Noch nicht implementiert
+
+- Taxon-/Artprofil-Schema
+- Pflanzenarten oder Taxon-Datenbank
+- Taxonomische Hierarchie
+- Verbreitungs- und Statusprüfung
+- Visueller Fotoabgleich
+- UI
+
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Entwicklung eines **Scoring-/Vergleichsmodells** auf Basis der vorhandenen Merkmalsmatrix.
+Der nächste fachliche Schritt ist die Definition eines **Taxon-/Artprofil-Schemas**.
 
-Dieses Modell ist noch nicht implementiert.
+Dieses Schema soll beschreiben, wie ein Art- oder Gattungsprofil strukturiert ist, das später mit dem Scoring-Modell verglichen werden kann.
 
-Es soll erfasste Merkmalswerte gewichten, kombinieren und mit Referenzdaten abgleichen, um eine merkmalsbasierte Pflanzenbestimmung zu ermöglichen.
-
-Der **visuelle Fotoabgleich** bleibt weiterhin ausschließlich ein abschließender Kontrollschritt und ist noch nicht Teil der aktuellen Implementierung.
+Das Taxon-/Artprofil-Schema ist noch nicht implementiert.
