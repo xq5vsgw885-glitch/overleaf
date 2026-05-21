@@ -206,7 +206,26 @@ Testet alle drei Funktionen aus `taxonComparison.ts`. Die produktive Domänenlog
 12. `compareObservedFeaturesWithTaxon` mit einem passenden und einem nicht passenden Merkmal → high_match, score 0.75
 13. `compareObservedFeaturesWithTaxon` ohne beobachtete Merkmale → no_observable_features
 
-**Gesamtstand Unit-Tests: 26/26 bestanden (2 Testdateien)**
+#### Unit-Tests plausibilityScoring.ts (plausibilityScoring.test.ts)
+
+Testet alle elf Funktionen aus `plausibilityScoring.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testtaxa (`"Test taxon"`, `"Testaceae"`, `"Testgenus"`, `"test-taxon-1"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt.
+
+**Getestete Funktionen:** `floristicStatusToWeight`, `checkGermanyRelevance`, `checkFloristicStatus`, `checkHabitat`, `checkMoisture`, `checkLight`, `checkPhenology`, `calculatePlausibilityScore`, `determinePlausibilityStatus`, `getPlausibilityReason`, `evaluateTaxonPlausibility`
+
+**Testumfang (36 Tests, alle bestanden):**
+- `floristicStatusToWeight` – alle vier Statusklassen
+- `checkGermanyRelevance` – mit und ohne Deutschland-Vorkommen
+- `checkFloristicStatus` – wildwachsend und kulturpflanze_nachrangig
+- `checkHabitat` – passend, nicht passend, nicht angegeben
+- `checkMoisture` – passend, nicht passend, nicht angegeben
+- `checkLight` – passend, nicht passend, nicht angegeben
+- `checkPhenology` – Blütezeit passend, Fruchtzeit passend, nicht passend, nicht angegeben
+- `calculatePlausibilityScore` – normale Werte (→ 0.75), leere Liste (→ 0), maxScore-Summe 0 (→ 0)
+- `determinePlausibilityStatus` – not_plausible bei fehlender Deutschland-Relevanz, alle Schwellenwerte
+- `getPlausibilityReason` – alle vier Reason-Codes
+- `evaluateTaxonPlausibility` – vollständig passender Kontext (→ high_plausibility, score 1), Taxon nicht in Deutschland (→ not_plausible)
+
+**Gesamtstand Unit-Tests: 62/62 bestanden (3 Testdateien)**
 
 ## Noch nicht implementiert
 
@@ -215,11 +234,11 @@ Testet alle drei Funktionen aus `taxonComparison.ts`. Die produktive Domänenlog
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Unit-Tests für plausibilityScoring.ts, combinedAssessment.ts, identificationResult.ts, visualControl.ts, identificationPipeline.ts
+- Unit-Tests für combinedAssessment.ts, identificationResult.ts, visualControl.ts, identificationPipeline.ts
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für plausibilityScoring.ts**.
+Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für combinedAssessment.ts**.
 
-Diese Tests sollen die Plausibilitätsfunktionen prüfen: `floristicStatusToWeight`, `checkGermanyRelevance`, `checkFloristicStatus`, `checkHabitat`, `checkMoisture`, `checkLight`, `checkPhenology`, `calculatePlausibilityScore`, `determinePlausibilityStatus`, `getPlausibilityReason` und `evaluateTaxonPlausibility`.
+Diese Tests sollen `calculateCombinedScore`, `determineCombinedAssessmentStatus`, `getCombinedAssessmentReason`, `assessTaxonCandidate` und `assessTaxonCandidates` prüfen.
