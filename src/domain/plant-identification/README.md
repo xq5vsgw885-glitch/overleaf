@@ -366,6 +366,33 @@ Tatsächlich von `getHighDiagnosticFeatures()` zurückgegebene IDs: `blattstellu
 
 **Gesamtstand Unit-Tests: 135/135 bestanden (9 Testdateien)**
 
+#### Unit-Tests taxonProfile.ts (taxonProfile.test.ts)
+
+Testet alle acht exportierten Typen und Strukturen aus `taxonProfile.ts` durch typkonforme künstliche Testobjekte. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testdaten (`"Test taxon"`, `"Testaceae"`, `"Testgenus"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt. Es wurde keine Bildanalyse implementiert.
+
+**Getestete Typen/Strukturen:** `TaxonomicRank`, `FloristicStatus`, `GermanyRelevance`, `TaxonomicIdentity`, `EcologyProfile`, `PhenologyProfile`, `VisualReferenceProfile`, `PlantTaxonProfile`
+
+**Testumfang (10 Tests, alle bestanden):**
+1. `TaxonomicRank` akzeptiert alle drei vorgesehenen Rangstufen: familie, gattung, art
+2. `FloristicStatus` akzeptiert alle vier vorgesehenen Statusklassen: wildwachsend, etablierter_neophyt, haeufig_verwildernd, kulturpflanze_nachrangig
+3. `GermanyRelevance`-Struktur ist typkonform: occursInGermany, floristicStatus, statusWeight
+4. `TaxonomicIdentity`-Struktur ist typkonform: taxonId, scientificName, rank
+5. `EcologyProfile`-Struktur ist typkonform: habitatTypes, moisture, light, notes
+6. `PhenologyProfile`-Struktur ist typkonform: floweringMonths, fruitingMonths
+7. `VisualReferenceProfile`-Struktur ist typkonform: fünf Felder als leere Arrays
+8. `PlantTaxonProfile`-Vollstruktur ist typkonform mit allen Pflichtfeldern und optionaler visualReferences
+9. `PlantTaxonProfile` erlaubt fehlendes optionales Feld `visualReferences`
+10. `PlantTaxonProfile` kann Familien- und Gattungsrang abbilden
+
+**Methodische Bestätigung:** `VisualReferenceProfile` bleibt ausschließlich Platzhalterstruktur für den späteren visuellen Kontrollschritt. Keine Bildanalyse, keine Bildähnlichkeitsberechnung.
+
+**Testabdeckung der Domäne vollständig für alle 10 Module:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport`
+
+**Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
+
+**Gesamtstand Unit-Tests: 145/145 bestanden (10 Testdateien)**
+
 ## Noch nicht implementiert
 
 - Echte Bildanalyse
@@ -373,9 +400,12 @@ Tatsächlich von `getHighDiagnosticFeatures()` zurückgegebene IDs: `blattstellu
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Unit-Tests für taxonProfile.ts
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Entwicklungsschritt ist die Ergänzung von Unit-Tests für `taxonProfile.ts`.
+Der nächste fachliche Entwicklungsschritt erfordert eine externe Entscheidung zwischen folgenden Optionen:
+
+1. **Aufbau erster fachlich kontrollierter Taxon-Seed-Daten** – Grundlage für spätere merkmalsbasierte Bestimmung mit künstlichen Testtaxa
+2. **Weitere technische Härtung der Testinfrastruktur** – z. B. Integrationstests, Grenzfallabdeckung oder CI-Einbindung
+3. **Review der Gewichtungen in der Merkmalsmatrix** – insbesondere Klärung des Befunds zu `bluetensymmetrie`, das aktuell nicht mit `"hoch"` oder `"sehr_hoch"` gewichtet ist
