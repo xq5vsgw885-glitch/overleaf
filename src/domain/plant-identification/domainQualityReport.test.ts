@@ -10,7 +10,7 @@ describe("PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT", () => {
     expect(report.primaryMethod).toBe("merkmalsbasiert");
     expect(report.visualControlRole).toBe("abschließender_kontrollschritt");
     expect(report.testFramework).toBe("vitest");
-    expect(report.passingUnitTests).toBe(114);
+    expect(report.passingUnitTests).toBe(145);
   });
 
   it("enforces methodical safety constraints", () => {
@@ -42,8 +42,8 @@ describe("PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT", () => {
   it("documents correct unit test coverage per module", () => {
     const byName = Object.fromEntries(report.modules.map((m) => [m.moduleName, m]));
 
-    expect(byName["morphologicalFeatureMatrix"].hasUnitTests).toBe(false);
-    expect(byName["taxonProfile"].hasUnitTests).toBe(false);
+    expect(byName["morphologicalFeatureMatrix"].hasUnitTests).toBe(true);
+    expect(byName["taxonProfile"].hasUnitTests).toBe(true);
     expect(byName["featureScoring"].hasUnitTests).toBe(true);
     expect(byName["taxonComparison"].hasUnitTests).toBe(true);
     expect(byName["plausibilityScoring"].hasUnitTests).toBe(true);
@@ -68,16 +68,19 @@ describe("PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT", () => {
 
   it("documents all expected open next steps", () => {
     expect(report.openNextSteps).toContain(
-      "README.md mit DomainQualityReport aktualisieren"
+      "README.md mit aktualisiertem DomainQualityReport synchronisieren"
     );
     expect(report.openNextSteps).toContain(
-      "Unit-Tests für domainQualityReport.ts ergänzen"
+      "Fachliches Review der Merkmalsgewichtungen durchführen, insbesondere bluetensymmetrie"
     );
     expect(report.openNextSteps).toContain(
-      "Spätere Taxon-Datenbank fachlich kontrolliert aufbauen"
+      "Entscheidung über Aufbau erster fachlich kontrollierter Taxon-Seed-Daten treffen"
     );
     expect(report.openNextSteps).toContain(
-      "Visuellen Kontrollschritt erst nach stabiler merkmalsbasierter Pipeline implementieren"
+      "Taxon-Seed-Daten nur quellenbasiert und schrittweise ergänzen"
+    );
+    expect(report.openNextSteps).toContain(
+      "Visuellen Kontrollschritt erst nach stabiler merkmalsbasierter Taxon-Datenbasis implementieren"
     );
     expect(report.openNextSteps).toContain(
       "Keine finale sichere Artbestimmung ohne konsistente Morphologie, Taxonomie, Deutschland-Plausibilität und visuellen Kontrollschritt"
