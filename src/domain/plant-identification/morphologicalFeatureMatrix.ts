@@ -458,6 +458,71 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     userExplanation:
       "Beschreibt unterirdische Überdauerungs- oder Speicherorgane wie Rhizom, Knolle, Zwiebel oder Ausläufer. Dieses Merkmal ist diagnostisch wichtig, aber auf normalen Fotos meist nicht sichtbar.",
   },
+
+  // Gruppe 15: Standortkontext
+  {
+    id: "standorttyp",
+    group: "Standortkontext",
+    name: "Standorttyp",
+    possibleValues: [
+      "wald",
+      "waldrand",
+      "wiese",
+      "rasen",
+      "acker",
+      "wegrand",
+      "ruderalflaeche",
+      "stadt",
+      "garten",
+      "ufer",
+      "moor",
+      "trockenrasen",
+      "heide",
+      "gebirge",
+      "gewaesser",
+    ],
+    diagnosticWeight: "mittel",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["standort", "habitus"],
+    userExplanation:
+      "Beschreibt den groben Lebensraum der Pflanze, zum Beispiel Wald, Wiese, Acker, Wegrand, Ufer oder Moor. Der Standort dient vor allem der Plausibilitätsprüfung und darf nicht allein eine Artbestimmung begründen.",
+  },
+  {
+    id: "feuchte",
+    group: "Standortkontext",
+    name: "Feuchte",
+    possibleValues: [
+      "trocken",
+      "frisch",
+      "feucht",
+      "nass",
+      "wechselfeucht",
+      "ueberflutet",
+      "nicht_beurteilbar",
+    ],
+    diagnosticWeight: "niedrig",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["standort"],
+    userExplanation:
+      "Beschreibt die erkennbare Feuchtigkeit des Standorts. Dieses Merkmal ist oft nur grob einschätzbar und dient der Plausibilitätsprüfung.",
+  },
+  {
+    id: "licht",
+    group: "Standortkontext",
+    name: "Licht",
+    possibleValues: [
+      "vollsonnig",
+      "halbschattig",
+      "schattig",
+      "wechselnd",
+      "nicht_beurteilbar",
+    ],
+    diagnosticWeight: "niedrig",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["standort", "habitus"],
+    userExplanation:
+      "Beschreibt die Lichtverhältnisse am Fundort. Dieses Merkmal ist foto- und tageszeitabhängig und wird deshalb niedrig gewichtet.",
+  },
 ];
 
 export function getFeaturesByGroup(group: string): MorphologicalFeature[] {
