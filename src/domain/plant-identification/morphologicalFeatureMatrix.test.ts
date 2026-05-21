@@ -136,7 +136,9 @@ describe("getHighDiagnosticFeatures", () => {
     const ids = getHighDiagnosticFeatures().map((f) => f.id);
     expect(ids).toContain("blattstellung");
     expect(ids).toContain("bluetentyp");
+    expect(ids).toContain("bluetensymmetrie");
     expect(ids).toContain("bluetenstand");
+    expect(ids).toContain("fruchttyp");
     expect(ids).toContain("unterirdisches_organ");
   });
 });

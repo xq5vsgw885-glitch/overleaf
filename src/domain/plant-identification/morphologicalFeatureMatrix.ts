@@ -587,6 +587,6 @@ export function getFeatureById(id: string): MorphologicalFeature | undefined {
 
 export function getHighDiagnosticFeatures(): MorphologicalFeature[] {
   return MORPHOLOGICAL_FEATURE_MATRIX.filter(
-    (f) => f.diagnosticWeight === "hoch"
+    (f) => f.diagnosticWeight === "hoch" || f.diagnosticWeight === "sehr_hoch"
   );
 }
