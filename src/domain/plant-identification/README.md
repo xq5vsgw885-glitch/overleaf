@@ -23,9 +23,11 @@
 5. **Blattrand**
    - blattrand
 
+6. **Blattnervatur**
+   - nervatur
+
 ### Noch geplant
 
-6. Blattnervatur
 7. Blattoberfläche/Behaarung
 8. Blüte
 9. Blütenfarbe
