@@ -46,6 +46,9 @@
 12. **Frucht**
     - fruchttyp
 
+13. **Samen/Ausbreitung**
+    - ausbreitungseinheit
+
 ### Technische Hinweise
 
 `DiagnosticWeight` enthält die Werte: `"sehr_hoch"`, `"hoch"`, `"mittel"`, `"niedrig"`.
@@ -54,7 +57,6 @@
 
 ### Noch geplant
 
-13. Samen/Ausbreitung
 14. Unterirdische Organe
 15. Standortkontext
 16. Phänologie
