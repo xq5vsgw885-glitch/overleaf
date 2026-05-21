@@ -410,6 +410,30 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     userExplanation:
       "Beschreibt den erkennbaren Fruchttyp, zum Beispiel Kapsel, Schote, Beere, Nuss, Achäne oder Spaltfrucht. Der Fruchttyp ist diagnostisch sehr wichtig, aber nur nutzbar, wenn Früchte vorhanden und sichtbar sind.",
   },
+
+  // Gruppe 13: Samen/Ausbreitung
+  {
+    id: "ausbreitungseinheit",
+    group: "Samen/Ausbreitung",
+    name: "Ausbreitungseinheit",
+    possibleValues: [
+      "flugschirm",
+      "fluegel",
+      "haken",
+      "klettfrucht",
+      "schwimmfaehig",
+      "fleischige_frucht",
+      "trockene_frucht",
+      "springfrucht",
+      "samen_nackt_sichtbar",
+      "nicht_sichtbar",
+    ],
+    diagnosticWeight: "niedrig",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["frucht", "detail"],
+    userExplanation:
+      "Beschreibt sichtbare Strukturen, die der Ausbreitung von Samen oder Früchten dienen, zum Beispiel Flugschirm, Flügel, Haken oder fleischige Früchte. Dieses Merkmal ist oft nicht sichtbar und wird deshalb niedrig gewichtet.",
+  },
 ];
 
 export function getFeaturesByGroup(group: string): MorphologicalFeature[] {
