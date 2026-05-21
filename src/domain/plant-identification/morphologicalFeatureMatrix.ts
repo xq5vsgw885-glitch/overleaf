@@ -179,6 +179,30 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     userExplanation:
       "Beschreibt, ob ein Blatt einfach, gelappt, geteilt oder aus mehreren Teilblättchen zusammengesetzt ist. Dieses Merkmal ist für viele Pflanzengruppen diagnostisch nützlich.",
   },
+
+  // Gruppe 5: Blattrand
+  {
+    id: "blattrand",
+    group: "Blattrand",
+    name: "Blattrand",
+    possibleValues: [
+      "ganzrandig",
+      "gesägt",
+      "doppelt_gesägt",
+      "gezähnt",
+      "gekerbt",
+      "gebuchtet",
+      "gelappt",
+      "gewellt",
+      "dornig",
+      "bewimpert",
+    ],
+    diagnosticWeight: "mittel",
+    photoVisibility: "true",
+    requiredPhotoTypes: ["blatt", "detail"],
+    userExplanation:
+      "Beschreibt die Ausgestaltung des Blattrandes, zum Beispiel ob er glatt, gesägt, gezähnt, gekerbt, gelappt oder dornig ist. Der Blattrand unterstützt die Eingrenzung, ist aber allein nicht artentscheidend.",
+  },
 ];
 
 export function getFeaturesByGroup(group: string): MorphologicalFeature[] {
