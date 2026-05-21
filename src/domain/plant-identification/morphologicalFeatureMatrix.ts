@@ -132,6 +132,53 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     userExplanation:
       "Beschreibt, wie die Blätter am Spross angeordnet sind. Die Blattstellung ist ein wichtiges diagnostisches Merkmal, weil sie häufig Familien, Gattungen oder Artengruppen eingrenzt.",
   },
+
+  // Gruppe 4: Blattform
+  {
+    id: "blattform",
+    group: "Blattform",
+    name: "Blattform",
+    possibleValues: [
+      "linealisch",
+      "lanzettlich",
+      "eiförmig",
+      "verkehrt_eiförmig",
+      "elliptisch",
+      "rundlich",
+      "herzförmig",
+      "nierenförmig",
+      "pfeilförmig",
+      "spießförmig",
+      "nadelförmig",
+      "schuppenförmig",
+    ],
+    diagnosticWeight: "mittel",
+    photoVisibility: "true",
+    requiredPhotoTypes: ["blatt", "detail"],
+    userExplanation:
+      "Beschreibt die äußere Form der Blattspreite. Die Blattform hilft bei der Eingrenzung, ist aber innerhalb vieler Arten variabel und wird deshalb nur mittel gewichtet.",
+  },
+  {
+    id: "blattgliederung",
+    group: "Blattform",
+    name: "Blattgliederung",
+    possibleValues: [
+      "einfach",
+      "dreizählig",
+      "gefingert",
+      "gefiedert",
+      "doppelt_gefiedert",
+      "fiederteilig",
+      "handförmig_gelappt",
+      "fiederlappig",
+      "ungeteilt",
+    ],
+    diagnosticWeight: "mittel",
+    photoVisibility: "true",
+    requiredPhotoTypes: ["blatt", "detail"],
+    userExplanation:
+      "Beschreibt, ob ein Blatt einfach, gelappt, geteilt oder aus mehreren Teilblättchen zusammengesetzt ist. Dieses Merkmal ist für viele Pflanzengruppen diagnostisch nützlich.",
+  },
 ];
 
 export function getFeaturesByGroup(group: string): MorphologicalFeature[] {
