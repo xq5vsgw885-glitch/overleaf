@@ -508,9 +508,25 @@ Legt die technische Struktur für spätere quellenbasierte Taxon-Seed-Einträge 
 
 **Fachliche Einordnung:** Spätere Ergänzungen dürfen ausschließlich als `TaxonSeedEntry` erfolgen, müssen `validateTaxonSeedEntry` bestehen und nach `taxonSeedPolicy` und `taxonSeedSchema` zulässig sein. Keine eigenständige Artbestimmung aus Seed-Daten allein.
 
-**Noch nicht testabgedeckt:** `taxonSeedData`
+#### Unit-Tests taxonSeedData.ts (taxonSeedData.test.ts)
 
-**Gesamtstand Unit-Tests: 168/168 bestanden (12 Testdateien)**
+Testet `PLANT_TAXON_SEED_DATA`, `getValidatedTaxonSeedData`, `getTaxonSeedDataCount` und `hasTaxonSeedData` aus `taxonSeedData.ts`. Keine echten Taxa, keine Seed-Daten, keine Bildanalyse.
+
+**Getestete Exporte:** `PLANT_TAXON_SEED_DATA`, `getValidatedTaxonSeedData`, `getTaxonSeedDataCount`, `hasTaxonSeedData`
+
+**Testumfang (5 Tests, alle bestanden):**
+1. `PLANT_TAXON_SEED_DATA` ist ein Array – `Array.isArray` true, length 0
+2. `getValidatedTaxonSeedData()` gibt leeres Array zurück – `Array.isArray` true, length 0
+3. `getTaxonSeedDataCount()` gibt 0 zurück
+4. `hasTaxonSeedData()` gibt false zurück
+5. Methodische Sicherung – alle vier Prüfwerte bestätigen: keine Seed-Daten vorhanden
+
+**Testabdeckung der Domäne vollständig für alle 13 Module:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy` · `taxonSeedSchema` · `taxonSeedData`
+
+**Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
+
+**Gesamtstand Unit-Tests: 173/173 bestanden (13 Testdateien)**
 
 ---
 
@@ -518,7 +534,6 @@ Legt die technische Struktur für spätere quellenbasierte Taxon-Seed-Einträge 
 
 ## Noch nicht implementiert
 
-- Unit-Tests für `taxonSeedData.ts`
 - Echte Bildanalyse
 - Bildähnlichkeitsberechnung
 - Referenzbild-Datenbank
@@ -528,6 +543,6 @@ Legt die technische Struktur für spätere quellenbasierte Taxon-Seed-Einträge 
 
 ## Nächster Entwicklungsschritt
 
-`taxonSeedData.ts` existiert als leere technische Struktur. `PLANT_TAXON_SEED_DATA` ist `[]`. Es wurden keine Taxa, keine Seed-Daten, keine Bildanalyse, kein visueller Fotoabgleich und keine finale sichere Artbestimmung ergänzt.
+`taxonSeedData.ts` existiert als leere technische Struktur und ist vollständig testabgedeckt (5 Tests). `PLANT_TAXON_SEED_DATA` ist `[]`. Es wurden keine Taxa, keine Seed-Daten, keine Bildanalyse, kein visueller Fotoabgleich und keine finale sichere Artbestimmung ergänzt.
 
-Der nächste technische Schritt ist die Ergänzung von Unit-Tests für `taxonSeedData.ts`. Danach muss `domainQualityReport.ts` mit `taxonSeedData` als neuem Domänenmodul und dem aktualisierten Teststand synchronisiert werden. Falls später Taxon-Seed-Daten ergänzt werden, müssen sie ausschließlich nach `taxonSeedPolicy` und `taxonSeedSchema` erfolgen.
+Der nächste technische Schritt ist die Synchronisierung von `domainQualityReport.ts` mit `taxonSeedData` als neuem Domänenmodul und dem aktualisierten Teststand (173 Tests, 13 Testdateien). Danach muss `domainQualityReport.test.ts` entsprechend angepasst werden.
