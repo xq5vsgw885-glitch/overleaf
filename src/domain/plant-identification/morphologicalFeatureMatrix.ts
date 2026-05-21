@@ -434,6 +434,30 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     userExplanation:
       "Beschreibt sichtbare Strukturen, die der Ausbreitung von Samen oder Früchten dienen, zum Beispiel Flugschirm, Flügel, Haken oder fleischige Früchte. Dieses Merkmal ist oft nicht sichtbar und wird deshalb niedrig gewichtet.",
   },
+
+  // Gruppe 14: Unterirdische Organe
+  {
+    id: "unterirdisches_organ",
+    group: "Unterirdische Organe",
+    name: "Unterirdisches Organ",
+    possibleValues: [
+      "pfahlwurzel",
+      "faserwurzel",
+      "rhizom",
+      "knolle",
+      "zwiebel",
+      "sprossknolle",
+      "wurzelknolle",
+      "auslaeufer",
+      "stolon",
+      "nicht_sichtbar",
+    ],
+    diagnosticWeight: "hoch",
+    photoVisibility: "false",
+    requiredPhotoTypes: ["detail"],
+    userExplanation:
+      "Beschreibt unterirdische Überdauerungs- oder Speicherorgane wie Rhizom, Knolle, Zwiebel oder Ausläufer. Dieses Merkmal ist diagnostisch wichtig, aber auf normalen Fotos meist nicht sichtbar.",
+  },
 ];
 
 export function getFeaturesByGroup(group: string): MorphologicalFeature[] {
