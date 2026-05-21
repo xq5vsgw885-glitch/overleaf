@@ -268,7 +268,28 @@ Testet alle fünf Funktionen aus `visualControl.ts`. Die produktive Domänenlogi
 - `attachVisualControlResult` – verbindet IdentificationResult und VisualControlResult korrekt
 - Methodische Sicherung: auch bei visual_support bleibt `isFinalSpeciesIdentification === false`
 
-**Gesamtstand Unit-Tests: 109/109 bestanden (6 Testdateien)**
+#### Unit-Tests identificationPipeline.ts (identificationPipeline.test.ts)
+
+Testet `runIdentificationPipeline` aus `identificationPipeline.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testtaxa (`"Test taxon"`, `"Testaceae"`, `"Testgenus"`, `"Test taxon 2"`, `"Testaceae2"`, `"test-taxon-1"`, `"test-taxon-2"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt. Es wurde kein echter visueller Fotoabgleich implementiert.
+
+**Getestete Funktion:** `runIdentificationPipeline`
+
+**Testumfang (5 Tests, alle bestanden):**
+1. Leere candidateTaxa-Liste → no_candidates_available, kein primaryCandidate
+2. Vollständig passendes Taxon → strong_candidate_requires_review, confidence high_but_not_final, score 1
+3. Zwei Taxa → Sortierung absteigend nach combinedScore, primaryCandidate = test-taxon-1, 1 alternativeCandidate
+4. Taxon nicht in Deutschland → plausibility not_plausible, status unlikely_candidate, confidence low
+5. Kandidat ohne beobachtete Merkmale → insufficient_data, confidence insufficient
+
+**Methodische Sicherungen in allen Tests:**
+- `isFinalSpeciesIdentification === false` – die Pipeline erzeugt keine finale Artbestimmung
+- `visualControl.status === "not_performed"` – kein echter visueller Fotoabgleich
+- `visualControlPending === true` – visueller Kontrollschritt steht noch aus
+
+**Testabdeckung der Domänenpipeline vollständig:**
+`featureScoring` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline`
+
+**Gesamtstand Unit-Tests: 114/114 bestanden (7 Testdateien)**
 
 ## Noch nicht implementiert
 
@@ -277,11 +298,12 @@ Testet alle fünf Funktionen aus `visualControl.ts`. Die produktive Domänenlogi
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Unit-Tests für identificationPipeline.ts
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für identificationPipeline.ts**.
+Der nächste fachliche Schritt ist eine **Architektur- und Qualitätsprüfung der Domänenlogik**.
 
-Diese Tests sollen `runIdentificationPipeline` prüfen: Pipeline mit leerer Taxonliste, Pipeline mit einem Kandidaten und Übergang des visuellen Kontrollstatus auf `not_performed`.
+Diese Prüfung soll die Kohärenz der Typen, Schnittstellen und Funktionen über alle Module hinweg bewerten und offene Risiken oder Inkonsistenzen benennen.
+
+Die Architektur- und Qualitätsprüfung ist noch nicht implementiert.
