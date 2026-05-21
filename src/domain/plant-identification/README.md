@@ -334,6 +334,38 @@ Testet `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT` aus `domainQualityReport.ts`
 
 **Gesamtstand Unit-Tests: 124/124 bestanden (8 Testdateien)**
 
+#### Unit-Tests morphologicalFeatureMatrix.ts (morphologicalFeatureMatrix.test.ts)
+
+Testet `MORPHOLOGICAL_FEATURE_MATRIX`, `getFeaturesByGroup`, `getFeatureById` und `getHighDiagnosticFeatures` aus `morphologicalFeatureMatrix.ts`. Die produktive Domänenlogik und die Merkmalsmatrix wurden durch diesen Testschritt nicht verändert. Es wurden keine echten Pflanzenarten oder Taxa ergänzt. Es wurde keine Bildanalyse implementiert.
+
+**Getestete Exporte:** `MORPHOLOGICAL_FEATURE_MATRIX`, `getFeaturesByGroup`, `getFeatureById`, `getHighDiagnosticFeatures`
+
+**Testumfang (11 Tests, alle bestanden):**
+1. Alle 16 geplanten Merkmalsgruppen sind in der Matrix vorhanden
+2. Alle zentralen Feature-IDs sind vorhanden (25 IDs geprüft)
+3. Jede Feature-ID ist eindeutig (keine Duplikate)
+4. Jedes Feature besitzt alle Pflichtfelder: id, group, name, possibleValues, diagnosticWeight, photoVisibility, requiredPhotoTypes, userExplanation
+5. Keine possibleValues-Einträge sind leer
+6. `getFeaturesByGroup("Standortkontext")` liefert exakt 3 Features: standorttyp, feuchte, licht
+7. `getFeaturesByGroup` liefert für unbekannte Gruppen ein leeres Array
+8. `getFeatureById("blattstellung")` findet das Feature und gibt korrekte Felder zurück
+9. `getFeatureById` liefert für unbekannte IDs `undefined`
+10. `getHighDiagnosticFeatures` liefert ausschließlich Merkmale mit `diagnosticWeight === "hoch"` (alle zurückgegebenen Werte sind in der erlaubten Menge `["hoch", "sehr_hoch"]`)
+11. `getHighDiagnosticFeatures` enthält die zentralen stark diagnostischen Merkmale: blattstellung, bluetentyp, bluetenstand, unterirdisches_organ
+
+**Befund zu bluetensymmetrie:**
+
+Beim Testen wurde festgestellt, dass `bluetensymmetrie` in der aktuellen Merkmalsmatrix nicht mit `"hoch"` oder `"sehr_hoch"` gewichtet ist und daher nicht von `getHighDiagnosticFeatures()` zurückgegeben wird. Die Implementierung von `getHighDiagnosticFeatures()` filtert ausschließlich nach `diagnosticWeight === "hoch"`. Die Tests folgen dem Ist-Zustand der Matrix. Es wurde keine fachliche Umgewichtung vorgenommen. Die Matrix selbst wurde nicht verändert.
+
+Tatsächlich von `getHighDiagnosticFeatures()` zurückgegebene IDs: `blattstellung`, `bluetentyp`, `bluetenstand`, `unterirdisches_organ`.
+
+**Testabdeckung der Domäne vollständig für:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport`
+
+**Noch nicht testabgedeckt:** `taxonProfile`
+
+**Gesamtstand Unit-Tests: 135/135 bestanden (9 Testdateien)**
+
 ## Noch nicht implementiert
 
 - Echte Bildanalyse
@@ -341,13 +373,9 @@ Testet `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT` aus `domainQualityReport.ts`
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Unit-Tests für morphologicalFeatureMatrix.ts und taxonProfile.ts
+- Unit-Tests für taxonProfile.ts
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist eine Entscheidung zwischen drei Optionen:
-
-1. **Unit-Tests für morphologicalFeatureMatrix.ts** – Testabdeckung der Merkmalsmatrix vervollständigen
-2. **Unit-Tests für taxonProfile.ts** – Testabdeckung des Profilschemas vervollständigen
-3. **Erster fachlich kontrollierter Aufbau künstlicher Taxon-Seed-Daten** – Grundlage für spätere merkmalsbasierte Bestimmung
+Der nächste fachliche Entwicklungsschritt ist die Ergänzung von Unit-Tests für `taxonProfile.ts`.
