@@ -2,7 +2,7 @@ export type DiagnosticWeight = "hoch" | "mittel" | "niedrig";
 
 export type PhotoVisibility = "true" | "bedingt" | "false";
 
-export type RequiredPhotoType = "habitus" | "standort" | "detail" | "blatt";
+export type RequiredPhotoType = "habitus" | "standort" | "detail" | "blatt" | "bluete";
 
 export interface MorphologicalFeature {
   id: string;
@@ -267,6 +267,47 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     requiredPhotoTypes: ["blatt", "detail"],
     userExplanation:
       "Beschreibt Art und Stärke der Behaarung. Behaarung kann diagnostisch hilfreich sein, ist aber oft nur auf Detailfotos sicher zu erkennen.",
+  },
+
+  // Gruppe 8: Blüte
+  {
+    id: "bluetentyp",
+    group: "Blüte",
+    name: "Blütentyp",
+    possibleValues: [
+      "einzelbluete",
+      "scheinbluete",
+      "korbbluete",
+      "lippenbluete",
+      "schmetterlingsbluete",
+      "roehrenbluete",
+      "zungenbluete",
+      "glockenfoermig",
+      "trichterfoermig",
+      "unscheinbar",
+    ],
+    diagnosticWeight: "hoch",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["bluete", "detail"],
+    userExplanation:
+      "Beschreibt den erkennbaren Grundtyp der Blüte. Der Blütentyp ist für viele Pflanzenfamilien diagnostisch wichtig, muss aber mit weiteren Blütenmerkmalen kombiniert werden.",
+  },
+  {
+    id: "bluetengroesse",
+    group: "Blüte",
+    name: "Blütengröße",
+    possibleValues: [
+      "sehr_klein",
+      "klein",
+      "mittel",
+      "groß",
+      "sehr_groß",
+    ],
+    diagnosticWeight: "niedrig",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["bluete", "detail"],
+    userExplanation:
+      "Beschreibt die ungefähre Größe der Blüte. Dieses Merkmal ist ohne Maßstab oft unsicher und wird deshalb niedrig gewichtet.",
   },
 ];
 
