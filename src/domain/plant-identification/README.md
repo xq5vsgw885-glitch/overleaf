@@ -20,9 +20,11 @@
    - blattform
    - blattgliederung
 
+5. **Blattrand**
+   - blattrand
+
 ### Noch geplant
 
-5. Blattrand
 6. Blattnervatur
 7. Blattoberfläche/Behaarung
 8. Blüte
