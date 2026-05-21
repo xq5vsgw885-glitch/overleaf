@@ -185,6 +185,29 @@ Testet alle vier Kernfunktionen aus `featureScoring.ts`. Die produktive Domänen
 12. `calculateFeatureScore` mit leerer Liste → 0
 13. `calculateFeatureScore` mit maxScore-Summe 0 → 0
 
+#### Unit-Tests taxonComparison.ts (taxonComparison.test.ts)
+
+Testet alle drei Funktionen aus `taxonComparison.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testtaxa (`"Test taxon"`, `"Testaceae"`, `"Testgenus"`, `"test-taxon-1"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt.
+
+**Getestete Funktionen:** `determineTaxonComparisonStatus`, `getTaxonComparisonReason`, `compareObservedFeaturesWithTaxon`
+
+**Testumfang (13 Tests, alle bestanden):**
+1. `determineTaxonComparisonStatus` → no_observable_features bei leerer Ergebnisliste
+2. `determineTaxonComparisonStatus` → low_match bei score 0.39
+3. `determineTaxonComparisonStatus` → moderate_match bei score 0.4
+4. `determineTaxonComparisonStatus` → moderate_match bei score 0.74
+5. `determineTaxonComparisonStatus` → high_match bei score 0.75
+6. `determineTaxonComparisonStatus` → high_match bei score 1
+7. `getTaxonComparisonReason` → no_observable_features
+8. `getTaxonComparisonReason` → low_morphological_match
+9. `getTaxonComparisonReason` → moderate_morphological_match
+10. `getTaxonComparisonReason` → high_morphological_match
+11. `compareObservedFeaturesWithTaxon` mit zwei passenden Merkmalen → high_match, score 1
+12. `compareObservedFeaturesWithTaxon` mit einem passenden und einem nicht passenden Merkmal → high_match, score 0.75
+13. `compareObservedFeaturesWithTaxon` ohne beobachtete Merkmale → no_observable_features
+
+**Gesamtstand Unit-Tests: 26/26 bestanden (2 Testdateien)**
+
 ## Noch nicht implementiert
 
 - Echte Bildanalyse
@@ -192,11 +215,11 @@ Testet alle vier Kernfunktionen aus `featureScoring.ts`. Die produktive Domänen
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Unit-Tests für taxonComparison.ts, plausibilityScoring.ts, combinedAssessment.ts, identificationResult.ts, visualControl.ts, identificationPipeline.ts
+- Unit-Tests für plausibilityScoring.ts, combinedAssessment.ts, identificationResult.ts, visualControl.ts, identificationPipeline.ts
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für taxonComparison.ts**.
+Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für plausibilityScoring.ts**.
 
-Diese Tests sollen `determineTaxonComparisonStatus`, `getTaxonComparisonReason` und `compareObservedFeaturesWithTaxon` prüfen.
+Diese Tests sollen die Plausibilitätsfunktionen prüfen: `floristicStatusToWeight`, `checkGermanyRelevance`, `checkFloristicStatus`, `checkHabitat`, `checkMoisture`, `checkLight`, `checkPhenology`, `calculatePlausibilityScore`, `determinePlausibilityStatus`, `getPlausibilityReason` und `evaluateTaxonPlausibility`.
