@@ -2,7 +2,7 @@ export type DiagnosticWeight = "sehr_hoch" | "hoch" | "mittel" | "niedrig";
 
 export type PhotoVisibility = "true" | "bedingt" | "false";
 
-export type RequiredPhotoType = "habitus" | "standort" | "detail" | "blatt" | "bluete";
+export type RequiredPhotoType = "habitus" | "standort" | "detail" | "blatt" | "bluete" | "frucht";
 
 export interface MorphologicalFeature {
   id: string;
@@ -381,6 +381,34 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     requiredPhotoTypes: ["habitus", "bluete", "detail"],
     userExplanation:
       "Beschreibt die Anordnung der Blüten an der Pflanze, zum Beispiel als Traube, Ähre, Rispe, Dolde, Körbchen oder Köpfchen. Der Blütenstand ist diagnostisch wichtig, muss aber mit weiteren Merkmalen kombiniert werden.",
+  },
+
+  // Gruppe 12: Frucht
+  {
+    id: "fruchttyp",
+    group: "Frucht",
+    name: "Fruchttyp",
+    possibleValues: [
+      "kapsel",
+      "schote",
+      "schötchen",
+      "beere",
+      "steinfrucht",
+      "nuss",
+      "achäne",
+      "sammelfrucht",
+      "spaltfrucht",
+      "fluegelfrucht",
+      "balgfrucht",
+      "huelse",
+      "zapfen",
+      "frucht_nicht_sichtbar",
+    ],
+    diagnosticWeight: "sehr_hoch",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["frucht", "detail"],
+    userExplanation:
+      "Beschreibt den erkennbaren Fruchttyp, zum Beispiel Kapsel, Schote, Beere, Nuss, Achäne oder Spaltfrucht. Der Fruchttyp ist diagnostisch sehr wichtig, aber nur nutzbar, wenn Früchte vorhanden und sichtbar sind.",
   },
 ];
 
