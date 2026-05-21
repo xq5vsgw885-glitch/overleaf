@@ -309,6 +309,32 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     userExplanation:
       "Beschreibt die ungefähre Größe der Blüte. Dieses Merkmal ist ohne Maßstab oft unsicher und wird deshalb niedrig gewichtet.",
   },
+
+  // Gruppe 9: Blütenfarbe
+  {
+    id: "bluetenfarbe",
+    group: "Blütenfarbe",
+    name: "Blütenfarbe",
+    possibleValues: [
+      "weiß",
+      "gelb",
+      "orange",
+      "rot",
+      "rosa",
+      "violett",
+      "blau",
+      "grün",
+      "braun",
+      "schwarz",
+      "mehrfarbig",
+      "unscheinbar",
+    ],
+    diagnosticWeight: "niedrig",
+    photoVisibility: "true",
+    requiredPhotoTypes: ["bluete"],
+    userExplanation:
+      "Beschreibt die auffällige Grundfarbe der Blüte. Die Blütenfarbe ist für Nutzer leicht erfassbar, kann aber innerhalb einer Art variieren und wird deshalb niedrig gewichtet.",
+  },
 ];
 
 export function getFeaturesByGroup(group: string): MorphologicalFeature[] {
