@@ -26,9 +26,12 @@
 6. **Blattnervatur**
    - nervatur
 
+7. **Blattoberfläche/Behaarung**
+   - blattoberflaeche
+   - behaarung
+
 ### Noch geplant
 
-7. Blattoberfläche/Behaarung
 8. Blüte
 9. Blütenfarbe
 10. Blütensymmetrie
