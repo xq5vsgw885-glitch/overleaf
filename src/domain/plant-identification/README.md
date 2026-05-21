@@ -238,7 +238,23 @@ Testet alle fünf Funktionen aus `combinedAssessment.ts`. Die produktive Domäne
 - `assessTaxonCandidate` – vollständig passendes Taxon (→ strong_candidate_requires_review, score 1), fehlende Merkmale (→ insufficient_data), Taxon nicht in Deutschland (→ unlikely_candidate)
 - `assessTaxonCandidates` – Sortierung absteigend nach combinedScore, leere Taxonliste
 
-**Gesamtstand Unit-Tests: 85/85 bestanden (4 Testdateien)**
+#### Unit-Tests identificationResult.ts (identificationResult.test.ts)
+
+Testet alle sechs Funktionen aus `identificationResult.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testtaxa (`"Test taxon"`, `"Testaceae"`, `"Testgenus"`, `"test-taxon-1"` bis `"test-taxon-6"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt.
+
+**Getestete Funktionen:** `confidenceFromCombinedStatus`, `outputRankFromTaxonRank`, `buildEvidenceSection`, `buildMissingEvidenceHints`, `buildIdentificationCandidate`, `buildIdentificationResult`
+
+**Testumfang (18 Tests, alle bestanden):**
+- `confidenceFromCombinedStatus` – alle fünf CombinedAssessmentStatus-Werte
+- `outputRankFromTaxonRank` – familie, gattung, art
+- `buildEvidenceSection` – methodische Trennung: observations, calculations mit Scores, interpretation mit Reasons, uncertainty mit allen drei Hinweisen
+- `buildMissingEvidenceHints` – leeres Array bei vorhandenen featureResults, ein Hinweis bei leeren featureResults (featureId: "unknown", recommendedPhotoType: "habitus")
+- `buildIdentificationCandidate` – confidence, outputRank, uncertainty, missingEvidence
+- `buildIdentificationResult` – leeres Array (→ no_candidates_available), starker Kandidat (→ strong_candidate_requires_review), moderater Kandidat (→ candidate_plausible_but_not_final), schwacher Kandidat (→ weak_candidate), insufficient (→ insufficient_data), Begrenzung alternativeCandidates auf 4
+
+**Methodische Prüfbestätigung:** Alle `buildIdentificationResult`-Tests prüfen explizit `isFinalSpeciesIdentification === false` und `visualControlPending === true`.
+
+**Gesamtstand Unit-Tests: 103/103 bestanden (5 Testdateien)**
 
 ## Noch nicht implementiert
 
@@ -247,11 +263,11 @@ Testet alle fünf Funktionen aus `combinedAssessment.ts`. Die produktive Domäne
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Unit-Tests für identificationResult.ts, visualControl.ts, identificationPipeline.ts
+- Unit-Tests für visualControl.ts, identificationPipeline.ts
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für identificationResult.ts**.
+Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für visualControl.ts**.
 
-Diese Tests sollen `confidenceFromCombinedStatus`, `outputRankFromTaxonRank`, `buildEvidenceSection`, `buildMissingEvidenceHints`, `buildIdentificationCandidate` und `buildIdentificationResult` prüfen.
+Diese Tests sollen `createNotPerformedVisualControlResult`, `createInsufficientVisualMaterialResult`, `createVisualSupportResult`, `createVisualConflictResult` und `attachVisualControlResult` prüfen.
