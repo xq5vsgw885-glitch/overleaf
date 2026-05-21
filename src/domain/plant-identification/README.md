@@ -465,9 +465,34 @@ Testet `PLANT_TAXON_SEED_POLICY`, `isAllowedTaxonSeedSource`, `checkTaxonSeedSou
 **Testabdeckung der Domäne vollständig für alle 11 Module:**
 `morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy`
 
-**Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
+**Noch nicht testabgedeckt:** `taxonSeedSchema`
 
 **Gesamtstand Unit-Tests: 158/158 bestanden (11 Testdateien)**
+
+#### Unit-Tests taxonSeedSchema.ts (taxonSeedSchema.test.ts)
+
+Testet `hasUsableCitation`, `validateTaxonSeedEntry` und `createBlockedTaxonSeedValidationResult` aus `taxonSeedSchema.ts`. Keine echten Taxa, keine Seed-Daten. Künstliche Testdaten: `"Test taxon"`, `"Testaceae"`, `"Testgenus"`. Rothmaler und Strasburger werden ausschließlich als erlaubte Quellenbezeichnungen geprüft.
+
+**Getestete Funktionen:** `hasUsableCitation`, `validateTaxonSeedEntry`, `createBlockedTaxonSeedValidationResult`
+
+**Testumfang (10 Tests, alle bestanden):**
+1. `hasUsableCitation` → true für nicht-leere reference
+2. `hasUsableCitation` → false für leere reference
+3. `hasUsableCitation` → false für whitespace-only reference
+4. `validateTaxonSeedEntry` → valid: true für Rothmaler, Citation, Deutschland-Relevanz (alle 3 checks allowed)
+5. `validateTaxonSeedEntry` → valid: true für Strasburger, Citation, Deutschland-Relevanz
+6. `validateTaxonSeedEntry` → blocked: source_not_allowed für extern_nicht_zugelassen
+7. `validateTaxonSeedEntry` → blocked: citation_required für leere reference
+8. `validateTaxonSeedEntry` → blocked: germany_relevance_required für germanyRelevant: false
+9. `validateTaxonSeedEntry` → alle drei blocked reasons gleichzeitig bei mehreren Verstößen
+10. `createBlockedTaxonSeedValidationResult("manual_block")` → valid: false, checks: [], reason: "manual_block"
+
+**Testabdeckung der Domäne vollständig für alle 12 Module:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy` · `taxonSeedSchema`
+
+**Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
+
+**Gesamtstand Unit-Tests: 168/168 bestanden (12 Testdateien)**
 
 ## Noch nicht implementiert
 
@@ -480,4 +505,4 @@ Testet `PLANT_TAXON_SEED_POLICY`, `isAllowedTaxonSeedSource`, `checkTaxonSeedSou
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Entwicklungsschritt ist die Ergänzung von Unit-Tests für `taxonSeedSchema.ts`.
+Der nächste fachliche Entwicklungsschritt ist die Synchronisierung von `domainQualityReport.ts` mit dem aktuellen Stand: Aufnahme von `taxonSeedSchema` als Domänenmodul und Aktualisierung auf 168 bestandene Tests.
