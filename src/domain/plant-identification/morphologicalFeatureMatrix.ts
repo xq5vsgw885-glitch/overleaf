@@ -354,6 +354,34 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     userExplanation:
       "Beschreibt, ob eine Blüte radiärsymmetrisch, zweiseitig symmetrisch oder asymmetrisch aufgebaut ist. Die Blütensymmetrie ist ein sehr wichtiges diagnostisches Merkmal, muss aber mit weiteren Blüten- und Pflanzenmerkmalen kombiniert werden.",
   },
+
+  // Gruppe 11: Blütenstand
+  {
+    id: "bluetenstand",
+    group: "Blütenstand",
+    name: "Blütenstand",
+    possibleValues: [
+      "einzelbluete",
+      "traube",
+      "aehre",
+      "rispe",
+      "dolde",
+      "doppeldolde",
+      "koerbchen",
+      "koepfchen",
+      "kolben",
+      "wickel",
+      "schirmrispe",
+      "quirl",
+      "scheinquirl",
+      "unscheinbar",
+    ],
+    diagnosticWeight: "hoch",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["habitus", "bluete", "detail"],
+    userExplanation:
+      "Beschreibt die Anordnung der Blüten an der Pflanze, zum Beispiel als Traube, Ähre, Rispe, Dolde, Körbchen oder Köpfchen. Der Blütenstand ist diagnostisch wichtig, muss aber mit weiteren Merkmalen kombiniert werden.",
+  },
 ];
 
 export function getFeaturesByGroup(group: string): MorphologicalFeature[] {
