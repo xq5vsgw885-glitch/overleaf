@@ -224,6 +224,50 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     userExplanation:
       "Beschreibt den Verlauf der Blattadern. Die Blattnervatur hilft besonders bei der groben Einordnung von Pflanzengruppen, ist aber allein nicht artentscheidend.",
   },
+
+  // Gruppe 7: Blattoberfläche/Behaarung
+  {
+    id: "blattoberflaeche",
+    group: "Blattoberfläche/Behaarung",
+    name: "Blattoberfläche",
+    possibleValues: [
+      "glatt",
+      "runzelig",
+      "glänzend",
+      "matt",
+      "lederig",
+      "wachsig",
+      "bereift",
+      "druesig",
+      "rau",
+    ],
+    diagnosticWeight: "niedrig",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["blatt", "detail"],
+    userExplanation:
+      "Beschreibt sichtbare Oberflächenmerkmale des Blattes, etwa ob es glatt, rau, glänzend, matt, wachsig oder bereift wirkt. Dieses Merkmal ist fotoabhängig und wird deshalb niedrig gewichtet.",
+  },
+  {
+    id: "behaarung",
+    group: "Blattoberfläche/Behaarung",
+    name: "Behaarung",
+    possibleValues: [
+      "kahl",
+      "locker_behaart",
+      "dicht_behaart",
+      "filzig",
+      "zottig",
+      "borstig",
+      "seidig",
+      "sternhaarig",
+      "druesig_behaart",
+    ],
+    diagnosticWeight: "mittel",
+    photoVisibility: "bedingt",
+    requiredPhotoTypes: ["blatt", "detail"],
+    userExplanation:
+      "Beschreibt Art und Stärke der Behaarung. Behaarung kann diagnostisch hilfreich sein, ist aber oft nur auf Detailfotos sicher zu erkennen.",
+  },
 ];
 
 export function getFeaturesByGroup(group: string): MorphologicalFeature[] {
