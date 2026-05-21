@@ -30,9 +30,16 @@
    - blattoberflaeche
    - behaarung
 
+8. **Blüte**
+   - bluetentyp
+   - bluetengroesse
+
+### Technischer Hinweis
+
+`RequiredPhotoType` enthält jetzt auch den Wert `"bluete"`.
+
 ### Noch geplant
 
-8. Blüte
 9. Blütenfarbe
 10. Blütensymmetrie
 11. Blütenstand
