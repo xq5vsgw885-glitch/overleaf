@@ -112,19 +112,45 @@ Die Datei erzeugt keine finale sichere Artbestimmung. Die Datei führt keinen vi
 
 `RequiredPhotoType` enthält die Werte: `"habitus"`, `"standort"`, `"detail"`, `"blatt"`, `"bluete"`, `"frucht"`.
 
+#### Visuelles Kontrollschritt-Schema (visualControl.ts)
+
+Definiert ausschließlich die Struktur des späteren visuellen Kontrollschritts. Die Datei implementiert keine Bildanalyse, berechnet keine Bildähnlichkeit und enthält keine Referenzbilder, keine echten Pflanzenarten und keine Taxon-Datenbank.
+
+**Typen:**
+- `VisualControlPhotoType` – habitus, blatt, bluete, frucht, detail, standort
+- `VisualControlInput` – photoType, imageUri, quality, notes?
+- `VisualControlReference` – taxon, referenceImageUris, photoTypes
+- `VisualControlStatus` – not_performed, insufficient_visual_material, visual_support, visual_conflict, visual_review_required
+- `VisualControlResult` – status, checkedPhotoTypes, reason, supportsCurrentIdentification, requiresHumanReview
+- `IdentificationResultWithVisualControl` – identification, visualControl
+
+**Funktionen:**
+- `createNotPerformedVisualControlResult` – erzeugt Ergebnis für nicht durchgeführten Kontrollschritt
+- `createInsufficientVisualMaterialResult` – erzeugt Ergebnis bei unzureichendem Bildmaterial
+- `createVisualSupportResult` – erzeugt Ergebnis bei visueller Übereinstimmung
+- `createVisualConflictResult` – erzeugt Ergebnis bei visuellem Widerspruch
+- `attachVisualControlResult` – kombiniert IdentificationResult mit VisualControlResult
+
+**Fachliche Einordnung:**
+
+Der visuelle Kontrollschritt darf eine merkmalsbasierte Bestimmung nur stützen, abschwächen oder zur menschlichen Nachprüfung markieren. Der visuelle Kontrollschritt darf niemals allein eine Bestimmung erzeugen.
+
+Eine sichere Artbestimmung darf nur entstehen, wenn morphologische Konsistenz, taxonomische Plausibilität, Deutschland-/Status-/Standortprüfung und visueller Kontrollschritt konsistent sind.
+
 ## Noch nicht implementiert
 
+- Echte Bildanalyse
+- Bildähnlichkeitsberechnung
+- Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Visuelles Kontrollschritt-Schema
-- Visueller Fotoabgleich
-- Bildanalyse
+- Pipeline-Klammerung
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Entwicklung eines **visuellen Kontrollschritt-Schemas**.
+Der nächste fachliche Schritt ist die **technische Klammerung der gesamten Pipeline**.
 
-Dieses Schema soll den abschließenden visuellen Kontrollschritt strukturieren: Anforderungen an Referenzbilder, Kontrollkriterien und Ausgabeformat des Fotoabgleichs. Der visuelle Fotoabgleich darf nur kontrollieren, aber niemals allein bestimmen.
+Diese Pipeline-Klammerung soll alle Stufen der Bestimmungsarchitektur zusammenführen: Deutschland-Florenraum, morphologische Merkmalsanalyse, taxonomische Eingrenzung, Verbreitungs- und Statusprüfung sowie visueller Kontrollschritt.
 
-Das visuelle Kontrollschritt-Schema ist noch nicht implementiert.
+Die Pipeline-Klammerung ist noch nicht implementiert.
