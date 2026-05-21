@@ -523,6 +523,58 @@ export const MORPHOLOGICAL_FEATURE_MATRIX: MorphologicalFeature[] = [
     userExplanation:
       "Beschreibt die Lichtverhältnisse am Fundort. Dieses Merkmal ist foto- und tageszeitabhängig und wird deshalb niedrig gewichtet.",
   },
+
+  // Gruppe 16: Phänologie
+  {
+    id: "bluetezeit",
+    group: "Phänologie",
+    name: "Blütezeit",
+    possibleValues: [
+      "januar",
+      "februar",
+      "maerz",
+      "april",
+      "mai",
+      "juni",
+      "juli",
+      "august",
+      "september",
+      "oktober",
+      "november",
+      "dezember",
+      "nicht_beurteilbar",
+    ],
+    diagnosticWeight: "mittel",
+    photoVisibility: "false",
+    requiredPhotoTypes: ["standort"],
+    userExplanation:
+      "Beschreibt den Zeitraum, in dem eine Art typischerweise blüht. Die Blütezeit dient der Plausibilitätsprüfung und darf nicht allein eine Artbestimmung begründen.",
+  },
+  {
+    id: "fruchtzeit",
+    group: "Phänologie",
+    name: "Fruchtzeit",
+    possibleValues: [
+      "januar",
+      "februar",
+      "maerz",
+      "april",
+      "mai",
+      "juni",
+      "juli",
+      "august",
+      "september",
+      "oktober",
+      "november",
+      "dezember",
+      "nicht_beurteilbar",
+    ],
+    diagnosticWeight: "niedrig",
+    photoVisibility: "false",
+    requiredPhotoTypes: ["standort"],
+    userExplanation:
+      "Beschreibt den Zeitraum, in dem eine Art typischerweise Früchte trägt. Die Fruchtzeit unterstützt die Plausibilitätsprüfung, ist aber allein nicht diagnostisch ausreichend.",
+  },
 ];
 
 export function getFeaturesByGroup(group: string): MorphologicalFeature[] {
