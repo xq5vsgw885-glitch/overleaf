@@ -311,6 +311,29 @@ Enthält ausschließlich einen maschinenlesbaren Architektur- und Qualitätsstat
 - Kein Modul führt Bildanalyse aus
 - Kein Modul verwendet echte Taxa
 
+#### Unit-Tests domainQualityReport.ts (domainQualityReport.test.ts)
+
+Testet `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT` aus `domainQualityReport.ts`. Keine echten Taxa, keine Bildanalyse, keine neue Bestimmungslogik.
+
+**Testumfang (10 Tests, alle bestanden):**
+1. Grundstatus – domain, scope, primaryMethod, visualControlRole, testFramework, passingUnitTests
+2. Methodische Sicherungen – `finalSpeciesIdentificationImplemented === false`, `imageAnalysisImplemented === false`, `realTaxaImplemented === false`
+3. 9 Domänenmodule vorhanden
+4. Alle Module `implemented === true`
+5. Kein Modul `createsFinalIdentification === true`
+6. Kein Modul `performsImageAnalysis === true`
+7. Kein Modul `usesRealTaxa === true`
+8. Teststatus: morphologicalFeatureMatrix und taxonProfile `hasUnitTests: false`, alle übrigen `hasUnitTests: true`
+9. Alle 9 erwarteten Modulnamen vorhanden
+10. Alle 5 offenen nächsten Schritte vorhanden
+
+**Testabdeckung der Domäne vollständig für:**
+`featureScoring` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport`
+
+**Noch nicht testabgedeckt:** `morphologicalFeatureMatrix`, `taxonProfile`
+
+**Gesamtstand Unit-Tests: 124/124 bestanden (8 Testdateien)**
+
 ## Noch nicht implementiert
 
 - Echte Bildanalyse
@@ -318,11 +341,13 @@ Enthält ausschließlich einen maschinenlesbaren Architektur- und Qualitätsstat
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Unit-Tests für domainQualityReport.ts
+- Unit-Tests für morphologicalFeatureMatrix.ts und taxonProfile.ts
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für domainQualityReport.ts**.
+Der nächste fachliche Schritt ist eine Entscheidung zwischen drei Optionen:
 
-Diese Tests sollen die Struktur und die methodischen Sicherungen der Konstante `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT` prüfen: `finalSpeciesIdentificationImplemented === false`, `imageAnalysisImplemented === false`, `realTaxaImplemented === false`, Modulanzahl, Testabdeckungsstatus.
+1. **Unit-Tests für morphologicalFeatureMatrix.ts** – Testabdeckung der Merkmalsmatrix vervollständigen
+2. **Unit-Tests für taxonProfile.ts** – Testabdeckung des Profilschemas vervollständigen
+3. **Erster fachlich kontrollierter Aufbau künstlicher Taxon-Seed-Daten** – Grundlage für spätere merkmalsbasierte Bestimmung
