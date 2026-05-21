@@ -355,14 +355,14 @@ Testet `MORPHOLOGICAL_FEATURE_MATRIX`, `getFeaturesByGroup`, `getFeatureById` un
 7. `getFeaturesByGroup` liefert für unbekannte Gruppen ein leeres Array
 8. `getFeatureById("blattstellung")` findet das Feature und gibt korrekte Felder zurück
 9. `getFeatureById` liefert für unbekannte IDs `undefined`
-10. `getHighDiagnosticFeatures` liefert ausschließlich Merkmale mit `diagnosticWeight === "hoch"` (alle zurückgegebenen Werte sind in der erlaubten Menge `["hoch", "sehr_hoch"]`)
-11. `getHighDiagnosticFeatures` enthält die zentralen stark diagnostischen Merkmale: blattstellung, bluetentyp, bluetenstand, unterirdisches_organ
+10. `getHighDiagnosticFeatures` liefert ausschließlich Merkmale mit `diagnosticWeight === "hoch"` oder `diagnosticWeight === "sehr_hoch"`
+11. `getHighDiagnosticFeatures` enthält die zentralen stark diagnostischen Merkmale: blattstellung, bluetentyp, bluetensymmetrie, bluetenstand, fruchttyp, unterirdisches_organ
 
-**Befund zu bluetensymmetrie:**
+**Korrektur getHighDiagnosticFeatures() (technische Konsistenz):**
 
-Beim Testen wurde festgestellt, dass `bluetensymmetrie` in der aktuellen Merkmalsmatrix nicht mit `"hoch"` oder `"sehr_hoch"` gewichtet ist und daher nicht von `getHighDiagnosticFeatures()` zurückgegeben wird. Die Implementierung von `getHighDiagnosticFeatures()` filtert ausschließlich nach `diagnosticWeight === "hoch"`. Die Tests folgen dem Ist-Zustand der Matrix. Es wurde keine fachliche Umgewichtung vorgenommen. Die Matrix selbst wurde nicht verändert.
+Ein technischer Konsistenzfehler wurde behoben: `getHighDiagnosticFeatures()` filterte zuvor ausschließlich nach `diagnosticWeight === "hoch"` und gab dadurch Merkmale mit `"sehr_hoch"` nicht zurück, obwohl `"sehr_hoch"` die stärkere diagnostische Gewichtungsstufe ist. Die Filterlogik wurde auf `"hoch" || "sehr_hoch"` erweitert. Es wurde keine fachliche Umgewichtung vorgenommen. Keine Merkmale wurden ergänzt oder entfernt.
 
-Tatsächlich von `getHighDiagnosticFeatures()` zurückgegebene IDs: `blattstellung`, `bluetentyp`, `bluetenstand`, `unterirdisches_organ`.
+Von `getHighDiagnosticFeatures()` zurückgegebene IDs (aktuell): `blattstellung`, `bluetentyp`, `bluetensymmetrie`, `bluetenstand`, `fruchttyp`, `unterirdisches_organ`.
 
 **Testabdeckung der Domäne vollständig für:**
 `morphologicalFeatureMatrix` · `featureScoring` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport`
@@ -409,9 +409,8 @@ Testet alle acht exportierten Typen und Strukturen aus `taxonProfile.ts` durch t
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Entwicklungsschritt ist ein **fachliches Review der Merkmalsgewichtungen in der Merkmalsmatrix**, insbesondere die Klärung des Befunds zu `bluetensymmetrie`:
+Der nächste fachliche Entwicklungsschritt erfordert eine externe Entscheidung zwischen folgenden Optionen:
 
-- `bluetensymmetrie` ist aktuell nicht mit `"hoch"` oder `"sehr_hoch"` gewichtet.
-- Die Tests folgen dem Ist-Zustand der Matrix.
-- Es wurde keine fachliche Umgewichtung vorgenommen.
-- Eine Umgewichtung darf ausschließlich durch externe fachliche Vorgabe erfolgen.
+1. **Aufbau erster fachlich kontrollierter Taxon-Seed-Daten** – Grundlage für spätere merkmalsbasierte Bestimmung
+2. **Weitere technische Härtung der Testinfrastruktur** – z. B. Integrationstests oder CI-Einbindung
+3. **Fachliches Review weiterer Merkmalsgewichtungen** – Prüfung weiterer `diagnosticWeight`-Werte in der Merkmalsmatrix
