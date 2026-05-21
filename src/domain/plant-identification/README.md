@@ -31,19 +31,27 @@ Die Merkmalsmatrix ist abgeschlossen. Es gibt keine offenen Merkmalsgruppen.
 
 Ein erstes generisches Scoring-/Vergleichsmodell ist implementiert.
 
+**Typen:** `ObservedFeature`, `TaxonFeatureProfile`, `FeatureComparisonResult`
+
+**Funktionen:** `diagnosticWeightToNumber`, `compareFeature`, `compareFeatureSet`, `calculateFeatureScore`
+
+**Fachliche Einordnung:** Das Scoring ist ein Hilfsmodell zur merkmalsbasierten Eingrenzung, keine abschließende Artbestimmung. Eine sichere Bestimmung erfordert morphologische Konsistenz, taxonomische Plausibilität, Deutschland-/Status-/Standortprüfung und visuellen Fotoabgleich als abschließenden Kontrollschritt.
+
+#### Taxon-Profil-Schema (taxonProfile.ts)
+
+Ein Schema für spätere Familien-, Gattungs- und Artprofile ist definiert.
+
 **Typen:**
-- `ObservedFeature` – ein beobachtetes Merkmal aus Foto, Nutzerangabe oder Ableitung
-- `TaxonFeatureProfile` – Merkmalsangabe eines späteren Art- oder Gattungsprofils
-- `FeatureComparisonResult` – Ergebnis eines einzelnen Merkmalsvergleichs
+- `TaxonomicRank` – Hierarchieebene: familie, gattung, art
+- `FloristicStatus` – wildwachsend, etablierter_neophyt, haeufig_verwildernd, kulturpflanze_nachrangig
+- `GermanyRelevance` – Deutschland-Relevanz und floristische Statusgewichtung
+- `TaxonomicIdentity` – wissenschaftlicher Name, Deutschname, Familie, Gattung, Art, Rang
+- `EcologyProfile` – Habitattypen, Feuchte, Licht, Hinweise
+- `PhenologyProfile` – Blüte- und Fruchtmonate
+- `VisualReferenceProfile` – Platzhalter für spätere Referenzbilder (nur für visuellen Kontrollschritt)
+- `PlantTaxonProfile` – Gesamtprofil: verbindet Identität, Deutschland-Relevanz, Morphologie, Ökologie, Phänologie und optionale Referenzbilder
 
-**Funktionen:**
-- `diagnosticWeightToNumber` – übersetzt DiagnosticWeight in einen numerischen Wert
-- `compareFeature` – vergleicht ein beobachtetes Merkmal mit einem Profil-Eintrag
-- `compareFeatureSet` – vergleicht eine Menge beobachteter Merkmale mit einem Taxon-Profil
-- `calculateFeatureScore` – berechnet einen Gesamtscore zwischen 0 und 1
-
-**Fachliche Einordnung:**
-Das Scoring ist ein Hilfsmodell zur merkmalsbasierten Eingrenzung, keine abschließende Artbestimmung. Fehlende Merkmale werden nicht negativ bewertet. Sichtbare, passende Merkmale werden nach diagnostischem Gewicht und Beobachtungssicherheit gewichtet. Eine sichere Bestimmung erfordert morphologische Konsistenz, taxonomische Plausibilität, Deutschland-/Status-/Standortprüfung und visuellen Fotoabgleich als abschließenden Kontrollschritt.
+**Fachliche Einordnung:** `taxonProfile.ts` ist nur ein Schema. Es enthält keine echten Pflanzenarten, keine Artenliste und keine Bestimmungslogik. Es dient als Grundlage für spätere strukturierte Familien-, Gattungs- und Artprofile.
 
 ### Technische Hinweise
 
@@ -53,17 +61,15 @@ Das Scoring ist ein Hilfsmodell zur merkmalsbasierten Eingrenzung, keine abschli
 
 ## Noch nicht implementiert
 
-- Taxon-/Artprofil-Schema
-- Pflanzenarten oder Taxon-Datenbank
-- Taxonomische Hierarchie
+- Echte Pflanzenarten oder Taxon-Datenbank
+- Taxon-Vergleichsfunktion
+- Taxonomische Entscheidungslogik
 - Verbreitungs- und Statusprüfung
 - Visueller Fotoabgleich
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Definition eines **Taxon-/Artprofil-Schemas**.
+Der nächste fachliche Schritt ist die Entwicklung einer **Taxon-Vergleichsfunktion**, die ein `PlantTaxonProfile` mit einer Menge von `ObservedFeature[]` vergleicht und einen Ähnlichkeitsscore zurückgibt.
 
-Dieses Schema soll beschreiben, wie ein Art- oder Gattungsprofil strukturiert ist, das später mit dem Scoring-Modell verglichen werden kann.
-
-Das Taxon-/Artprofil-Schema ist noch nicht implementiert.
+Diese Taxon-Vergleichsfunktion ist noch nicht implementiert.
