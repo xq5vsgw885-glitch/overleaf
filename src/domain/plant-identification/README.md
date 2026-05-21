@@ -40,6 +40,9 @@
 10. **Blütensymmetrie**
     - bluetensymmetrie
 
+11. **Blütenstand**
+    - bluetenstand
+
 ### Technische Hinweise
 
 `DiagnosticWeight` enthält die Werte: `"sehr_hoch"`, `"hoch"`, `"mittel"`, `"niedrig"`.
@@ -48,7 +51,6 @@
 
 ### Noch geplant
 
-11. Blütenstand
 12. Frucht
 13. Samen/Ausbreitung
 14. Unterirdische Organe
