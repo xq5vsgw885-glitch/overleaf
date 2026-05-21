@@ -291,6 +291,26 @@ Testet `runIdentificationPipeline` aus `identificationPipeline.ts`. Die produkti
 
 **Gesamtstand Unit-Tests: 114/114 bestanden (7 Testdateien)**
 
+#### Architektur- und Qualitätsstatus (domainQualityReport.ts)
+
+Enthält ausschließlich einen maschinenlesbaren Architektur- und Qualitätsstatus. Keine neue Bestimmungslogik, keine echten Taxa, keine Bildanalyse, kein visueller Fotoabgleich.
+
+**Typen:**
+- `DomainModuleStatus` – moduleName, purpose, implemented, hasUnitTests, createsFinalIdentification, performsImageAnalysis, usesRealTaxa
+- `DomainQualityReport` – domain, scope, primaryMethod, visualControlRole, finalSpeciesIdentificationImplemented, imageAnalysisImplemented, realTaxaImplemented, testFramework, passingUnitTests, modules, openNextSteps
+
+**Konstante:** `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT`
+
+**Inhalt des Reports:**
+- 9 Domänenmodule mit Implementierungs- und Teststatus
+- 114 bestandene Unit-Tests dokumentiert
+- `finalSpeciesIdentificationImplemented: false`
+- `imageAnalysisImplemented: false`
+- `realTaxaImplemented: false`
+- Kein Modul erzeugt eine finale sichere Artbestimmung
+- Kein Modul führt Bildanalyse aus
+- Kein Modul verwendet echte Taxa
+
 ## Noch nicht implementiert
 
 - Echte Bildanalyse
@@ -298,12 +318,11 @@ Testet `runIdentificationPipeline` aus `identificationPipeline.ts`. Die produkti
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
+- Unit-Tests für domainQualityReport.ts
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist eine **Architektur- und Qualitätsprüfung der Domänenlogik**.
+Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für domainQualityReport.ts**.
 
-Diese Prüfung soll die Kohärenz der Typen, Schnittstellen und Funktionen über alle Module hinweg bewerten und offene Risiken oder Inkonsistenzen benennen.
-
-Die Architektur- und Qualitätsprüfung ist noch nicht implementiert.
+Diese Tests sollen die Struktur und die methodischen Sicherungen der Konstante `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT` prüfen: `finalSpeciesIdentificationImplemented === false`, `imageAnalysisImplemented === false`, `realTaxaImplemented === false`, Modulanzahl, Testabdeckungsstatus.
