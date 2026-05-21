@@ -225,7 +225,20 @@ Testet alle elf Funktionen aus `plausibilityScoring.ts`. Die produktive Domänen
 - `getPlausibilityReason` – alle vier Reason-Codes
 - `evaluateTaxonPlausibility` – vollständig passender Kontext (→ high_plausibility, score 1), Taxon nicht in Deutschland (→ not_plausible)
 
-**Gesamtstand Unit-Tests: 62/62 bestanden (3 Testdateien)**
+#### Unit-Tests combinedAssessment.ts (combinedAssessment.test.ts)
+
+Testet alle fünf Funktionen aus `combinedAssessment.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testtaxa (`"Test taxon"`, `"Testaceae"`, `"Test taxon 2"`, `"Testaceae2"`, `"test-taxon-1"`, `"test-taxon-2"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt.
+
+**Getestete Funktionen:** `calculateCombinedScore`, `determineCombinedAssessmentStatus`, `getCombinedAssessmentReason`, `assessTaxonCandidate`, `assessTaxonCandidates`
+
+**Testumfang (23 Tests, alle bestanden):**
+- `calculateCombinedScore` – Gewichtung Morphologie 0.75 · Plausibilität 0.25 für vier Eingabekombinationen
+- `determineCombinedAssessmentStatus` – insufficient_data bei leeren featureResults, unlikely_candidate bei not_plausible, alle Score-Schwellen (0.39/0.4/0.69/0.7/0.84/0.85/1)
+- `getCombinedAssessmentReason` – alle fünf Reason-Codes
+- `assessTaxonCandidate` – vollständig passendes Taxon (→ strong_candidate_requires_review, score 1), fehlende Merkmale (→ insufficient_data), Taxon nicht in Deutschland (→ unlikely_candidate)
+- `assessTaxonCandidates` – Sortierung absteigend nach combinedScore, leere Taxonliste
+
+**Gesamtstand Unit-Tests: 85/85 bestanden (4 Testdateien)**
 
 ## Noch nicht implementiert
 
@@ -234,11 +247,11 @@ Testet alle elf Funktionen aus `plausibilityScoring.ts`. Die produktive Domänen
 - Referenzbild-Datenbank
 - Echte Pflanzenarten oder Taxon-Datenbank
 - Finale sichere Artbestimmung
-- Unit-Tests für combinedAssessment.ts, identificationResult.ts, visualControl.ts, identificationPipeline.ts
+- Unit-Tests für identificationResult.ts, visualControl.ts, identificationPipeline.ts
 - UI
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für combinedAssessment.ts**.
+Der nächste fachliche Schritt ist die Ergänzung von **Unit-Tests für identificationResult.ts**.
 
-Diese Tests sollen `calculateCombinedScore`, `determineCombinedAssessmentStatus`, `getCombinedAssessmentReason`, `assessTaxonCandidate` und `assessTaxonCandidates` prüfen.
+Diese Tests sollen `confidenceFromCombinedStatus`, `outputRankFromTaxonRank`, `buildEvidenceSection`, `buildMissingEvidenceHints`, `buildIdentificationCandidate` und `buildIdentificationResult` prüfen.
