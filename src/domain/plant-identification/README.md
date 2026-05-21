@@ -304,8 +304,6 @@ Enthält ausschließlich einen maschinenlesbaren Architektur- und Qualitätsstat
 **Inhalt des Reports (aktueller Stand):**
 - 9 Domänenmodule mit Implementierungs- und Teststatus
 - 145 bestandene Unit-Tests dokumentiert (`passingUnitTests: 145`)
-- `morphologicalFeatureMatrix.hasUnitTests: true`
-- `taxonProfile.hasUnitTests: true`
 - Alle 9 Module im Report: `hasUnitTests: true`
 - `finalSpeciesIdentificationImplemented: false`
 - `imageAnalysisImplemented: false`
@@ -313,6 +311,7 @@ Enthält ausschließlich einen maschinenlesbaren Architektur- und Qualitätsstat
 - Kein Modul erzeugt eine finale sichere Artbestimmung
 - Kein Modul führt Bildanalyse aus
 - Kein Modul verwendet echte Taxa
+- `openNextSteps` nach getHighDiagnosticFeatures-Korrektur synchronisiert (6 Einträge)
 
 #### Unit-Tests domainQualityReport.ts (domainQualityReport.test.ts)
 
@@ -330,7 +329,7 @@ Testet `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT` aus `domainQualityReport.ts`
 9. Alle 9 erwarteten Modulnamen vorhanden
 10. Alle 6 offenen nächsten Schritte vorhanden (openNextSteps an aktuellen Stand angepasst)
 
-**Synchronisierung:** `domainQualityReport.ts` und `domainQualityReport.test.ts` wurden in zwei separaten Schritten synchronisiert: erst die Produktionsdatei, dann die Testdatei.
+**Synchronisierung:** `domainQualityReport.ts` und `domainQualityReport.test.ts` wurden nach der `getHighDiagnosticFeatures`-Korrektur erneut synchronisiert: `openNextSteps` in der Produktionsdatei aktualisiert, anschließend Testerwartungen angepasst. `getHighDiagnosticFeatures()` gibt weiterhin korrekt alle Merkmale mit `diagnosticWeight === "hoch"` oder `"sehr_hoch"` zurück – inklusive `bluetensymmetrie` und `fruchttyp`.
 
 **Testabdeckung der Domäne vollständig für alle 10 Module:**
 `morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport`
@@ -411,6 +410,5 @@ Testet alle acht exportierten Typen und Strukturen aus `taxonProfile.ts` durch t
 
 Der nächste fachliche Entwicklungsschritt erfordert eine externe Entscheidung zwischen folgenden Optionen:
 
-1. **Aufbau erster fachlich kontrollierter Taxon-Seed-Daten** – Grundlage für spätere merkmalsbasierte Bestimmung
+1. **Aufbau erster fachlich kontrollierter Taxon-Seed-Daten** – Grundlage für spätere merkmalsbasierte Bestimmung; Taxon-Seed-Daten dürfen nur quellenbasiert und schrittweise ergänzt werden
 2. **Weitere technische Härtung der Testinfrastruktur** – z. B. Integrationstests oder CI-Einbindung
-3. **Fachliches Review weiterer Merkmalsgewichtungen** – Prüfung weiterer `diagnosticWeight`-Werte in der Merkmalsmatrix
