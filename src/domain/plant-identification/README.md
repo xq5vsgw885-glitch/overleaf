@@ -423,6 +423,34 @@ Testet alle acht exportierten Typen und Strukturen aus `taxonProfile.ts` durch t
 
 **Gesamtstand Unit-Tests: 145/145 bestanden (10 Testdateien)**
 
+#### Unit-Tests taxonSeedPolicy.ts (taxonSeedPolicy.test.ts)
+
+Testet `PLANT_TAXON_SEED_POLICY`, `isAllowedTaxonSeedSource`, `checkTaxonSeedSource`, `checkTaxonSeedCitation` und `checkTaxonSeedGermanyRelevance` aus `taxonSeedPolicy.ts`. Keine echten Taxa, keine Seed-Daten, keine Bildanalyse. Rothmaler und Strasburger werden ausschließlich als erlaubte Quellenbezeichnungen geprüft, nicht als inhaltliche Datenquelle verwendet.
+
+**Getestete Exporte:** `PLANT_TAXON_SEED_POLICY`, `isAllowedTaxonSeedSource`, `checkTaxonSeedSource`, `checkTaxonSeedCitation`, `checkTaxonSeedGermanyRelevance`
+
+**Testumfang (13 Tests, alle bestanden):**
+1. `PLANT_TAXON_SEED_POLICY.allowedSources` enthält Rothmaler und Strasburger, nicht extern_nicht_zugelassen, Länge 2
+2. `requiresSourceCitation === true`, `requiresGermanyRelevance === true`
+3. `allowsUncitedTaxa === false`, `allowsImageOnlyTaxa === false`, `allowsFinalSpeciesIdentificationFromSeedAlone === false`
+4. `isAllowedTaxonSeedSource("Rothmaler")` → true
+5. `isAllowedTaxonSeedSource("Strasburger")` → true
+6. `isAllowedTaxonSeedSource("extern_nicht_zugelassen")` → false
+7. `checkTaxonSeedSource("Rothmaler")` → status: "allowed", reason: "allowed_source"
+8. `checkTaxonSeedSource("Strasburger")` → status: "allowed", reason: "allowed_source"
+9. `checkTaxonSeedSource("extern_nicht_zugelassen")` → status: "blocked", reason: "source_not_allowed"
+10. `checkTaxonSeedCitation(true)` → status: "allowed", reason: "citation_present"
+11. `checkTaxonSeedCitation(false)` → status: "blocked", reason: "citation_required"
+12. `checkTaxonSeedGermanyRelevance(true)` → status: "allowed", reason: "germany_relevance_present"
+13. `checkTaxonSeedGermanyRelevance(false)` → status: "blocked", reason: "germany_relevance_required"
+
+**Testabdeckung der Domäne vollständig für alle 11 Module:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy`
+
+**Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
+
+**Gesamtstand Unit-Tests: 158/158 bestanden (11 Testdateien)**
+
 ## Noch nicht implementiert
 
 - Echte Bildanalyse
@@ -434,4 +462,4 @@ Testet alle acht exportierten Typen und Strukturen aus `taxonProfile.ts` durch t
 
 ## Nächster Entwicklungsschritt
 
-Der nächste fachliche Entwicklungsschritt ist die Ergänzung von Unit-Tests für `taxonSeedPolicy.ts`.
+Der nächste fachliche Entwicklungsschritt ist die Synchronisierung von `domainQualityReport.ts` mit dem aktuellen Stand: Aufnahme von `taxonSeedPolicy` als Domänenmodul und Aktualisierung auf 158 bestandene Tests.
