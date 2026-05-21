@@ -10,7 +10,7 @@ describe("PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT", () => {
     expect(report.primaryMethod).toBe("merkmalsbasiert");
     expect(report.visualControlRole).toBe("abschließender_kontrollschritt");
     expect(report.testFramework).toBe("vitest");
-    expect(report.passingUnitTests).toBe(145);
+    expect(report.passingUnitTests).toBe(158);
   });
 
   it("enforces methodical safety constraints", () => {
@@ -19,8 +19,8 @@ describe("PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT", () => {
     expect(report.realTaxaImplemented).toBe(false);
   });
 
-  it("documents exactly 9 domain modules", () => {
-    expect(report.modules).toHaveLength(9);
+  it("documents exactly 10 domain modules", () => {
+    expect(report.modules).toHaveLength(10);
   });
 
   it("marks all modules as implemented", () => {
@@ -51,6 +51,7 @@ describe("PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT", () => {
     expect(byName["identificationResult"].hasUnitTests).toBe(true);
     expect(byName["visualControl"].hasUnitTests).toBe(true);
     expect(byName["identificationPipeline"].hasUnitTests).toBe(true);
+    expect(byName["taxonSeedPolicy"].hasUnitTests).toBe(true);
   });
 
   it("contains all expected module names", () => {
@@ -64,17 +65,21 @@ describe("PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT", () => {
     expect(names).toContain("identificationResult");
     expect(names).toContain("visualControl");
     expect(names).toContain("identificationPipeline");
+    expect(names).toContain("taxonSeedPolicy");
   });
 
   it("documents all expected open next steps", () => {
     expect(report.openNextSteps).toContain(
-      "README.md mit aktualisiertem Stand nach getHighDiagnosticFeatures-Korrektur synchronisieren"
+      "README.md mit aktualisiertem DomainQualityReport nach taxonSeedPolicy synchronisieren"
     );
     expect(report.openNextSteps).toContain(
       "Entscheidung über Aufbau erster fachlich kontrollierter Taxon-Seed-Daten treffen"
     );
     expect(report.openNextSteps).toContain(
       "Taxon-Seed-Daten nur quellenbasiert und schrittweise ergänzen"
+    );
+    expect(report.openNextSteps).toContain(
+      "Taxon-Seed-Daten nur nach taxonSeedPolicy ergänzen"
     );
     expect(report.openNextSteps).toContain(
       "Alternativ weitere technische Härtung der Testinfrastruktur durchführen"
