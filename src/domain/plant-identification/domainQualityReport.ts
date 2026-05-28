@@ -31,7 +31,7 @@ export const PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT: DomainQualityReport = {
   imageAnalysisImplemented: false,
   realTaxaImplemented: false,
   testFramework: "vitest",
-  passingUnitTests: 178,
+  passingUnitTests: 182,
   modules: [
     {
       moduleName: "morphologicalFeatureMatrix",
@@ -116,7 +116,7 @@ export const PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT: DomainQualityReport = {
     },
     {
       moduleName: "taxonSeedPolicy",
-      purpose: "Regelwerk für spätere quellenbasierte Taxon-Seed-Daten",
+      purpose: "Regelwerk für quellenbasierte Taxon-Seed-Daten inkl. checkTaxonSeedMorphologyPresent (morphologische Mindestbindung)",
       implemented: true,
       hasUnitTests: true,
       createsFinalIdentification: false,
@@ -125,7 +125,7 @@ export const PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT: DomainQualityReport = {
     },
     {
       moduleName: "taxonSeedSchema",
-      purpose: "Schema und Policy-Validierung für spätere Taxon-Seed-Einträge",
+      purpose: "Schema und Policy-Validierung; validateTaxonSeedEntry führt 5 Checks durch, darunter Morphologie-Pflichtprüfung",
       implemented: true,
       hasUnitTests: true,
       createsFinalIdentification: false,
@@ -143,9 +143,9 @@ export const PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT: DomainQualityReport = {
     },
   ],
   openNextSteps: [
-    "domainQualityReport.test.ts nach checkTaxonSeedGermanyConsistency-Härtung synchronisieren",
-    "README.md mit aktualisiertem DomainQualityReport nach checkTaxonSeedGermanyConsistency synchronisieren",
-    "HANDOFF.md auf 178 Tests und checkTaxonSeedGermanyConsistency aktualisieren",
+    "domainQualityReport.test.ts nach morphologischer Mindestbindung auf 182 Tests synchronisieren",
+    "README.md nach morphologischer Mindestbindung synchronisieren",
+    "HANDOFF.md auf 182 Tests und morphologische Mindestbindung aktualisieren",
     "Entscheidung über Aufbau erster fachlich kontrollierter Taxon-Seed-Daten treffen",
     "Taxon-Seed-Daten nur quellenbasiert und schrittweise ergänzen",
     "Taxon-Seed-Daten nur nach taxonSeedPolicy, taxonSeedSchema und taxonSeedData ergänzen",
