@@ -38,7 +38,7 @@ Eine sichere finale Artbestimmung ist aktuell nicht implementiert.
 
 - TypeScript strict check: erfolgreich
 - Testframework: Vitest
-- npm test: 178/178 Tests bestanden
+- npm test: 182/182 Tests bestanden
 - Testdateien: 13
 
 ## Aktuelle Domänenmodule
@@ -96,19 +96,23 @@ In domainQualityReport.ts müssen diese Sicherungen false bleiben:
 - imageAnalysisImplemented: false
 - realTaxaImplemented: false
 
-## Synchronisierungsstand (nach Phase 0)
+## Synchronisierungsstand (nach Phase 1)
 
-Folgende Dateien sind nach checkTaxonSeedGermanyConsistency-Härtung vollständig synchronisiert:
+Folgende Dateien sind nach morphologischer Mindestbindung vollständig synchronisiert:
 
-- domainQualityReport.ts: passingUnitTests: 178, 12 Module, alle hasUnitTests: true
-- domainQualityReport.test.ts: passingUnitTests === 178, 12 Module geprüft
-- README.md: 178/178 Tests dokumentiert, checkTaxonSeedGermanyConsistency vollständig dokumentiert
+- domainQualityReport.ts: passingUnitTests: 182, 13 Module, alle hasUnitTests: true
+- domainQualityReport.test.ts: passingUnitTests === 182, openNextSteps synchronisiert
+- README.md: 182/182 Tests dokumentiert, morphologische Mindestbindung vollständig dokumentiert
 
-Technische Härtung checkTaxonSeedGermanyConsistency:
+Technische Härtung Phase 0 – checkTaxonSeedGermanyConsistency:
 - taxonSeedPolicy.ts: checkTaxonSeedGermanyConsistency als 4. Policy-Check (blocked wenn germanyRelevant und taxon.germanyRelevance.occursInGermany nicht übereinstimmen)
-- taxonSeedSchema.ts: validateTaxonSeedEntry führt jetzt 4 Checks durch (war: 3)
-- taxonSeedPolicy.test.ts: 17 Tests (4 neue Tests für checkTaxonSeedGermanyConsistency)
-- taxonSeedSchema.test.ts: 11 Tests (1 neuer Test für germany_relevance_inconsistent)
+- taxonSeedSchema.ts: validateTaxonSeedEntry führte nach Phase 0 vier Checks durch
+
+Technische Härtung Phase 1 – morphologische Mindestbindung:
+- taxonSeedPolicy.ts: checkTaxonSeedMorphologyPresent als 5. Policy-Check ergänzt (blocked: morphology_required wenn taxon.morphology leer)
+- taxonSeedSchema.ts: validateTaxonSeedEntry führt jetzt fünf Checks durch; Einträge mit leerer taxon.morphology werden geblockt
+- taxonSeedPolicy.test.ts: 20 Tests (3 neue Tests für checkTaxonSeedMorphologyPresent)
+- taxonSeedSchema.test.ts: 12 Tests (1 neuer Test für morphology_required, toHaveLength(4)→5)
 
 ## Taxon-Seed-Regeln
 
@@ -119,6 +123,7 @@ Spätere Taxon-Seed-Daten dürfen nur ergänzt werden, wenn sie:
 - eine zugelassene Quelle besitzen
 - eine Quellenangabe besitzen
 - Deutschland-Relevanz besitzen
+- mindestens ein morphologisches Merkmal in taxon.morphology besitzen
 - nicht rein bildbasiert begründet sind
 - keine finale sichere Artbestimmung allein erzeugen
 
@@ -129,12 +134,12 @@ Zugelassene Quellen sind aktuell nur:
 
 ## Aktueller nächster fachlicher Entscheidungspunkt
 
-Phase 0 (Synchronisierung nach checkTaxonSeedGermanyConsistency) ist abgeschlossen.
-178/178 Tests bestanden. Alle Synchronisierungsdateien aktuell.
+Phase 1 (morphologische Mindestbindung) ist abgeschlossen.
+182/182 Tests bestanden. Alle Synchronisierungsdateien aktuell.
 
 Vor dem Aufbau echter Taxon-Seed-Daten muss fachlich entschieden werden:
 
-1. Soll mit Phase 1 (morphologische Mindestbindung) begonnen werden?
+1. Soll mit Phase 2 (Audit-Metadaten: addedAt, reviewNote) begonnen werden?
 2. Oder soll direkt mit ersten fachlich kontrollierten Taxon-Seed-Daten (Phase 3) begonnen werden?
 
 Wenn Taxon-Seed-Daten ergänzt werden, dann nur:
@@ -157,4 +162,4 @@ Vor jeder Änderung:
 Erwartung nach Umsetzung:
 
 - tsc --strict --noEmit erfolgreich
-- npm test: 178/178 Tests bestanden
+- npm test: 182/182 Tests bestanden
