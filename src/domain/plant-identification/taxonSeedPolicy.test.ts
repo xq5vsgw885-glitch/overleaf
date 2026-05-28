@@ -7,6 +7,7 @@ import {
   checkTaxonSeedGermanyRelevance,
   checkTaxonSeedGermanyConsistency,
   checkTaxonSeedMorphologyPresent,
+  checkTaxonSeedReviewNote,
 } from "./taxonSeedPolicy.js";
 
 describe("PLANT_TAXON_SEED_POLICY", () => {
@@ -134,5 +135,25 @@ describe("checkTaxonSeedMorphologyPresent", () => {
     const result = checkTaxonSeedMorphologyPresent(0);
     expect(result.status).toBe("blocked");
     expect(result.reason).toBe("morphology_required");
+  });
+});
+
+describe("checkTaxonSeedReviewNote", () => {
+  it("allows when reviewNote is non-empty", () => {
+    const result = checkTaxonSeedReviewNote("Geprüft nach Rothmaler Band 1");
+    expect(result.status).toBe("allowed");
+    expect(result.reason).toBe("review_note_present");
+  });
+
+  it("blocks when reviewNote is empty string", () => {
+    const result = checkTaxonSeedReviewNote("");
+    expect(result.status).toBe("blocked");
+    expect(result.reason).toBe("review_note_required");
+  });
+
+  it("blocks when reviewNote is whitespace-only", () => {
+    const result = checkTaxonSeedReviewNote("   ");
+    expect(result.status).toBe("blocked");
+    expect(result.reason).toBe("review_note_required");
   });
 });

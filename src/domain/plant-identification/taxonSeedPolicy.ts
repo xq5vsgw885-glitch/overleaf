@@ -71,3 +71,10 @@ export function checkTaxonSeedMorphologyPresent(morphologyCount: number): TaxonS
   }
   return { status: "blocked", reason: "morphology_required" };
 }
+
+export function checkTaxonSeedReviewNote(reviewNote: string): TaxonSeedPolicyCheck {
+  if (reviewNote.trim().length > 0) {
+    return { status: "allowed", reason: "review_note_present" };
+  }
+  return { status: "blocked", reason: "review_note_required" };
+}
