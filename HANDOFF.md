@@ -38,7 +38,7 @@ Eine sichere finale Artbestimmung ist aktuell nicht implementiert.
 
 - TypeScript strict check: erfolgreich
 - Testframework: Vitest
-- npm test: 186/186 Tests bestanden
+- npm test: 190/190 Tests bestanden
 
 ## Aktuelle Domänenmodule
 
@@ -95,13 +95,13 @@ In domainQualityReport.ts müssen diese Sicherungen false bleiben:
 - imageAnalysisImplemented: false
 - realTaxaImplemented: false
 
-## Synchronisierungsstand (nach Phase 2)
+## Synchronisierungsstand (nach Phase 2.5)
 
-Folgende Dateien sind nach Audit-Metadaten-Härtung vollständig synchronisiert:
+Folgende Dateien sind nach addedAt-Härtung vollständig synchronisiert:
 
-- domainQualityReport.ts: passingUnitTests: 186, 13 Module, alle hasUnitTests: true
-- domainQualityReport.test.ts: passingUnitTests === 186, openNextSteps synchronisiert
-- README.md: 186/186 Tests dokumentiert, Phase 2 (Audit-Metadaten) vollständig dokumentiert
+- domainQualityReport.ts: passingUnitTests: 190, 13 Module, alle hasUnitTests: true
+- domainQualityReport.test.ts: passingUnitTests === 190, openNextSteps synchronisiert
+- README.md: 190/190 Tests dokumentiert, Phase 2.5 (checkTaxonSeedAddedAt) vollständig dokumentiert
 
 Technische Härtung Phase 0 – checkTaxonSeedGermanyConsistency:
 - taxonSeedPolicy.ts: checkTaxonSeedGermanyConsistency als 4. Policy-Check (blocked wenn germanyRelevant und taxon.germanyRelevance.occursInGermany nicht übereinstimmen)
@@ -116,9 +116,15 @@ Technische Härtung Phase 1 – morphologische Mindestbindung:
 Technische Härtung Phase 2 – Audit-Metadaten (addedAt, reviewNote):
 - taxonSeedSchema.ts: TaxonSeedEntry um addedAt: string und reviewNote: string erweitert
 - taxonSeedPolicy.ts: checkTaxonSeedReviewNote als 6. Policy-Check ergänzt (blocked: review_note_required wenn reviewNote leer oder whitespace)
-- taxonSeedSchema.ts: validateTaxonSeedEntry führt jetzt sechs Checks durch
-- taxonSeedPolicy.test.ts: 23 Tests (3 neue Tests für checkTaxonSeedReviewNote)
-- taxonSeedSchema.test.ts: 13 Tests (1 neuer Test für review_note_required, toHaveLength(5)→6, alle Fixtures um addedAt/reviewNote ergänzt)
+- taxonSeedSchema.ts: validateTaxonSeedEntry führte nach Phase 2 sechs Checks durch
+- taxonSeedPolicy.test.ts: 23 Tests nach Phase 2
+- taxonSeedSchema.test.ts: 13 Tests nach Phase 2
+
+Technische Härtung Phase 2.5 – addedAt-Pflichtprüfung:
+- taxonSeedPolicy.ts: checkTaxonSeedAddedAt als 7. Policy-Check ergänzt (blocked: addedAt_required wenn addedAt leer oder whitespace)
+- taxonSeedSchema.ts: validateTaxonSeedEntry führt jetzt sieben Checks durch
+- taxonSeedPolicy.test.ts: 26 Tests (3 neue Tests für checkTaxonSeedAddedAt)
+- taxonSeedSchema.test.ts: 14 Tests (1 neuer Test für addedAt_required, toHaveLength(6)→7)
 
 ## Taxon-Seed-Regeln
 
@@ -142,8 +148,8 @@ Zugelassene Quellen sind aktuell nur:
 
 ## Aktueller nächster fachlicher Entscheidungspunkt
 
-Phase 2 (Audit-Metadaten) ist abgeschlossen.
-186/186 Tests bestanden. Alle Synchronisierungsdateien aktuell.
+Phase 2.5 (addedAt-Härtung) ist abgeschlossen.
+190/190 Tests bestanden. Alle Synchronisierungsdateien aktuell.
 
 Vor dem Aufbau echter Taxon-Seed-Daten muss fachlich entschieden werden:
 
@@ -170,5 +176,5 @@ Vor jeder Änderung:
 Erwartung nach Umsetzung:
 
 - tsc --strict --noEmit erfolgreich
-- npm test: 186/186 Tests bestanden
+- npm test: 190/190 Tests bestanden
 - Testdateien: 13
