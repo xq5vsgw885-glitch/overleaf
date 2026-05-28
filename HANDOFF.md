@@ -38,8 +38,8 @@ Eine sichere finale Artbestimmung ist aktuell nicht implementiert.
 
 - TypeScript strict check: erfolgreich
 - Testframework: Vitest
-- npm test: 168/168 Tests bestanden
-- Testdateien: 12
+- npm test: 178/178 Tests bestanden
+- Testdateien: 13
 
 ## Aktuelle Domänenmodule
 
@@ -61,6 +61,7 @@ Aktuelle Module:
 10. domainQualityReport.ts
 11. taxonSeedPolicy.ts
 12. taxonSeedSchema.ts
+13. taxonSeedData.ts
 
 ## Aktuelle Testdateien
 
@@ -76,6 +77,7 @@ Aktuelle Module:
 10. domainQualityReport.test.ts
 11. taxonSeedPolicy.test.ts
 12. taxonSeedSchema.test.ts
+13. taxonSeedData.test.ts
 
 ## Methodische Sicherungen
 
@@ -83,7 +85,7 @@ Aktuell gilt:
 
 - keine echte Taxon-Datenbank
 - keine echten Pflanzenarten
-- keine Taxon-Seed-Daten
+- keine Taxon-Seed-Daten (PLANT_TAXON_SEED_DATA bleibt [])
 - keine Bildanalyse
 - kein echter visueller Fotoabgleich
 - keine finale sichere Artbestimmung
@@ -93,6 +95,20 @@ In domainQualityReport.ts müssen diese Sicherungen false bleiben:
 - finalSpeciesIdentificationImplemented: false
 - imageAnalysisImplemented: false
 - realTaxaImplemented: false
+
+## Synchronisierungsstand (nach Phase 0)
+
+Folgende Dateien sind nach checkTaxonSeedGermanyConsistency-Härtung vollständig synchronisiert:
+
+- domainQualityReport.ts: passingUnitTests: 178, 12 Module, alle hasUnitTests: true
+- domainQualityReport.test.ts: passingUnitTests === 178, 12 Module geprüft
+- README.md: 178/178 Tests dokumentiert, checkTaxonSeedGermanyConsistency vollständig dokumentiert
+
+Technische Härtung checkTaxonSeedGermanyConsistency:
+- taxonSeedPolicy.ts: checkTaxonSeedGermanyConsistency als 4. Policy-Check (blocked wenn germanyRelevant und taxon.germanyRelevance.occursInGermany nicht übereinstimmen)
+- taxonSeedSchema.ts: validateTaxonSeedEntry führt jetzt 4 Checks durch (war: 3)
+- taxonSeedPolicy.test.ts: 17 Tests (4 neue Tests für checkTaxonSeedGermanyConsistency)
+- taxonSeedSchema.test.ts: 11 Tests (1 neuer Test für germany_relevance_inconsistent)
 
 ## Taxon-Seed-Regeln
 
@@ -113,13 +129,16 @@ Zugelassene Quellen sind aktuell nur:
 
 ## Aktueller nächster fachlicher Entscheidungspunkt
 
+Phase 0 (Synchronisierung nach checkTaxonSeedGermanyConsistency) ist abgeschlossen.
+178/178 Tests bestanden. Alle Synchronisierungsdateien aktuell.
+
 Vor dem Aufbau echter Taxon-Seed-Daten muss fachlich entschieden werden:
 
-1. Soll mit ersten fachlich kontrollierten Taxon-Seed-Daten begonnen werden?
-2. Oder soll zunächst weitere technische Härtung erfolgen?
+1. Soll mit Phase 1 (morphologische Mindestbindung) begonnen werden?
+2. Oder soll direkt mit ersten fachlich kontrollierten Taxon-Seed-Daten (Phase 3) begonnen werden?
 
 Wenn Taxon-Seed-Daten ergänzt werden, dann nur:
-- quellenbasiert
+- quellenbasiert (Rothmaler oder Strasburger)
 - schrittweise
 - nach expliziter fachlicher Vorgabe
 - ohne eigene botanische Interpretation durch Claude Code
@@ -138,4 +157,4 @@ Vor jeder Änderung:
 Erwartung nach Umsetzung:
 
 - tsc --strict --noEmit erfolgreich
-- npm test: 168/168 Tests bestanden
+- npm test: 178/178 Tests bestanden
