@@ -22,7 +22,7 @@ const testTaxon: PlantTaxonProfile = {
     floristicStatus: "wildwachsend",
     statusWeight: 1,
   },
-  morphology: [],
+  morphology: [{ featureId: "test-feature", acceptedValues: ["test"], requiredForStrongIdentification: false }],
   ecology: {
     habitatTypes: ["wiese"],
     moisture: ["frisch"],
@@ -67,7 +67,7 @@ describe("validateTaxonSeedEntry", () => {
     const result = validateTaxonSeedEntry(entry);
     expect(result.valid).toBe(true);
     expect(result.reason).toBe("taxon_seed_entry_valid");
-    expect(result.checks).toHaveLength(4);
+    expect(result.checks).toHaveLength(5);
     expect(result.checks.every((c) => c.status === "allowed")).toBe(true);
   });
 
@@ -153,6 +153,24 @@ describe("validateTaxonSeedEntry", () => {
     expect(result.reason).toBe("taxon_seed_entry_blocked_by_policy");
     const blocked = result.checks.find(
       (c) => c.status === "blocked" && c.reason === "germany_relevance_inconsistent"
+    );
+    expect(blocked).toBeDefined();
+  });
+
+  it("blocks entry with empty morphology", () => {
+    const taxonNoMorphology: PlantTaxonProfile = { ...testTaxon, morphology: [] };
+    const entry: TaxonSeedEntry = {
+      taxon: taxonNoMorphology,
+      citation: { source: "Rothmaler", reference: "Band 1, S. 10" },
+      germanyRelevant: true,
+      createdFromImageOnly: false,
+      createsFinalIdentification: false,
+    };
+    const result = validateTaxonSeedEntry(entry);
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe("taxon_seed_entry_blocked_by_policy");
+    const blocked = result.checks.find(
+      (c) => c.status === "blocked" && c.reason === "morphology_required"
     );
     expect(blocked).toBeDefined();
   });
