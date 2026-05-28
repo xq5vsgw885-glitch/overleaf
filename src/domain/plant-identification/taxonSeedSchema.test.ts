@@ -61,13 +61,15 @@ describe("validateTaxonSeedEntry", () => {
       taxon: testTaxon,
       citation: { source: "Rothmaler", reference: "Band 1, S. 10" },
       germanyRelevant: true,
+      addedAt: "2026-05-28",
+      reviewNote: "Testnotiz für automatisierte Tests",
       createdFromImageOnly: false,
       createsFinalIdentification: false,
     };
     const result = validateTaxonSeedEntry(entry);
     expect(result.valid).toBe(true);
     expect(result.reason).toBe("taxon_seed_entry_valid");
-    expect(result.checks).toHaveLength(5);
+    expect(result.checks).toHaveLength(6);
     expect(result.checks.every((c) => c.status === "allowed")).toBe(true);
   });
 
@@ -76,6 +78,8 @@ describe("validateTaxonSeedEntry", () => {
       taxon: testTaxon,
       citation: { source: "Strasburger", reference: "Kapitel Morphologie" },
       germanyRelevant: true,
+      addedAt: "2026-05-28",
+      reviewNote: "Testnotiz für automatisierte Tests",
       createdFromImageOnly: false,
       createsFinalIdentification: false,
     };
@@ -90,6 +94,8 @@ describe("validateTaxonSeedEntry", () => {
       taxon: testTaxon,
       citation: { source: "extern_nicht_zugelassen", reference: "Irgendeine Quelle" },
       germanyRelevant: true,
+      addedAt: "2026-05-28",
+      reviewNote: "Testnotiz für automatisierte Tests",
       createdFromImageOnly: false,
       createsFinalIdentification: false,
     };
@@ -107,6 +113,8 @@ describe("validateTaxonSeedEntry", () => {
       taxon: testTaxon,
       citation: { source: "Rothmaler", reference: "" },
       germanyRelevant: true,
+      addedAt: "2026-05-28",
+      reviewNote: "Testnotiz für automatisierte Tests",
       createdFromImageOnly: false,
       createsFinalIdentification: false,
     };
@@ -124,6 +132,8 @@ describe("validateTaxonSeedEntry", () => {
       taxon: testTaxon,
       citation: { source: "Rothmaler", reference: "Band 1, S. 10" },
       germanyRelevant: false,
+      addedAt: "2026-05-28",
+      reviewNote: "Testnotiz für automatisierte Tests",
       createdFromImageOnly: false,
       createsFinalIdentification: false,
     };
@@ -145,6 +155,8 @@ describe("validateTaxonSeedEntry", () => {
       taxon: taxonNotInGermany,
       citation: { source: "Rothmaler", reference: "Band 1, S. 10" },
       germanyRelevant: true,
+      addedAt: "2026-05-28",
+      reviewNote: "Testnotiz für automatisierte Tests",
       createdFromImageOnly: false,
       createsFinalIdentification: false,
     };
@@ -163,6 +175,8 @@ describe("validateTaxonSeedEntry", () => {
       taxon: taxonNoMorphology,
       citation: { source: "Rothmaler", reference: "Band 1, S. 10" },
       germanyRelevant: true,
+      addedAt: "2026-05-28",
+      reviewNote: "Testnotiz für automatisierte Tests",
       createdFromImageOnly: false,
       createsFinalIdentification: false,
     };
@@ -175,11 +189,32 @@ describe("validateTaxonSeedEntry", () => {
     expect(blocked).toBeDefined();
   });
 
+  it("blocks entry with empty reviewNote", () => {
+    const entry: TaxonSeedEntry = {
+      taxon: testTaxon,
+      citation: { source: "Rothmaler", reference: "Band 1, S. 10" },
+      germanyRelevant: true,
+      addedAt: "2026-05-28",
+      reviewNote: "",
+      createdFromImageOnly: false,
+      createsFinalIdentification: false,
+    };
+    const result = validateTaxonSeedEntry(entry);
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe("taxon_seed_entry_blocked_by_policy");
+    const blocked = result.checks.find(
+      (c) => c.status === "blocked" && c.reason === "review_note_required"
+    );
+    expect(blocked).toBeDefined();
+  });
+
   it("blocks entry with multiple policy violations", () => {
     const entry: TaxonSeedEntry = {
       taxon: testTaxon,
       citation: { source: "extern_nicht_zugelassen", reference: " " },
       germanyRelevant: false,
+      addedAt: "2026-05-28",
+      reviewNote: "Testnotiz für automatisierte Tests",
       createdFromImageOnly: false,
       createsFinalIdentification: false,
     };

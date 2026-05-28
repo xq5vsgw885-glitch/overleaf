@@ -7,6 +7,7 @@ import {
   checkTaxonSeedGermanyRelevance,
   checkTaxonSeedGermanyConsistency,
   checkTaxonSeedMorphologyPresent,
+  checkTaxonSeedReviewNote,
 } from "./taxonSeedPolicy.js";
 
 export type TaxonSeedCitation = {
@@ -46,6 +47,7 @@ export function validateTaxonSeedEntry(entry: TaxonSeedEntry): TaxonSeedValidati
       entry.taxon.germanyRelevance.occursInGermany
     ),
     checkTaxonSeedMorphologyPresent(entry.taxon.morphology.length),
+    checkTaxonSeedReviewNote(entry.reviewNote),
   ];
 
   const valid = checks.every((c) => c.status === "allowed");
