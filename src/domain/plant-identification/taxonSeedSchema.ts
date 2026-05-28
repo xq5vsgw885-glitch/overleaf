@@ -20,6 +20,8 @@ export type TaxonSeedEntry = {
   taxon: PlantTaxonProfile;
   citation: TaxonSeedCitation;
   germanyRelevant: boolean;
+  addedAt: string;
+  reviewNote: string;
   createdFromImageOnly: false;
   createsFinalIdentification: false;
 };
