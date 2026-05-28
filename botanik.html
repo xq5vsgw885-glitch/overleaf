@@ -22,7 +22,7 @@
   <h1>Botanik API Test</h1>
 
   <div class="row">
-    <input id="q" value="Acer">
+    <input id="q" placeholder="Suchbegriff eingeben …" oninput="debouncedSearch()">
     <button onclick="searchTaxa()">Taxa suchen</button>
 
     <label class="muted">
@@ -62,9 +62,19 @@
   <script>
     const API_BASE = "https://overleaf-tdkd.onrender.com";
 
+    let _searchTimer;
+    function debouncedSearch() {
+      clearTimeout(_searchTimer);
+      _searchTimer = setTimeout(searchTaxa, 300);
+    }
+
     async function searchTaxa() {
       const q = document.getElementById("q").value.trim();
       const box = document.getElementById("results");
+      if (!q) {
+        box.textContent = "Noch keine Abfrage.";
+        return;
+      }
       box.textContent = "Lade Suchergebnisse…";
 
       const includeStubs = document.getElementById("includeStubs").checked;
@@ -166,7 +176,6 @@
       }[c]));
     }
 
-    searchTaxa();
   </script>
 </body>
 </html>
