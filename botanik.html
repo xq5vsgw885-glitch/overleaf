@@ -77,97 +77,107 @@
       }
       box.textContent = "Lade Suchergebnisse…";
 
-      const includeStubs = document.getElementById("includeStubs").checked;
-      const stubParam = includeStubs ? "&include_stubs=1" : "";
-      const res = await fetch(`${API_BASE}/api/botanik/taxa?q=${encodeURIComponent(q)}${stubParam}`);
-      const data = await res.json();
+      try {
+        const includeStubs = document.getElementById("includeStubs").checked;
+        const stubParam = includeStubs ? "&include_stubs=1" : "";
+        const res = await fetch(`${API_BASE}/api/botanik/taxa?q=${encodeURIComponent(q)}${stubParam}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
 
-      if (!data.rows || data.rows.length === 0) {
-        box.textContent = "Keine Treffer.";
-        return;
+        if (!data.rows || data.rows.length === 0) {
+          box.textContent = "Keine Treffer.";
+          return;
+        }
+
+        box.innerHTML = `
+          <p class="muted">Treffer: ${data.count} · vorbereitete Taxa: ${data.include_stubs ? "ein" : "aus"}</p>
+          ${data.rows.map(row => `
+            <div class="taxon" onclick="loadTaxon('${row.taxon_id}')">
+              <strong>${escapeHtml(row.scientific_name || "")}</strong><br>
+              <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · Status: ${escapeHtml(row.status || "")} · ${escapeHtml(row.taxon_id || "")}</span>
+            </div>
+          `).join("")}
+        `;
+      } catch {
+        box.textContent = "Suche fehlgeschlagen. Bitte Verbindung prüfen.";
       }
-
-      box.innerHTML = `
-        <p class="muted">Treffer: ${data.count} · vorbereitete Taxa: ${data.include_stubs ? "ein" : "aus"}</p>
-        ${data.rows.map(row => `
-          <div class="taxon" onclick="loadTaxon('${row.taxon_id}')">
-            <strong>${escapeHtml(row.scientific_name || "")}</strong><br>
-            <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · Status: ${escapeHtml(row.status || "")} · ${escapeHtml(row.taxon_id || "")}</span>
-          </div>
-        `).join("")}
-      `;
     }
 
     async function loadTaxon(taxonId) {
       const box = document.getElementById("details");
       box.textContent = "Lade Details…";
 
-      const res = await fetch(`${API_BASE}/api/botanik/taxon/${encodeURIComponent(taxonId)}`);
-      const data = await res.json();
+      try {
+        const res = await fetch(`${API_BASE}/api/botanik/taxon/${encodeURIComponent(taxonId)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
 
-      if (!res.ok) {
-        box.textContent = JSON.stringify(data, null, 2);
-        return;
+        const t = data.taxon;
+        const features = data.features || [];
+
+        box.innerHTML = `
+          <h3>${escapeHtml(t.scientific_name || "")}</h3>
+          <p><strong>Deutsch:</strong> ${escapeHtml(t.german_name || "")}</p>
+          <p><strong>Rang:</strong> ${escapeHtml(t.rank || "")}</p>
+          <p><strong>Familie:</strong> ${escapeHtml(t.family || "")}</p>
+          <p><strong>Quelle:</strong> ${escapeHtml(t.source_pdf || "")}</p>
+          <p><strong>Merkmale:</strong> ${features.length}</p>
+          ${features.length ? `
+            <ul>
+              ${features.map(f => `
+                <li>
+                  <strong>${escapeHtml(f.character || "")}</strong>:
+                  ${escapeHtml(f.state || "")}
+                  <br><span class="muted">Organ: ${escapeHtml(f.organ || "")}; diagnostisches Gewicht: ${escapeHtml(f.diagnostic_weight || "")}</span>
+                </li>
+              `).join("")}
+            </ul>
+          ` : `<p class="muted">Für dieses Taxon sind noch keine Merkmale hinterlegt.</p>`}
+        `;
+      } catch {
+        box.textContent = "Taxon-Details konnten nicht geladen werden.";
       }
-
-      const t = data.taxon;
-      const features = data.features || [];
-
-      box.innerHTML = `
-        <h3>${escapeHtml(t.scientific_name || "")}</h3>
-        <p><strong>Deutsch:</strong> ${escapeHtml(t.german_name || "")}</p>
-        <p><strong>Rang:</strong> ${escapeHtml(t.rank || "")}</p>
-        <p><strong>Familie:</strong> ${escapeHtml(t.family || "")}</p>
-        <p><strong>Quelle:</strong> ${escapeHtml(t.source_pdf || "")}</p>
-        <p><strong>Merkmale:</strong> ${features.length}</p>
-        ${features.length ? `
-          <ul>
-            ${features.map(f => `
-              <li>
-                <strong>${escapeHtml(f.character || "")}</strong>:
-                ${escapeHtml(f.state || "")}
-                <br><span class="muted">Organ: ${escapeHtml(f.organ || "")}; diagnostisches Gewicht: ${escapeHtml(f.diagnostic_weight || "")}</span>
-              </li>
-            `).join("")}
-          </ul>
-        ` : `<p class="muted">Für dieses Taxon sind noch keine Merkmale hinterlegt.</p>`}
-      `;
     }
 
     async function loadPhotoFeatures() {
       const box = document.getElementById("results");
       box.textContent = "Lade foto-diagnostische Merkmale…";
 
-      const visibility = document.getElementById("visibility").value;
-      const weight = document.getElementById("weight").value;
-      const term = document.getElementById("featureSearch").value.trim().toLowerCase();
+      try {
+        const visibility = document.getElementById("visibility").value;
+        const weight = document.getElementById("weight").value;
+        const term = document.getElementById("featureSearch").value.trim().toLowerCase();
 
-      const res = await fetch(`${API_BASE}/api/botanik/features/photo?visibility=${encodeURIComponent(visibility)}&weight=${encodeURIComponent(weight)}`);
-      const data = await res.json();
+        const res = await fetch(`${API_BASE}/api/botanik/features/photo?visibility=${encodeURIComponent(visibility)}&weight=${encodeURIComponent(weight)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
 
-      let rows = data.rows || [];
-      if (term) {
-        rows = rows.filter(f => [
-          f.scientific_name, f.german_name, f.character, f.state, f.organ,
-          f.feature_group, f.taxon_id, f.source_note
-        ].join(" ").toLowerCase().includes(term));
+        let rows = data.rows || [];
+        if (term) {
+          rows = rows.filter(f => [
+            f.scientific_name, f.german_name, f.character, f.state, f.organ,
+            f.feature_group, f.taxon_id, f.source_note
+          ].join(" ").toLowerCase().includes(term));
+        }
+
+        if (!rows.length) {
+          box.textContent = "Keine passenden foto-diagnostischen Merkmale gefunden.";
+          return;
+        }
+
+        box.innerHTML = `
+          <p class="muted">Filter: visibility=${escapeHtml(data.filters.visibility)}, weight=${escapeHtml(data.filters.weight)} · Treffer: ${rows.length} von ${data.count}</p>
+          ${rows.map(f => `
+            <div class="feature" onclick="loadTaxon('${f.taxon_id}')">
+              <strong>${escapeHtml(f.scientific_name || f.taxon_id)}</strong><br>
+              ${escapeHtml(f.character || "")}: ${escapeHtml(f.state || "")}
+              <br><span class="muted">${escapeHtml(f.german_name || "")} · Organ: ${escapeHtml(f.organ || "")} · ${escapeHtml(f.taxon_id || "")}</span>
+            </div>
+          `).join("")}
+        `;
+      } catch {
+        box.textContent = "Foto-Merkmale konnten nicht geladen werden.";
       }
-
-      if (!rows.length) {
-        box.textContent = "Keine passenden foto-diagnostischen Merkmale gefunden.";
-        return;
-      }
-
-      box.innerHTML = `
-        <p class="muted">Filter: visibility=${escapeHtml(data.filters.visibility)}, weight=${escapeHtml(data.filters.weight)} · Treffer: ${rows.length} von ${data.count}</p>
-        ${rows.map(f => `
-          <div class="feature" onclick="loadTaxon('${f.taxon_id}')">
-            <strong>${escapeHtml(f.scientific_name || f.taxon_id)}</strong><br>
-            ${escapeHtml(f.character || "")}: ${escapeHtml(f.state || "")}
-            <br><span class="muted">${escapeHtml(f.german_name || "")} · Organ: ${escapeHtml(f.organ || "")} · ${escapeHtml(f.taxon_id || "")}</span>
-          </div>
-        `).join("")}
-      `;
     }
 
     function escapeHtml(s) {
