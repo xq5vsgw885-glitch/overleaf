@@ -78,3 +78,10 @@ export function checkTaxonSeedReviewNote(reviewNote: string): TaxonSeedPolicyChe
   }
   return { status: "blocked", reason: "review_note_required" };
 }
+
+export function checkTaxonSeedAddedAt(addedAt: string): TaxonSeedPolicyCheck {
+  if (addedAt.trim().length > 0) {
+    return { status: "allowed", reason: "addedAt_present" };
+  }
+  return { status: "blocked", reason: "addedAt_required" };
+}
