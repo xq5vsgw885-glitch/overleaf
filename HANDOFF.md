@@ -38,7 +38,7 @@ Eine sichere finale Artbestimmung ist aktuell nicht implementiert.
 
 - TypeScript strict check: erfolgreich
 - Testframework: Vitest
-- npm test: 190/190 Tests bestanden
+- npm test: 197/197 Tests bestanden
 
 ## Aktuelle Domänenmodule
 
@@ -95,13 +95,13 @@ In domainQualityReport.ts müssen diese Sicherungen false bleiben:
 - imageAnalysisImplemented: false
 - realTaxaImplemented: false
 
-## Synchronisierungsstand (nach Phase 2.5)
+## Synchronisierungsstand (nach Phase 2.6)
 
-Folgende Dateien sind nach addedAt-Härtung vollständig synchronisiert:
+Folgende Dateien sind nach addedAt-Format-Härtung vollständig synchronisiert:
 
-- domainQualityReport.ts: passingUnitTests: 190, 13 Module, alle hasUnitTests: true
-- domainQualityReport.test.ts: passingUnitTests === 190, openNextSteps synchronisiert
-- README.md: 190/190 Tests dokumentiert, Phase 2.5 (checkTaxonSeedAddedAt) vollständig dokumentiert
+- domainQualityReport.ts: passingUnitTests: 197, 13 Module, alle hasUnitTests: true
+- domainQualityReport.test.ts: passingUnitTests === 197, openNextSteps synchronisiert
+- README.md: 197/197 Tests dokumentiert, Phase 2.6 (checkTaxonSeedAddedAtFormat) vollständig dokumentiert
 
 Technische Härtung Phase 0 – checkTaxonSeedGermanyConsistency:
 - taxonSeedPolicy.ts: checkTaxonSeedGermanyConsistency als 4. Policy-Check (blocked wenn germanyRelevant und taxon.germanyRelevance.occursInGermany nicht übereinstimmen)
@@ -122,9 +122,15 @@ Technische Härtung Phase 2 – Audit-Metadaten (addedAt, reviewNote):
 
 Technische Härtung Phase 2.5 – addedAt-Pflichtprüfung:
 - taxonSeedPolicy.ts: checkTaxonSeedAddedAt als 7. Policy-Check ergänzt (blocked: addedAt_required wenn addedAt leer oder whitespace)
-- taxonSeedSchema.ts: validateTaxonSeedEntry führt jetzt sieben Checks durch
-- taxonSeedPolicy.test.ts: 26 Tests (3 neue Tests für checkTaxonSeedAddedAt)
-- taxonSeedSchema.test.ts: 14 Tests (1 neuer Test für addedAt_required, toHaveLength(6)→7)
+- taxonSeedSchema.ts: validateTaxonSeedEntry führte nach Phase 2.5 sieben Checks durch
+- taxonSeedPolicy.test.ts: 26 Tests nach Phase 2.5
+- taxonSeedSchema.test.ts: 14 Tests nach Phase 2.5
+
+Technische Härtung Phase 2.6 – addedAt-Format-Prüfung (YYYY-MM-DD):
+- taxonSeedPolicy.ts: checkTaxonSeedAddedAtFormat als 8. Policy-Check ergänzt (blocked: addedAt_format_invalid wenn addedAt nicht YYYY-MM-DD)
+- taxonSeedSchema.ts: validateTaxonSeedEntry führt jetzt acht Checks durch
+- taxonSeedPolicy.test.ts: 32 Tests (6 neue Tests für checkTaxonSeedAddedAtFormat)
+- taxonSeedSchema.test.ts: 15 Tests (1 neuer Test für addedAt_format_invalid, toHaveLength(7)→8)
 
 ## Taxon-Seed-Regeln
 
@@ -148,8 +154,8 @@ Zugelassene Quellen sind aktuell nur:
 
 ## Aktueller nächster fachlicher Entscheidungspunkt
 
-Phase 2.5 (addedAt-Härtung) ist abgeschlossen.
-190/190 Tests bestanden. Alle Synchronisierungsdateien aktuell.
+Phase 2.6 (addedAt-Format-Härtung) ist abgeschlossen.
+197/197 Tests bestanden. Alle Synchronisierungsdateien aktuell.
 
 Vor dem Aufbau echter Taxon-Seed-Daten muss fachlich entschieden werden:
 
@@ -176,5 +182,5 @@ Vor jeder Änderung:
 Erwartung nach Umsetzung:
 
 - tsc --strict --noEmit erfolgreich
-- npm test: 190/190 Tests bestanden
+- npm test: 197/197 Tests bestanden
 - Testdateien: 13
