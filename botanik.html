@@ -12,6 +12,7 @@
     .card { border: 1px solid #ddd; border-radius: 10px; padding: 1rem; background: #fafafa; }
     .taxon, .feature { padding: .6rem; border-bottom: 1px solid #ddd; cursor: pointer; }
     .taxon:hover, .feature:hover { background: #eef3ff; }
+    .taxon-stub { border-left: 3px solid #f0ad4e; background: #fffbf2; }
     .muted { color: #666; font-size: .9rem; }
     .row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
     pre { background: #f3f3f3; padding: 1rem; overflow:auto; white-space: pre-wrap; }
@@ -92,9 +93,9 @@
         box.innerHTML = `
           <p class="muted">Treffer: ${data.count} · vorbereitete Taxa: ${data.include_stubs ? "ein" : "aus"}</p>
           ${data.rows.map(row => `
-            <div class="taxon" onclick="loadTaxon('${row.taxon_id}')">
+            <div class="taxon${row.status === 'stub' ? ' taxon-stub' : ''}" onclick="loadTaxon('${row.taxon_id}')">
               <strong>${escapeHtml(row.scientific_name || "")}</strong><br>
-              <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · Status: ${escapeHtml(row.status || "")} · ${escapeHtml(row.taxon_id || "")}</span>
+              <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · ${row.status === 'stub' ? 'vorläufig' : escapeHtml(row.status || '')} · ${escapeHtml(row.taxon_id || "")}</span>
             </div>
           `).join("")}
         `;
