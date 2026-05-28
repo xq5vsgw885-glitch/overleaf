@@ -10,7 +10,7 @@ describe("PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT", () => {
     expect(report.primaryMethod).toBe("merkmalsbasiert");
     expect(report.visualControlRole).toBe("abschließender_kontrollschritt");
     expect(report.testFramework).toBe("vitest");
-    expect(report.passingUnitTests).toBe(178);
+    expect(report.passingUnitTests).toBe(182);
   });
 
   it("enforces methodical safety constraints", () => {
@@ -74,13 +74,13 @@ describe("PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT", () => {
 
   it("documents all expected open next steps", () => {
     expect(report.openNextSteps).toContain(
-      "domainQualityReport.test.ts nach checkTaxonSeedGermanyConsistency-Härtung synchronisieren"
+      "domainQualityReport.test.ts nach morphologischer Mindestbindung auf 182 Tests synchronisieren"
     );
     expect(report.openNextSteps).toContain(
-      "README.md mit aktualisiertem DomainQualityReport nach checkTaxonSeedGermanyConsistency synchronisieren"
+      "README.md nach morphologischer Mindestbindung synchronisieren"
     );
     expect(report.openNextSteps).toContain(
-      "HANDOFF.md auf 178 Tests und checkTaxonSeedGermanyConsistency aktualisieren"
+      "HANDOFF.md auf 182 Tests und morphologische Mindestbindung aktualisieren"
     );
     expect(report.openNextSteps).toContain(
       "Entscheidung über Aufbau erster fachlich kontrollierter Taxon-Seed-Daten treffen"
