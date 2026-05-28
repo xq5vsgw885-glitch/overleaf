@@ -54,3 +54,13 @@ export function checkTaxonSeedGermanyRelevance(isGermanyRelevant: boolean): Taxo
   }
   return { status: "blocked", reason: "germany_relevance_required" };
 }
+
+export function checkTaxonSeedGermanyConsistency(
+  germanyRelevant: boolean,
+  occursInGermany: boolean
+): TaxonSeedPolicyCheck {
+  if (germanyRelevant === occursInGermany) {
+    return { status: "allowed", reason: "germany_consistency_confirmed" };
+  }
+  return { status: "blocked", reason: "germany_relevance_inconsistent" };
+}

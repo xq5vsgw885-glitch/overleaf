@@ -5,6 +5,7 @@ import {
   checkTaxonSeedSource,
   checkTaxonSeedCitation,
   checkTaxonSeedGermanyRelevance,
+  checkTaxonSeedGermanyConsistency,
 } from "./taxonSeedPolicy.js";
 
 describe("PLANT_TAXON_SEED_POLICY", () => {
@@ -86,5 +87,31 @@ describe("checkTaxonSeedGermanyRelevance", () => {
     const result = checkTaxonSeedGermanyRelevance(false);
     expect(result.status).toBe("blocked");
     expect(result.reason).toBe("germany_relevance_required");
+  });
+});
+
+describe("checkTaxonSeedGermanyConsistency", () => {
+  it("allows when germanyRelevant and occursInGermany are both true", () => {
+    const result = checkTaxonSeedGermanyConsistency(true, true);
+    expect(result.status).toBe("allowed");
+    expect(result.reason).toBe("germany_consistency_confirmed");
+  });
+
+  it("allows when germanyRelevant and occursInGermany are both false", () => {
+    const result = checkTaxonSeedGermanyConsistency(false, false);
+    expect(result.status).toBe("allowed");
+    expect(result.reason).toBe("germany_consistency_confirmed");
+  });
+
+  it("blocks when germanyRelevant is true but occursInGermany is false", () => {
+    const result = checkTaxonSeedGermanyConsistency(true, false);
+    expect(result.status).toBe("blocked");
+    expect(result.reason).toBe("germany_relevance_inconsistent");
+  });
+
+  it("blocks when germanyRelevant is false but occursInGermany is true", () => {
+    const result = checkTaxonSeedGermanyConsistency(false, true);
+    expect(result.status).toBe("blocked");
+    expect(result.reason).toBe("germany_relevance_inconsistent");
   });
 });

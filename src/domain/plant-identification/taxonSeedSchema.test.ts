@@ -67,7 +67,7 @@ describe("validateTaxonSeedEntry", () => {
     const result = validateTaxonSeedEntry(entry);
     expect(result.valid).toBe(true);
     expect(result.reason).toBe("taxon_seed_entry_valid");
-    expect(result.checks).toHaveLength(3);
+    expect(result.checks).toHaveLength(4);
     expect(result.checks.every((c) => c.status === "allowed")).toBe(true);
   });
 
@@ -132,6 +132,27 @@ describe("validateTaxonSeedEntry", () => {
     expect(result.reason).toBe("taxon_seed_entry_blocked_by_policy");
     const blocked = result.checks.find(
       (c) => c.status === "blocked" && c.reason === "germany_relevance_required"
+    );
+    expect(blocked).toBeDefined();
+  });
+
+  it("blocks entry where germanyRelevant contradicts taxon occursInGermany", () => {
+    const taxonNotInGermany: PlantTaxonProfile = {
+      ...testTaxon,
+      germanyRelevance: { occursInGermany: false, floristicStatus: "wildwachsend", statusWeight: 0 },
+    };
+    const entry: TaxonSeedEntry = {
+      taxon: taxonNotInGermany,
+      citation: { source: "Rothmaler", reference: "Band 1, S. 10" },
+      germanyRelevant: true,
+      createdFromImageOnly: false,
+      createsFinalIdentification: false,
+    };
+    const result = validateTaxonSeedEntry(entry);
+    expect(result.valid).toBe(false);
+    expect(result.reason).toBe("taxon_seed_entry_blocked_by_policy");
+    const blocked = result.checks.find(
+      (c) => c.status === "blocked" && c.reason === "germany_relevance_inconsistent"
     );
     expect(blocked).toBeDefined();
   });
