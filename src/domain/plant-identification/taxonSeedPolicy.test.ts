@@ -9,6 +9,7 @@ import {
   checkTaxonSeedMorphologyPresent,
   checkTaxonSeedReviewNote,
   checkTaxonSeedAddedAt,
+  checkTaxonSeedAddedAtFormat,
 } from "./taxonSeedPolicy.js";
 
 describe("PLANT_TAXON_SEED_POLICY", () => {
@@ -176,5 +177,43 @@ describe("checkTaxonSeedAddedAt", () => {
     const result = checkTaxonSeedAddedAt("   ");
     expect(result.status).toBe("blocked");
     expect(result.reason).toBe("addedAt_required");
+  });
+});
+
+describe("checkTaxonSeedAddedAtFormat", () => {
+  it("allows when addedAt matches YYYY-MM-DD", () => {
+    const result = checkTaxonSeedAddedAtFormat("2026-05-28");
+    expect(result.status).toBe("allowed");
+    expect(result.reason).toBe("addedAt_format_valid");
+  });
+
+  it("allows another valid YYYY-MM-DD date", () => {
+    const result = checkTaxonSeedAddedAtFormat("2025-01-01");
+    expect(result.status).toBe("allowed");
+    expect(result.reason).toBe("addedAt_format_valid");
+  });
+
+  it("blocks when addedAt is empty string", () => {
+    const result = checkTaxonSeedAddedAtFormat("");
+    expect(result.status).toBe("blocked");
+    expect(result.reason).toBe("addedAt_format_invalid");
+  });
+
+  it("blocks when addedAt has wrong format (DD.MM.YYYY)", () => {
+    const result = checkTaxonSeedAddedAtFormat("28.05.2026");
+    expect(result.status).toBe("blocked");
+    expect(result.reason).toBe("addedAt_format_invalid");
+  });
+
+  it("blocks when addedAt is year only", () => {
+    const result = checkTaxonSeedAddedAtFormat("2026");
+    expect(result.status).toBe("blocked");
+    expect(result.reason).toBe("addedAt_format_invalid");
+  });
+
+  it("blocks when addedAt is free text", () => {
+    const result = checkTaxonSeedAddedAtFormat("heute");
+    expect(result.status).toBe("blocked");
+    expect(result.reason).toBe("addedAt_format_invalid");
   });
 });
