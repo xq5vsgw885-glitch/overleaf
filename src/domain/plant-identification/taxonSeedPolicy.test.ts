@@ -8,6 +8,7 @@ import {
   checkTaxonSeedGermanyConsistency,
   checkTaxonSeedMorphologyPresent,
   checkTaxonSeedReviewNote,
+  checkTaxonSeedAddedAt,
 } from "./taxonSeedPolicy.js";
 
 describe("PLANT_TAXON_SEED_POLICY", () => {
@@ -155,5 +156,25 @@ describe("checkTaxonSeedReviewNote", () => {
     const result = checkTaxonSeedReviewNote("   ");
     expect(result.status).toBe("blocked");
     expect(result.reason).toBe("review_note_required");
+  });
+});
+
+describe("checkTaxonSeedAddedAt", () => {
+  it("allows when addedAt is a non-empty date string", () => {
+    const result = checkTaxonSeedAddedAt("2026-05-28");
+    expect(result.status).toBe("allowed");
+    expect(result.reason).toBe("addedAt_present");
+  });
+
+  it("blocks when addedAt is empty string", () => {
+    const result = checkTaxonSeedAddedAt("");
+    expect(result.status).toBe("blocked");
+    expect(result.reason).toBe("addedAt_required");
+  });
+
+  it("blocks when addedAt is whitespace-only", () => {
+    const result = checkTaxonSeedAddedAt("   ");
+    expect(result.status).toBe("blocked");
+    expect(result.reason).toBe("addedAt_required");
   });
 });
