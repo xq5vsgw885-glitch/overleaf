@@ -1,0 +1,575 @@
+# Plant Identification – Morphologische Merkmalsmatrix
+
+## Fachlicher Stand
+
+### Bereits umgesetzt
+
+#### Merkmalsmatrix (morphologicalFeatureMatrix.ts)
+
+Alle 16 geplanten Merkmalsgruppen sind vollständig implementiert:
+
+1. **Wuchsform** – wuchsform, lebensform
+2. **Spross/Stängel** – sprossform, sprossoberflaeche, milchsaft
+3. **Blattstellung** – blattstellung
+4. **Blattform** – blattform, blattgliederung
+5. **Blattrand** – blattrand
+6. **Blattnervatur** – nervatur
+7. **Blattoberfläche/Behaarung** – blattoberflaeche, behaarung
+8. **Blüte** – bluetentyp, bluetengroesse
+9. **Blütenfarbe** – bluetenfarbe
+10. **Blütensymmetrie** – bluetensymmetrie
+11. **Blütenstand** – bluetenstand
+12. **Frucht** – fruchttyp
+13. **Samen/Ausbreitung** – ausbreitungseinheit
+14. **Unterirdische Organe** – unterirdisches_organ
+15. **Standortkontext** – standorttyp, feuchte, licht
+16. **Phänologie** – bluetezeit, fruchtzeit
+
+Die Merkmalsmatrix ist abgeschlossen. Es gibt keine offenen Merkmalsgruppen.
+
+#### Scoring-Modell (featureScoring.ts)
+
+**Typen:** `ObservedFeature`, `TaxonFeatureProfile`, `FeatureComparisonResult`
+
+**Funktionen:** `diagnosticWeightToNumber`, `compareFeature`, `compareFeatureSet`, `calculateFeatureScore`
+
+**Fachliche Einordnung:** Hilfsmodell zur merkmalsbasierten Eingrenzung, keine abschließende Artbestimmung.
+
+#### Taxon-Profil-Schema (taxonProfile.ts)
+
+**Typen:** `TaxonomicRank`, `FloristicStatus`, `GermanyRelevance`, `TaxonomicIdentity`, `EcologyProfile`, `PhenologyProfile`, `VisualReferenceProfile`, `PlantTaxonProfile`
+
+**Fachliche Einordnung:** Nur ein Schema. Keine echten Pflanzenarten, keine Artenliste, keine Bestimmungslogik.
+
+#### Taxon-Vergleichsfunktion (taxonComparison.ts)
+
+**Typen:** `TaxonComparisonStatus`, `TaxonComparisonResult`
+
+**Funktionen:** `determineTaxonComparisonStatus`, `getTaxonComparisonReason`, `compareObservedFeaturesWithTaxon`
+
+**Fachliche Einordnung:** Bewertet ausschließlich morphologische Merkmalsübereinstimmung. Ein Status `high_match` ist keine sichere Artbestimmung.
+
+#### Plausibilitätsmodell (plausibilityScoring.ts)
+
+**Typen:** `ObservationContext`, `PlausibilityComponent`, `PlausibilityCheckResult`, `PlausibilityStatus`, `TaxonPlausibilityResult`
+
+**Funktionen:** `floristicStatusToWeight`, `checkGermanyRelevance`, `checkFloristicStatus`, `checkHabitat`, `checkMoisture`, `checkLight`, `checkPhenology`, `calculatePlausibilityScore`, `determinePlausibilityStatus`, `getPlausibilityReason`, `evaluateTaxonPlausibility`
+
+**Fachliche Einordnung:** Prüft Kontext- und Verbreitungsplausibilität. Deutschland-Relevanz ist harter Anker. Ein Status `high_plausibility` ist keine sichere Artbestimmung.
+
+#### Kombinierte Gesamtbewertung (combinedAssessment.ts)
+
+Kombiniert morphologische Taxon-Übereinstimmung und Kontextplausibilität zu einer Gesamtbewertung.
+
+**Typen:**
+- `CombinedAssessmentStatus` – insufficient_data, unlikely_candidate, possible_candidate, probable_candidate, strong_candidate_requires_review
+- `CombinedAssessmentResult` – Gesamtergebnis mit Morphologie, Plausibilität, combinedScore, Status und Begründung
+
+**Funktionen:**
+- `calculateCombinedScore` – Morphologie × 0.75 + Plausibilität × 0.25
+- `determineCombinedAssessmentStatus` – leitet Status aus combinedScore, Morphologie und Plausibilität ab
+- `getCombinedAssessmentReason` – liefert textuelle Begründung zum Status
+- `assessTaxonCandidate` – bewertet einen einzelnen Taxon-Kandidaten
+- `assessTaxonCandidates` – bewertet eine Liste von Taxa und sortiert absteigend nach combinedScore
+
+**Gewichtung:** Morphologie 0.75 · Plausibilität 0.25. Morphologische Merkmale bleiben primär. Kontext- und Verbreitungsplausibilität stabilisieren die Bewertung, dominieren sie aber nicht.
+
+**Fachliche Einordnung:** Die höchste Statusklasse `strong_candidate_requires_review` bedeutet ausdrücklich keine sichere Artbestimmung. Ein Kandidat ist stark unterstützt, muss aber weiterhin taxonomisch geprüft und später visuell kontrolliert werden. Es gibt keine finale Artbestimmung, keine Taxon-Datenbank, keine Bildanalyse und keinen visuellen Fotoabgleich in dieser Datei.
+
+#### Finale Bestimmungsausgabe-Struktur (identificationResult.ts)
+
+Strukturiert die Ausgabe der merkmalsbasierten Pipeline vor dem visuellen Kontrollschritt. Trennt die Begründung methodisch in Beobachtung, Berechnung, Interpretation und Unsicherheit.
+
+**Typen:**
+- `IdentificationConfidence` – insufficient, low, moderate, high_but_not_final
+- `IdentificationOutputRank` – familie, gattung, art, nicht_bestimmbar
+- `EvidenceSection` – Felder: observations, calculations, interpretation, uncertainty
+- `MissingEvidenceHint` – featureId, message, recommendedPhotoType?
+- `IdentificationCandidate` – taxon, assessment, confidence, outputRank, evidence, missingEvidence
+- `IdentificationResult` – primaryCandidate?, alternativeCandidates, resultSummary, isFinalSpeciesIdentification, visualControlPending
+
+**Funktionen:**
+- `confidenceFromCombinedStatus` – mappt CombinedAssessmentStatus auf IdentificationConfidence
+- `outputRankFromTaxonRank` – mappt TaxonomicRank auf IdentificationOutputRank
+- `buildEvidenceSection` – erzeugt EvidenceSection aus CombinedAssessmentResult
+- `buildMissingEvidenceHints` – liefert Hinweise auf fehlende Merkmale
+- `buildIdentificationCandidate` – erzeugt IdentificationCandidate aus CombinedAssessmentResult
+- `buildIdentificationResult` – erzeugt sortierte IdentificationResult aus Kandidatenliste
+
+**Fachliche Einordnung:**
+
+`isFinalSpeciesIdentification` ist immer `false`. Dieser Wert kann nie `true` sein.
+
+`visualControlPending` ist immer `true`, weil der visuelle Fotoabgleich noch nicht durchgeführt wurde.
+
+Ein `outputRank` „art" bedeutet ausschließlich, dass ein Kandidatenprofil auf Art-Rang liegt. Es bedeutet nicht, dass die Art sicher bestimmt wurde.
+
+Die Datei erzeugt keine finale sichere Artbestimmung. Die Datei führt keinen visuellen Fotoabgleich durch. Die Datei führt keine Bildanalyse durch. Die Datei enthält keine echten Pflanzenarten und keine Taxon-Datenbank.
+
+### Technische Hinweise
+
+`DiagnosticWeight` enthält die Werte: `"sehr_hoch"`, `"hoch"`, `"mittel"`, `"niedrig"`.
+
+`RequiredPhotoType` enthält die Werte: `"habitus"`, `"standort"`, `"detail"`, `"blatt"`, `"bluete"`, `"frucht"`.
+
+#### Visuelles Kontrollschritt-Schema (visualControl.ts)
+
+Definiert ausschließlich die Struktur des späteren visuellen Kontrollschritts. Die Datei implementiert keine Bildanalyse, berechnet keine Bildähnlichkeit und enthält keine Referenzbilder, keine echten Pflanzenarten und keine Taxon-Datenbank.
+
+**Typen:**
+- `VisualControlPhotoType` – habitus, blatt, bluete, frucht, detail, standort
+- `VisualControlInput` – photoType, imageUri, quality, notes?
+- `VisualControlReference` – taxon, referenceImageUris, photoTypes
+- `VisualControlStatus` – not_performed, insufficient_visual_material, visual_support, visual_conflict, visual_review_required
+- `VisualControlResult` – status, checkedPhotoTypes, reason, supportsCurrentIdentification, requiresHumanReview
+- `IdentificationResultWithVisualControl` – identification, visualControl
+
+**Funktionen:**
+- `createNotPerformedVisualControlResult` – erzeugt Ergebnis für nicht durchgeführten Kontrollschritt
+- `createInsufficientVisualMaterialResult` – erzeugt Ergebnis bei unzureichendem Bildmaterial
+- `createVisualSupportResult` – erzeugt Ergebnis bei visueller Übereinstimmung
+- `createVisualConflictResult` – erzeugt Ergebnis bei visuellem Widerspruch
+- `attachVisualControlResult` – kombiniert IdentificationResult mit VisualControlResult
+
+**Fachliche Einordnung:**
+
+Der visuelle Kontrollschritt darf eine merkmalsbasierte Bestimmung nur stützen, abschwächen oder zur menschlichen Nachprüfung markieren. Der visuelle Kontrollschritt darf niemals allein eine Bestimmung erzeugen.
+
+Eine sichere Artbestimmung darf nur entstehen, wenn morphologische Konsistenz, taxonomische Plausibilität, Deutschland-/Status-/Standortprüfung und visueller Kontrollschritt konsistent sind.
+
+#### Pipeline-Klammerung (identificationPipeline.ts)
+
+Verbindet die bestehenden Bausteine zu einer ersten merkmalsbasierten Pipeline.
+
+**Typen:**
+- `IdentificationPipelineInput` – observedFeatures, observationContext, candidateTaxa
+- `IdentificationPipelineResult` – assessments, identification, identificationWithVisualControl
+
+**Funktion:**
+- `runIdentificationPipeline` – führt kombinierte Bewertung, Ausgabestrukturierung und visuellen Kontrollstatus in einem Aufruf zusammen
+
+**Fachliche Einordnung:**
+
+Die Pipeline arbeitet ausschließlich mit übergebenen `candidateTaxa`. Es werden keine echten Pflanzenarten oder Taxon-Datenbanken angelegt. Die Pipeline implementiert keine Bildanalyse und keinen echten visuellen Fotoabgleich.
+
+Der visuelle Kontrollstatus ist aktuell immer `not_performed`: Der Kontrollschritt ist strukturell vorgesehen, aber noch nicht durchgeführt.
+
+Wenn `candidateTaxa` leer ist, läuft die Pipeline typkonform und erzeugt eine `IdentificationResult` ohne `primaryCandidate`.
+
+Die Pipeline erzeugt keine finale sichere Artbestimmung. Eine sichere Artbestimmung darf nur entstehen, wenn morphologische Konsistenz, taxonomische Plausibilität, Deutschland-/Status-/Standortprüfung und visueller Kontrollschritt konsistent sind.
+
+#### Taxon-Seed-Policy (taxonSeedPolicy.ts)
+
+Definiert ausschließlich die Mindestregeln für spätere Taxon-Seed-Daten. Enthält keine Taxa, keine echten Pflanzenarten, keine Seed-Daten, keine Bestimmungslogik und keine Bildanalyse.
+
+**Typen:**
+- `TaxonSeedSourceType` – "Rothmaler" | "Strasburger" | "extern_nicht_zugelassen"
+- `TaxonSeedPolicyStatus` – "allowed" | "blocked"
+- `TaxonSeedPolicyCheck` – status, reason
+- `TaxonSeedPolicy` – allowedSources, requiresSourceCitation, requiresGermanyRelevance, allowsUncitedTaxa, allowsImageOnlyTaxa, allowsFinalSpeciesIdentificationFromSeedAlone
+
+**Konstante:** `PLANT_TAXON_SEED_POLICY`
+
+Zugelassene Quellen aktuell: **Rothmaler**, **Strasburger**
+
+**Funktionen:**
+- `isAllowedTaxonSeedSource` – prüft, ob eine Quelle zugelassen ist
+- `checkTaxonSeedSource` – liefert `TaxonSeedPolicyCheck` für eine Quellenangabe
+- `checkTaxonSeedCitation` – liefert `TaxonSeedPolicyCheck` für das Vorhandensein einer Quellenangabe
+- `checkTaxonSeedGermanyRelevance` – liefert `TaxonSeedPolicyCheck` für die Deutschland-Relevanz
+- `checkTaxonSeedGermanyConsistency` – liefert `TaxonSeedPolicyCheck`; blocked wenn `germanyRelevant` und `taxon.germanyRelevance.occursInGermany` nicht übereinstimmen
+- `checkTaxonSeedMorphologyPresent` – liefert `TaxonSeedPolicyCheck`; blocked (morphology_required) wenn `morphologyCount === 0`
+- `checkTaxonSeedReviewNote` – liefert `TaxonSeedPolicyCheck`; blocked (review_note_required) wenn `reviewNote` leer oder nur whitespace
+
+**Fachliche Einordnung:**
+
+Spätere Taxon-Seed-Daten dürfen nur mit zugelassener Quellenangabe (Rothmaler, Strasburger) ergänzt werden. Nicht zitierte Taxa sind nicht zulässig. Taxon-Seed-Daten müssen Deutschland-Relevanz besitzen. Reine Bildähnlichkeit darf kein Taxon begründen. Taxon-Seed-Daten dürfen keine finale sichere Artbestimmung allein erzeugen.
+
+`requiresSourceCitation: true`, `requiresGermanyRelevance: true`, `allowsUncitedTaxa: false`, `allowsImageOnlyTaxa: false`, `allowsFinalSpeciesIdentificationFromSeedAlone: false` sind als TypeScript-Literal-Typen definiert und können nicht auf andere Werte gesetzt werden.
+
+#### Taxon-Seed-Schema (taxonSeedSchema.ts)
+
+Definiert ausschließlich Schema und Policy-Validierung für spätere Taxon-Seed-Einträge. Enthält keine Taxa, keine echten Pflanzenarten, keine Seed-Daten, keine Taxon-Datenbank, keine Bildanalyse und keine finale sichere Artbestimmung.
+
+**Typen:**
+- `TaxonSeedCitation` – source, reference, page?, note?
+- `TaxonSeedEntry` – taxon, citation, germanyRelevant, addedAt: string, reviewNote: string, createdFromImageOnly: false, createsFinalIdentification: false
+- `TaxonSeedValidationResult` – valid, checks, reason
+
+**Funktionen:**
+- `hasUsableCitation` – prüft, ob eine Quellenangabe einen nicht-leeren `reference`-String enthält
+- `validateTaxonSeedEntry` – führt acht Policy-Checks durch (Quelle, Zitation, Deutschland-Relevanz, Deutschland-Konsistenz, Morphologie-Pflicht, Review-Note-Pflicht, addedAt-Pflicht, addedAt-Format-Pflicht) und liefert `TaxonSeedValidationResult`
+- `createBlockedTaxonSeedValidationResult` – erzeugt ein blockiertes Ergebnis mit leerem checks-Array
+
+**Fachliche Einordnung:**
+
+`TaxonSeedEntry.createdFromImageOnly` ist ein TypeScript-Literal-Typ `false` und kann nicht auf `true` gesetzt werden. `TaxonSeedEntry.createsFinalIdentification` ist ebenfalls ein Literal-Typ `false`. Die Pflichtfelder `addedAt: string` und `reviewNote: string` sind seit Phase 2 Teil von `TaxonSeedEntry`. Die Validierung nutzt `checkTaxonSeedSource`, `checkTaxonSeedCitation`, `checkTaxonSeedGermanyRelevance`, `checkTaxonSeedGermanyConsistency`, `checkTaxonSeedMorphologyPresent`, `checkTaxonSeedReviewNote`, `checkTaxonSeedAddedAt` und `checkTaxonSeedAddedAtFormat` aus `taxonSeedPolicy.ts`. Ein Eintrag ist nur `valid`, wenn alle acht Checks `status === "allowed"` liefern. Einträge mit leerer `taxon.morphology` werden durch `checkTaxonSeedMorphologyPresent` geblockt (morphology_required). Einträge mit leerer oder whitespace-only `reviewNote` werden durch `checkTaxonSeedReviewNote` geblockt (review_note_required). Einträge mit leerem oder whitespace-only `addedAt` werden durch `checkTaxonSeedAddedAt` geblockt (addedAt_required). Einträge mit `addedAt` außerhalb des Formats YYYY-MM-DD werden durch `checkTaxonSeedAddedAtFormat` geblockt (addedAt_format_invalid).
+
+### Test-Infrastruktur
+
+**Test-Framework:** Vitest (`vitest run`)
+
+**Test-Script in package.json:** `"test": "vitest run"`
+
+#### Unit-Tests featureScoring.ts (featureScoring.test.ts)
+
+Testet alle vier Kernfunktionen aus `featureScoring.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert.
+
+**Getestete Funktionen:** `diagnosticWeightToNumber`, `compareFeature`, `compareFeatureSet`, `calculateFeatureScore`
+
+**Testumfang (13 Tests, alle bestanden):**
+1. Gewichtung niedrig → 1
+2. Gewichtung mittel → 2
+3. Gewichtung hoch → 3
+4. Gewichtung sehr_hoch → 4
+5. `compareFeature` mit passendem Wert → matched, score, reason
+6. `compareFeature` mit nicht passendem Wert → value_mismatch
+7. `compareFeature` mit nicht sichtbarem Merkmal → feature_not_visible
+8. `compareFeature` mit unbekanntem Merkmal → unknown_feature
+9. `compareFeatureSet` mit zwei passenden Merkmalen → 2 Ergebnisse, alle matched
+10. `compareFeatureSet` ignoriert fehlendes beobachtetes Merkmal
+11. `calculateFeatureScore` mit normalen Werten → 0.5
+12. `calculateFeatureScore` mit leerer Liste → 0
+13. `calculateFeatureScore` mit maxScore-Summe 0 → 0
+
+#### Unit-Tests taxonComparison.ts (taxonComparison.test.ts)
+
+Testet alle drei Funktionen aus `taxonComparison.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testtaxa (`"Test taxon"`, `"Testaceae"`, `"Testgenus"`, `"test-taxon-1"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt.
+
+**Getestete Funktionen:** `determineTaxonComparisonStatus`, `getTaxonComparisonReason`, `compareObservedFeaturesWithTaxon`
+
+**Testumfang (13 Tests, alle bestanden):**
+1. `determineTaxonComparisonStatus` → no_observable_features bei leerer Ergebnisliste
+2. `determineTaxonComparisonStatus` → low_match bei score 0.39
+3. `determineTaxonComparisonStatus` → moderate_match bei score 0.4
+4. `determineTaxonComparisonStatus` → moderate_match bei score 0.74
+5. `determineTaxonComparisonStatus` → high_match bei score 0.75
+6. `determineTaxonComparisonStatus` → high_match bei score 1
+7. `getTaxonComparisonReason` → no_observable_features
+8. `getTaxonComparisonReason` → low_morphological_match
+9. `getTaxonComparisonReason` → moderate_morphological_match
+10. `getTaxonComparisonReason` → high_morphological_match
+11. `compareObservedFeaturesWithTaxon` mit zwei passenden Merkmalen → high_match, score 1
+12. `compareObservedFeaturesWithTaxon` mit einem passenden und einem nicht passenden Merkmal → high_match, score 0.75
+13. `compareObservedFeaturesWithTaxon` ohne beobachtete Merkmale → no_observable_features
+
+#### Unit-Tests plausibilityScoring.ts (plausibilityScoring.test.ts)
+
+Testet alle elf Funktionen aus `plausibilityScoring.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testtaxa (`"Test taxon"`, `"Testaceae"`, `"Testgenus"`, `"test-taxon-1"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt.
+
+**Getestete Funktionen:** `floristicStatusToWeight`, `checkGermanyRelevance`, `checkFloristicStatus`, `checkHabitat`, `checkMoisture`, `checkLight`, `checkPhenology`, `calculatePlausibilityScore`, `determinePlausibilityStatus`, `getPlausibilityReason`, `evaluateTaxonPlausibility`
+
+**Testumfang (36 Tests, alle bestanden):**
+- `floristicStatusToWeight` – alle vier Statusklassen
+- `checkGermanyRelevance` – mit und ohne Deutschland-Vorkommen
+- `checkFloristicStatus` – wildwachsend und kulturpflanze_nachrangig
+- `checkHabitat` – passend, nicht passend, nicht angegeben
+- `checkMoisture` – passend, nicht passend, nicht angegeben
+- `checkLight` – passend, nicht passend, nicht angegeben
+- `checkPhenology` – Blütezeit passend, Fruchtzeit passend, nicht passend, nicht angegeben
+- `calculatePlausibilityScore` – normale Werte (→ 0.75), leere Liste (→ 0), maxScore-Summe 0 (→ 0)
+- `determinePlausibilityStatus` – not_plausible bei fehlender Deutschland-Relevanz, alle Schwellenwerte
+- `getPlausibilityReason` – alle vier Reason-Codes
+- `evaluateTaxonPlausibility` – vollständig passender Kontext (→ high_plausibility, score 1), Taxon nicht in Deutschland (→ not_plausible)
+
+#### Unit-Tests combinedAssessment.ts (combinedAssessment.test.ts)
+
+Testet alle fünf Funktionen aus `combinedAssessment.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testtaxa (`"Test taxon"`, `"Testaceae"`, `"Test taxon 2"`, `"Testaceae2"`, `"test-taxon-1"`, `"test-taxon-2"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt.
+
+**Getestete Funktionen:** `calculateCombinedScore`, `determineCombinedAssessmentStatus`, `getCombinedAssessmentReason`, `assessTaxonCandidate`, `assessTaxonCandidates`
+
+**Testumfang (23 Tests, alle bestanden):**
+- `calculateCombinedScore` – Gewichtung Morphologie 0.75 · Plausibilität 0.25 für vier Eingabekombinationen
+- `determineCombinedAssessmentStatus` – insufficient_data bei leeren featureResults, unlikely_candidate bei not_plausible, alle Score-Schwellen (0.39/0.4/0.69/0.7/0.84/0.85/1)
+- `getCombinedAssessmentReason` – alle fünf Reason-Codes
+- `assessTaxonCandidate` – vollständig passendes Taxon (→ strong_candidate_requires_review, score 1), fehlende Merkmale (→ insufficient_data), Taxon nicht in Deutschland (→ unlikely_candidate)
+- `assessTaxonCandidates` – Sortierung absteigend nach combinedScore, leere Taxonliste
+
+#### Unit-Tests identificationResult.ts (identificationResult.test.ts)
+
+Testet alle sechs Funktionen aus `identificationResult.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testtaxa (`"Test taxon"`, `"Testaceae"`, `"Testgenus"`, `"test-taxon-1"` bis `"test-taxon-6"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt.
+
+**Getestete Funktionen:** `confidenceFromCombinedStatus`, `outputRankFromTaxonRank`, `buildEvidenceSection`, `buildMissingEvidenceHints`, `buildIdentificationCandidate`, `buildIdentificationResult`
+
+**Testumfang (18 Tests, alle bestanden):**
+- `confidenceFromCombinedStatus` – alle fünf CombinedAssessmentStatus-Werte
+- `outputRankFromTaxonRank` – familie, gattung, art
+- `buildEvidenceSection` – methodische Trennung: observations, calculations mit Scores, interpretation mit Reasons, uncertainty mit allen drei Hinweisen
+- `buildMissingEvidenceHints` – leeres Array bei vorhandenen featureResults, ein Hinweis bei leeren featureResults (featureId: "unknown", recommendedPhotoType: "habitus")
+- `buildIdentificationCandidate` – confidence, outputRank, uncertainty, missingEvidence
+- `buildIdentificationResult` – leeres Array (→ no_candidates_available), starker Kandidat (→ strong_candidate_requires_review), moderater Kandidat (→ candidate_plausible_but_not_final), schwacher Kandidat (→ weak_candidate), insufficient (→ insufficient_data), Begrenzung alternativeCandidates auf 4
+
+**Methodische Prüfbestätigung:** Alle `buildIdentificationResult`-Tests prüfen explizit `isFinalSpeciesIdentification === false` und `visualControlPending === true`.
+
+#### Unit-Tests visualControl.ts (visualControl.test.ts)
+
+Testet alle fünf Funktionen aus `visualControl.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten enthalten keine echten Pflanzenarten oder Taxa. Es wurde keine Bildanalyse und keine Bildähnlichkeit implementiert.
+
+**Getestete Funktionen:** `createNotPerformedVisualControlResult`, `createInsufficientVisualMaterialResult`, `createVisualSupportResult`, `createVisualConflictResult`, `attachVisualControlResult`
+
+**Testumfang (6 Tests, alle bestanden):**
+- `createNotPerformedVisualControlResult` – status, leere checkedPhotoTypes, kein Support, keine Review-Pflicht
+- `createInsufficientVisualMaterialResult` – status, checkedPhotoTypes, Review-Pflicht
+- `createVisualSupportResult` – status, checkedPhotoTypes, Support ohne Review-Pflicht
+- `createVisualConflictResult` – status, checkedPhotoTypes, Review-Pflicht
+- `attachVisualControlResult` – verbindet IdentificationResult und VisualControlResult korrekt
+- Methodische Sicherung: auch bei visual_support bleibt `isFinalSpeciesIdentification === false`
+
+#### Unit-Tests identificationPipeline.ts (identificationPipeline.test.ts)
+
+Testet `runIdentificationPipeline` aus `identificationPipeline.ts`. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testtaxa (`"Test taxon"`, `"Testaceae"`, `"Testgenus"`, `"Test taxon 2"`, `"Testaceae2"`, `"test-taxon-1"`, `"test-taxon-2"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt. Es wurde kein echter visueller Fotoabgleich implementiert.
+
+**Getestete Funktion:** `runIdentificationPipeline`
+
+**Testumfang (5 Tests, alle bestanden):**
+1. Leere candidateTaxa-Liste → no_candidates_available, kein primaryCandidate
+2. Vollständig passendes Taxon → strong_candidate_requires_review, confidence high_but_not_final, score 1
+3. Zwei Taxa → Sortierung absteigend nach combinedScore, primaryCandidate = test-taxon-1, 1 alternativeCandidate
+4. Taxon nicht in Deutschland → plausibility not_plausible, status unlikely_candidate, confidence low
+5. Kandidat ohne beobachtete Merkmale → insufficient_data, confidence insufficient
+
+**Methodische Sicherungen in allen Tests:**
+- `isFinalSpeciesIdentification === false` – die Pipeline erzeugt keine finale Artbestimmung
+- `visualControl.status === "not_performed"` – kein echter visueller Fotoabgleich
+- `visualControlPending === true` – visueller Kontrollschritt steht noch aus
+
+**Testabdeckung der Domänenpipeline vollständig:**
+`featureScoring` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline`
+
+**Gesamtstand Unit-Tests: 114/114 bestanden (7 Testdateien)**
+
+#### Architektur- und Qualitätsstatus (domainQualityReport.ts)
+
+Enthält ausschließlich einen maschinenlesbaren Architektur- und Qualitätsstatus. Keine neue Bestimmungslogik, keine echten Taxa, keine Bildanalyse, kein visueller Fotoabgleich.
+
+**Typen:**
+- `DomainModuleStatus` – moduleName, purpose, implemented, hasUnitTests, createsFinalIdentification, performsImageAnalysis, usesRealTaxa
+- `DomainQualityReport` – domain, scope, primaryMethod, visualControlRole, finalSpeciesIdentificationImplemented, imageAnalysisImplemented, realTaxaImplemented, testFramework, passingUnitTests, modules, openNextSteps
+
+**Konstante:** `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT`
+
+**Inhalt des Reports (aktueller Stand):**
+- 12 Domänenmodule mit Implementierungs- und Teststatus
+- 197 bestandene Unit-Tests dokumentiert (`passingUnitTests: 197`)
+- Alle 12 Module im Report: `hasUnitTests: true` – inkl. `taxonSeedPolicy`, `taxonSeedSchema` und `taxonSeedData`
+- `finalSpeciesIdentificationImplemented: false`
+- `imageAnalysisImplemented: false`
+- `realTaxaImplemented: false`
+- Kein Modul erzeugt eine finale sichere Artbestimmung
+- Kein Modul führt Bildanalyse aus
+- Kein Modul verwendet echte Taxa
+- `openNextSteps` nach Phase 2.5 (checkTaxonSeedAddedAt) synchronisiert (7 Einträge)
+
+#### Unit-Tests domainQualityReport.ts (domainQualityReport.test.ts)
+
+Testet `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT` aus `domainQualityReport.ts`. Keine echten Taxa, keine Bildanalyse, keine neue Bestimmungslogik.
+
+**Testumfang (10 Tests, alle bestanden):**
+1. Grundstatus – domain, scope, primaryMethod, visualControlRole, testFramework, `passingUnitTests === 197`
+2. Methodische Sicherungen – `finalSpeciesIdentificationImplemented === false`, `imageAnalysisImplemented === false`, `realTaxaImplemented === false`
+3. 12 Domänenmodule vorhanden
+4. Alle Module `implemented === true`
+5. Kein Modul `createsFinalIdentification === true`
+6. Kein Modul `performsImageAnalysis === true`
+7. Kein Modul `usesRealTaxa === true`
+8. Teststatus: alle 12 Module `hasUnitTests: true` – inkl. `taxonSeedPolicy`, `taxonSeedSchema` und `taxonSeedData`
+9. Alle 12 erwarteten Modulnamen vorhanden – inkl. `taxonSeedPolicy`, `taxonSeedSchema` und `taxonSeedData`
+10. Alle 7 offenen nächsten Schritte vorhanden (openNextSteps nach `checkTaxonSeedGermanyConsistency`-Härtung aktualisiert)
+
+**Synchronisierung:** `domainQualityReport.ts` und `domainQualityReport.test.ts` wurden nach Phase 2.6 (checkTaxonSeedAddedAtFormat) erneut synchronisiert: `passingUnitTests` auf 197 aktualisiert, `openNextSteps` angepasst, anschließend Testerwartungen nachgezogen.
+
+**Testabdeckung der Domäne vollständig für alle 13 Module:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy` · `taxonSeedSchema` · `taxonSeedData`
+
+**Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
+
+**Gesamtstand Unit-Tests: 173/173 bestanden (13 Testdateien)**
+
+#### Unit-Tests morphologicalFeatureMatrix.ts (morphologicalFeatureMatrix.test.ts)
+
+Testet `MORPHOLOGICAL_FEATURE_MATRIX`, `getFeaturesByGroup`, `getFeatureById` und `getHighDiagnosticFeatures` aus `morphologicalFeatureMatrix.ts`. Die produktive Domänenlogik und die Merkmalsmatrix wurden durch diesen Testschritt nicht verändert. Es wurden keine echten Pflanzenarten oder Taxa ergänzt. Es wurde keine Bildanalyse implementiert.
+
+**Getestete Exporte:** `MORPHOLOGICAL_FEATURE_MATRIX`, `getFeaturesByGroup`, `getFeatureById`, `getHighDiagnosticFeatures`
+
+**Testumfang (11 Tests, alle bestanden):**
+1. Alle 16 geplanten Merkmalsgruppen sind in der Matrix vorhanden
+2. Alle zentralen Feature-IDs sind vorhanden (25 IDs geprüft)
+3. Jede Feature-ID ist eindeutig (keine Duplikate)
+4. Jedes Feature besitzt alle Pflichtfelder: id, group, name, possibleValues, diagnosticWeight, photoVisibility, requiredPhotoTypes, userExplanation
+5. Keine possibleValues-Einträge sind leer
+6. `getFeaturesByGroup("Standortkontext")` liefert exakt 3 Features: standorttyp, feuchte, licht
+7. `getFeaturesByGroup` liefert für unbekannte Gruppen ein leeres Array
+8. `getFeatureById("blattstellung")` findet das Feature und gibt korrekte Felder zurück
+9. `getFeatureById` liefert für unbekannte IDs `undefined`
+10. `getHighDiagnosticFeatures` liefert ausschließlich Merkmale mit `diagnosticWeight === "hoch"` oder `diagnosticWeight === "sehr_hoch"`
+11. `getHighDiagnosticFeatures` enthält die zentralen stark diagnostischen Merkmale: blattstellung, bluetentyp, bluetensymmetrie, bluetenstand, fruchttyp, unterirdisches_organ
+
+**Korrektur getHighDiagnosticFeatures() (technische Konsistenz):**
+
+Ein technischer Konsistenzfehler wurde behoben: `getHighDiagnosticFeatures()` filterte zuvor ausschließlich nach `diagnosticWeight === "hoch"` und gab dadurch Merkmale mit `"sehr_hoch"` nicht zurück, obwohl `"sehr_hoch"` die stärkere diagnostische Gewichtungsstufe ist. Die Filterlogik wurde auf `"hoch" || "sehr_hoch"` erweitert. Es wurde keine fachliche Umgewichtung vorgenommen. Keine Merkmale wurden ergänzt oder entfernt.
+
+Von `getHighDiagnosticFeatures()` zurückgegebene IDs (aktuell): `blattstellung`, `bluetentyp`, `bluetensymmetrie`, `bluetenstand`, `fruchttyp`, `unterirdisches_organ`.
+
+**Testabdeckung der Domäne vollständig für:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport`
+
+**Noch nicht testabgedeckt:** `taxonProfile`
+
+**Gesamtstand Unit-Tests: 135/135 bestanden (9 Testdateien)**
+
+#### Unit-Tests taxonProfile.ts (taxonProfile.test.ts)
+
+Testet alle acht exportierten Typen und Strukturen aus `taxonProfile.ts` durch typkonforme künstliche Testobjekte. Die produktive Domänenlogik wurde durch diesen Testschritt nicht verändert. Die Testdaten sind ausschließlich künstliche Testdaten (`"Test taxon"`, `"Testaceae"`, `"Testgenus"`). Es wurden keine echten Pflanzenarten oder Taxa ergänzt. Es wurde keine Bildanalyse implementiert.
+
+**Getestete Typen/Strukturen:** `TaxonomicRank`, `FloristicStatus`, `GermanyRelevance`, `TaxonomicIdentity`, `EcologyProfile`, `PhenologyProfile`, `VisualReferenceProfile`, `PlantTaxonProfile`
+
+**Testumfang (10 Tests, alle bestanden):**
+1. `TaxonomicRank` akzeptiert alle drei vorgesehenen Rangstufen: familie, gattung, art
+2. `FloristicStatus` akzeptiert alle vier vorgesehenen Statusklassen: wildwachsend, etablierter_neophyt, haeufig_verwildernd, kulturpflanze_nachrangig
+3. `GermanyRelevance`-Struktur ist typkonform: occursInGermany, floristicStatus, statusWeight
+4. `TaxonomicIdentity`-Struktur ist typkonform: taxonId, scientificName, rank
+5. `EcologyProfile`-Struktur ist typkonform: habitatTypes, moisture, light, notes
+6. `PhenologyProfile`-Struktur ist typkonform: floweringMonths, fruitingMonths
+7. `VisualReferenceProfile`-Struktur ist typkonform: fünf Felder als leere Arrays
+8. `PlantTaxonProfile`-Vollstruktur ist typkonform mit allen Pflichtfeldern und optionaler visualReferences
+9. `PlantTaxonProfile` erlaubt fehlendes optionales Feld `visualReferences`
+10. `PlantTaxonProfile` kann Familien- und Gattungsrang abbilden
+
+**Methodische Bestätigung:** `VisualReferenceProfile` bleibt ausschließlich Platzhalterstruktur für den späteren visuellen Kontrollschritt. Keine Bildanalyse, keine Bildähnlichkeitsberechnung.
+
+**Testabdeckung der Domäne vollständig für alle 10 Module:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport`
+
+**Noch nicht testabgedeckt:** `taxonSeedPolicy`
+
+**Gesamtstand Unit-Tests: 145/145 bestanden (10 Testdateien)**
+
+#### Unit-Tests taxonSeedPolicy.ts (taxonSeedPolicy.test.ts)
+
+Testet `PLANT_TAXON_SEED_POLICY`, `isAllowedTaxonSeedSource`, `checkTaxonSeedSource`, `checkTaxonSeedCitation`, `checkTaxonSeedGermanyRelevance` und `checkTaxonSeedGermanyConsistency` aus `taxonSeedPolicy.ts`. Keine echten Taxa, keine Seed-Daten, keine Bildanalyse. Rothmaler und Strasburger werden ausschließlich als erlaubte Quellenbezeichnungen geprüft, nicht als inhaltliche Datenquelle verwendet.
+
+**Getestete Exporte:** `PLANT_TAXON_SEED_POLICY`, `isAllowedTaxonSeedSource`, `checkTaxonSeedSource`, `checkTaxonSeedCitation`, `checkTaxonSeedGermanyRelevance`, `checkTaxonSeedGermanyConsistency`, `checkTaxonSeedMorphologyPresent`, `checkTaxonSeedReviewNote`, `checkTaxonSeedAddedAt`, `checkTaxonSeedAddedAtFormat`
+
+**Testumfang (32 Tests, alle bestanden):**
+1. `PLANT_TAXON_SEED_POLICY.allowedSources` enthält Rothmaler und Strasburger, nicht extern_nicht_zugelassen, Länge 2
+2. `requiresSourceCitation === true`, `requiresGermanyRelevance === true`
+3. `allowsUncitedTaxa === false`, `allowsImageOnlyTaxa === false`, `allowsFinalSpeciesIdentificationFromSeedAlone === false`
+4. `isAllowedTaxonSeedSource("Rothmaler")` → true
+5. `isAllowedTaxonSeedSource("Strasburger")` → true
+6. `isAllowedTaxonSeedSource("extern_nicht_zugelassen")` → false
+7. `checkTaxonSeedSource("Rothmaler")` → status: "allowed", reason: "allowed_source"
+8. `checkTaxonSeedSource("Strasburger")` → status: "allowed", reason: "allowed_source"
+9. `checkTaxonSeedSource("extern_nicht_zugelassen")` → status: "blocked", reason: "source_not_allowed"
+10. `checkTaxonSeedCitation(true)` → status: "allowed", reason: "citation_present"
+11. `checkTaxonSeedCitation(false)` → status: "blocked", reason: "citation_required"
+12. `checkTaxonSeedGermanyRelevance(true)` → status: "allowed", reason: "germany_relevance_present"
+13. `checkTaxonSeedGermanyRelevance(false)` → status: "blocked", reason: "germany_relevance_required"
+14. `checkTaxonSeedGermanyConsistency(true, true)` → status: "allowed", reason: "germany_consistency_confirmed"
+15. `checkTaxonSeedGermanyConsistency(false, false)` → status: "allowed", reason: "germany_consistency_confirmed"
+16. `checkTaxonSeedGermanyConsistency(true, false)` → status: "blocked", reason: "germany_relevance_inconsistent"
+17. `checkTaxonSeedGermanyConsistency(false, true)` → status: "blocked", reason: "germany_relevance_inconsistent"
+18. `checkTaxonSeedMorphologyPresent(1)` → status: "allowed", reason: "morphology_present"
+19. `checkTaxonSeedMorphologyPresent(3)` → status: "allowed", reason: "morphology_present"
+20. `checkTaxonSeedMorphologyPresent(0)` → status: "blocked", reason: "morphology_required"
+21. `checkTaxonSeedReviewNote("Geprüft nach Rothmaler Band 1")` → status: "allowed", reason: "review_note_present"
+22. `checkTaxonSeedReviewNote("")` → status: "blocked", reason: "review_note_required"
+23. `checkTaxonSeedReviewNote("   ")` → status: "blocked", reason: "review_note_required"
+24. `checkTaxonSeedAddedAt("2026-05-28")` → status: "allowed", reason: "addedAt_present"
+25. `checkTaxonSeedAddedAt("")` → status: "blocked", reason: "addedAt_required"
+26. `checkTaxonSeedAddedAt("   ")` → status: "blocked", reason: "addedAt_required"
+27. `checkTaxonSeedAddedAtFormat("2026-05-28")` → status: "allowed", reason: "addedAt_format_valid"
+28. `checkTaxonSeedAddedAtFormat("2025-01-01")` → status: "allowed", reason: "addedAt_format_valid"
+29. `checkTaxonSeedAddedAtFormat("")` → status: "blocked", reason: "addedAt_format_invalid"
+30. `checkTaxonSeedAddedAtFormat("28.05.2026")` → status: "blocked", reason: "addedAt_format_invalid"
+31. `checkTaxonSeedAddedAtFormat("2026")` → status: "blocked", reason: "addedAt_format_invalid"
+32. `checkTaxonSeedAddedAtFormat("heute")` → status: "blocked", reason: "addedAt_format_invalid"
+
+**Testabdeckung der Domäne vollständig für alle 11 Module:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy`
+
+**Noch nicht testabgedeckt:** `taxonSeedSchema`
+
+**Gesamtstand Unit-Tests: 177/177 bestanden (11 Testdateien)**
+
+#### Unit-Tests taxonSeedSchema.ts (taxonSeedSchema.test.ts)
+
+Testet `hasUsableCitation`, `validateTaxonSeedEntry` und `createBlockedTaxonSeedValidationResult` aus `taxonSeedSchema.ts`. Keine echten Taxa, keine Seed-Daten. Künstliche Testdaten: `"Test taxon"`, `"Testaceae"`, `"Testgenus"`. Rothmaler und Strasburger werden ausschließlich als erlaubte Quellenbezeichnungen geprüft.
+
+**Getestete Funktionen:** `hasUsableCitation`, `validateTaxonSeedEntry`, `createBlockedTaxonSeedValidationResult`
+
+**Testumfang (15 Tests, alle bestanden):**
+1. `hasUsableCitation` → true für nicht-leere reference
+2. `hasUsableCitation` → false für leere reference
+3. `hasUsableCitation` → false für whitespace-only reference
+4. `validateTaxonSeedEntry` → valid: true für Rothmaler, Citation, Deutschland-Relevanz, addedAt, reviewNote (alle 8 checks allowed), `checks.toHaveLength(8)`
+5. `validateTaxonSeedEntry` → valid: true für Strasburger, Citation, Deutschland-Relevanz
+6. `validateTaxonSeedEntry` → blocked: source_not_allowed für extern_nicht_zugelassen
+7. `validateTaxonSeedEntry` → blocked: citation_required für leere reference
+8. `validateTaxonSeedEntry` → blocked: germany_relevance_required für germanyRelevant: false
+9. `validateTaxonSeedEntry` → blocked: germany_relevance_inconsistent wenn germanyRelevant der taxon.occursInGermany widerspricht
+10. `validateTaxonSeedEntry` → blocked: morphology_required wenn taxon.morphology leer ist
+11. `validateTaxonSeedEntry` → blocked: review_note_required wenn reviewNote leer ist
+12. `validateTaxonSeedEntry` → blocked: addedAt_required wenn addedAt leer ist
+13. `validateTaxonSeedEntry` → blocked: addedAt_format_invalid wenn addedAt nicht YYYY-MM-DD entspricht
+14. `validateTaxonSeedEntry` → alle blocked reasons gleichzeitig bei mehreren Verstößen
+15. `createBlockedTaxonSeedValidationResult("manual_block")` → valid: false, checks: [], reason: "manual_block"
+
+**Testabdeckung der Domäne vollständig für alle 12 Module:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy` · `taxonSeedSchema`
+
+**Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
+
+**Gesamtstand Unit-Tests: 192/192 bestanden (12 Testdateien)**
+
+#### Leere Seed-Daten-Struktur (taxonSeedData.ts)
+
+Legt die technische Struktur für spätere quellenbasierte Taxon-Seed-Einträge fest. Enthält aktuell ausdrücklich keine Taxa, keine echten Pflanzenarten, keine Seed-Daten, keine Taxon-Datenbank, keine Bildanalyse und keine finale sichere Artbestimmung.
+
+**Konstante:**
+- `PLANT_TAXON_SEED_DATA: TaxonSeedEntry[]` – aktuell `[]`
+
+**Funktionen:**
+- `getValidatedTaxonSeedData()` – gibt für jeden Eintrag das Ergebnis von `validateTaxonSeedEntry` zurück; aktuell `[]`
+- `getTaxonSeedDataCount()` – gibt `PLANT_TAXON_SEED_DATA.length` zurück; aktuell `0`
+- `hasTaxonSeedData()` – gibt `true` zurück wenn Einträge vorhanden; aktuell `false`
+
+**Fachliche Einordnung:** Spätere Ergänzungen dürfen ausschließlich als `TaxonSeedEntry` erfolgen, müssen `validateTaxonSeedEntry` bestehen und nach `taxonSeedPolicy` und `taxonSeedSchema` zulässig sein. Keine eigenständige Artbestimmung aus Seed-Daten allein.
+
+#### Unit-Tests taxonSeedData.ts (taxonSeedData.test.ts)
+
+Testet `PLANT_TAXON_SEED_DATA`, `getValidatedTaxonSeedData`, `getTaxonSeedDataCount` und `hasTaxonSeedData` aus `taxonSeedData.ts`. Keine echten Taxa, keine Seed-Daten, keine Bildanalyse.
+
+**Getestete Exporte:** `PLANT_TAXON_SEED_DATA`, `getValidatedTaxonSeedData`, `getTaxonSeedDataCount`, `hasTaxonSeedData`
+
+**Testumfang (5 Tests, alle bestanden):**
+1. `PLANT_TAXON_SEED_DATA` ist ein Array – `Array.isArray` true, length 0
+2. `getValidatedTaxonSeedData()` gibt leeres Array zurück – `Array.isArray` true, length 0
+3. `getTaxonSeedDataCount()` gibt 0 zurück
+4. `hasTaxonSeedData()` gibt false zurück
+5. Methodische Sicherung – alle vier Prüfwerte bestätigen: keine Seed-Daten vorhanden
+
+**Testabdeckung der Domäne vollständig für alle 13 Module:**
+`morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy` · `taxonSeedSchema` · `taxonSeedData`
+
+**Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
+
+**Gesamtstand Unit-Tests: 197/197 bestanden (13 Testdateien)**
+
+---
+
+**HANDOFF.md** wurde im Repository-Root angelegt. Sie dokumentiert den aktuellen Projektstand, die methodischen Sicherungen und die Arbeitsregeln für zukünftige Implementierungsschritte. Sie enthält keine App-Logik.
+
+## Noch nicht implementiert
+
+- Echte Bildanalyse
+- Bildähnlichkeitsberechnung
+- Referenzbild-Datenbank
+- Echte Pflanzenarten oder Taxon-Datenbank
+- Finale sichere Artbestimmung
+- UI
+
+## Nächster Entwicklungsschritt
+
+Phase 2.6 (addedAt-Format-Härtung) ist abgeschlossen. `checkTaxonSeedAddedAtFormat` ist in `taxonSeedPolicy.ts` implementiert und als 8. Check in `validateTaxonSeedEntry` integriert. `taxonSeedPolicy.test.ts` enthält jetzt 32 Tests. `taxonSeedSchema.test.ts` enthält jetzt 15 Tests. `domainQualityReport.ts` und `domainQualityReport.test.ts` sind auf 197 Tests synchronisiert. Alle 13 Domänenmodule sind im Qualitätsreport mit `hasUnitTests: true` geführt. `tsc --strict --noEmit` ist erfolgreich. `npm test` bestätigt 197/197 Tests bestanden. `PLANT_TAXON_SEED_DATA` ist weiterhin `[]`. Es wurden keine Taxa, keine Seed-Daten, keine Bildanalyse, kein visueller Fotoabgleich und keine finale sichere Artbestimmung ergänzt.
+
+Nächster Schritt: `HANDOFF.md` synchronisieren (Phase 2.6g) – Teststand auf 197 aktualisieren, `checkTaxonSeedAddedAtFormat` und 8. Check dokumentieren. Danach Phase 3 oder fachliche Entscheidung über Aufbau erster Taxon-Seed-Daten.
