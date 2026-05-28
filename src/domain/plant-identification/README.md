@@ -198,12 +198,12 @@ Definiert ausschließlich Schema und Policy-Validierung für spätere Taxon-Seed
 
 **Funktionen:**
 - `hasUsableCitation` – prüft, ob eine Quellenangabe einen nicht-leeren `reference`-String enthält
-- `validateTaxonSeedEntry` – führt sechs Policy-Checks durch (Quelle, Zitation, Deutschland-Relevanz, Deutschland-Konsistenz, Morphologie-Pflicht, Review-Note-Pflicht) und liefert `TaxonSeedValidationResult`
+- `validateTaxonSeedEntry` – führt sieben Policy-Checks durch (Quelle, Zitation, Deutschland-Relevanz, Deutschland-Konsistenz, Morphologie-Pflicht, Review-Note-Pflicht, addedAt-Pflicht) und liefert `TaxonSeedValidationResult`
 - `createBlockedTaxonSeedValidationResult` – erzeugt ein blockiertes Ergebnis mit leerem checks-Array
 
 **Fachliche Einordnung:**
 
-`TaxonSeedEntry.createdFromImageOnly` ist ein TypeScript-Literal-Typ `false` und kann nicht auf `true` gesetzt werden. `TaxonSeedEntry.createsFinalIdentification` ist ebenfalls ein Literal-Typ `false`. Die Pflichtfelder `addedAt: string` und `reviewNote: string` sind seit Phase 2 Teil von `TaxonSeedEntry`. Die Validierung nutzt `checkTaxonSeedSource`, `checkTaxonSeedCitation`, `checkTaxonSeedGermanyRelevance`, `checkTaxonSeedGermanyConsistency`, `checkTaxonSeedMorphologyPresent` und `checkTaxonSeedReviewNote` aus `taxonSeedPolicy.ts`. Ein Eintrag ist nur `valid`, wenn alle sechs Checks `status === "allowed"` liefern. Einträge mit leerer `taxon.morphology` werden durch `checkTaxonSeedMorphologyPresent` geblockt (morphology_required). Einträge mit leerer oder whitespace-only `reviewNote` werden durch `checkTaxonSeedReviewNote` geblockt (review_note_required).
+`TaxonSeedEntry.createdFromImageOnly` ist ein TypeScript-Literal-Typ `false` und kann nicht auf `true` gesetzt werden. `TaxonSeedEntry.createsFinalIdentification` ist ebenfalls ein Literal-Typ `false`. Die Pflichtfelder `addedAt: string` und `reviewNote: string` sind seit Phase 2 Teil von `TaxonSeedEntry`. Die Validierung nutzt `checkTaxonSeedSource`, `checkTaxonSeedCitation`, `checkTaxonSeedGermanyRelevance`, `checkTaxonSeedGermanyConsistency`, `checkTaxonSeedMorphologyPresent`, `checkTaxonSeedReviewNote` und `checkTaxonSeedAddedAt` aus `taxonSeedPolicy.ts`. Ein Eintrag ist nur `valid`, wenn alle sieben Checks `status === "allowed"` liefern. Einträge mit leerer `taxon.morphology` werden durch `checkTaxonSeedMorphologyPresent` geblockt (morphology_required). Einträge mit leerer oder whitespace-only `reviewNote` werden durch `checkTaxonSeedReviewNote` geblockt (review_note_required). Einträge mit leerem oder whitespace-only `addedAt` werden durch `checkTaxonSeedAddedAt` geblockt (addedAt_required).
 
 ### Test-Infrastruktur
 
@@ -350,7 +350,7 @@ Enthält ausschließlich einen maschinenlesbaren Architektur- und Qualitätsstat
 
 **Inhalt des Reports (aktueller Stand):**
 - 12 Domänenmodule mit Implementierungs- und Teststatus
-- 178 bestandene Unit-Tests dokumentiert (`passingUnitTests: 178`)
+- 190 bestandene Unit-Tests dokumentiert (`passingUnitTests: 190`)
 - Alle 12 Module im Report: `hasUnitTests: true` – inkl. `taxonSeedPolicy`, `taxonSeedSchema` und `taxonSeedData`
 - `finalSpeciesIdentificationImplemented: false`
 - `imageAnalysisImplemented: false`
@@ -358,14 +358,14 @@ Enthält ausschließlich einen maschinenlesbaren Architektur- und Qualitätsstat
 - Kein Modul erzeugt eine finale sichere Artbestimmung
 - Kein Modul führt Bildanalyse aus
 - Kein Modul verwendet echte Taxa
-- `openNextSteps` nach `checkTaxonSeedGermanyConsistency`-Härtung synchronisiert (7 Einträge)
+- `openNextSteps` nach Phase 2.5 (checkTaxonSeedAddedAt) synchronisiert (7 Einträge)
 
 #### Unit-Tests domainQualityReport.ts (domainQualityReport.test.ts)
 
 Testet `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT` aus `domainQualityReport.ts`. Keine echten Taxa, keine Bildanalyse, keine neue Bestimmungslogik.
 
 **Testumfang (10 Tests, alle bestanden):**
-1. Grundstatus – domain, scope, primaryMethod, visualControlRole, testFramework, `passingUnitTests === 178`
+1. Grundstatus – domain, scope, primaryMethod, visualControlRole, testFramework, `passingUnitTests === 190`
 2. Methodische Sicherungen – `finalSpeciesIdentificationImplemented === false`, `imageAnalysisImplemented === false`, `realTaxaImplemented === false`
 3. 12 Domänenmodule vorhanden
 4. Alle Module `implemented === true`
@@ -376,7 +376,7 @@ Testet `PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT` aus `domainQualityReport.ts`
 9. Alle 12 erwarteten Modulnamen vorhanden – inkl. `taxonSeedPolicy`, `taxonSeedSchema` und `taxonSeedData`
 10. Alle 7 offenen nächsten Schritte vorhanden (openNextSteps nach `checkTaxonSeedGermanyConsistency`-Härtung aktualisiert)
 
-**Synchronisierung:** `domainQualityReport.ts` und `domainQualityReport.test.ts` wurden nach `checkTaxonSeedGermanyConsistency`-Härtung erneut synchronisiert: `passingUnitTests` auf 178 aktualisiert, `openNextSteps` angepasst, anschließend Testerwartungen nachgezogen.
+**Synchronisierung:** `domainQualityReport.ts` und `domainQualityReport.test.ts` wurden nach Phase 2.5 (checkTaxonSeedAddedAt) erneut synchronisiert: `passingUnitTests` auf 190 aktualisiert, `openNextSteps` angepasst, anschließend Testerwartungen nachgezogen.
 
 **Testabdeckung der Domäne vollständig für alle 13 Module:**
 `morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy` · `taxonSeedSchema` · `taxonSeedData`
@@ -448,9 +448,9 @@ Testet alle acht exportierten Typen und Strukturen aus `taxonProfile.ts` durch t
 
 Testet `PLANT_TAXON_SEED_POLICY`, `isAllowedTaxonSeedSource`, `checkTaxonSeedSource`, `checkTaxonSeedCitation`, `checkTaxonSeedGermanyRelevance` und `checkTaxonSeedGermanyConsistency` aus `taxonSeedPolicy.ts`. Keine echten Taxa, keine Seed-Daten, keine Bildanalyse. Rothmaler und Strasburger werden ausschließlich als erlaubte Quellenbezeichnungen geprüft, nicht als inhaltliche Datenquelle verwendet.
 
-**Getestete Exporte:** `PLANT_TAXON_SEED_POLICY`, `isAllowedTaxonSeedSource`, `checkTaxonSeedSource`, `checkTaxonSeedCitation`, `checkTaxonSeedGermanyRelevance`, `checkTaxonSeedGermanyConsistency`, `checkTaxonSeedMorphologyPresent`, `checkTaxonSeedReviewNote`
+**Getestete Exporte:** `PLANT_TAXON_SEED_POLICY`, `isAllowedTaxonSeedSource`, `checkTaxonSeedSource`, `checkTaxonSeedCitation`, `checkTaxonSeedGermanyRelevance`, `checkTaxonSeedGermanyConsistency`, `checkTaxonSeedMorphologyPresent`, `checkTaxonSeedReviewNote`, `checkTaxonSeedAddedAt`
 
-**Testumfang (23 Tests, alle bestanden):**
+**Testumfang (26 Tests, alle bestanden):**
 1. `PLANT_TAXON_SEED_POLICY.allowedSources` enthält Rothmaler und Strasburger, nicht extern_nicht_zugelassen, Länge 2
 2. `requiresSourceCitation === true`, `requiresGermanyRelevance === true`
 3. `allowsUncitedTaxa === false`, `allowsImageOnlyTaxa === false`, `allowsFinalSpeciesIdentificationFromSeedAlone === false`
@@ -474,13 +474,16 @@ Testet `PLANT_TAXON_SEED_POLICY`, `isAllowedTaxonSeedSource`, `checkTaxonSeedSou
 21. `checkTaxonSeedReviewNote("Geprüft nach Rothmaler Band 1")` → status: "allowed", reason: "review_note_present"
 22. `checkTaxonSeedReviewNote("")` → status: "blocked", reason: "review_note_required"
 23. `checkTaxonSeedReviewNote("   ")` → status: "blocked", reason: "review_note_required"
+24. `checkTaxonSeedAddedAt("2026-05-28")` → status: "allowed", reason: "addedAt_present"
+25. `checkTaxonSeedAddedAt("")` → status: "blocked", reason: "addedAt_required"
+26. `checkTaxonSeedAddedAt("   ")` → status: "blocked", reason: "addedAt_required"
 
 **Testabdeckung der Domäne vollständig für alle 11 Module:**
 `morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy`
 
 **Noch nicht testabgedeckt:** `taxonSeedSchema`
 
-**Gesamtstand Unit-Tests: 169/169 bestanden (11 Testdateien)**
+**Gesamtstand Unit-Tests: 172/172 bestanden (11 Testdateien)**
 
 #### Unit-Tests taxonSeedSchema.ts (taxonSeedSchema.test.ts)
 
@@ -488,11 +491,11 @@ Testet `hasUsableCitation`, `validateTaxonSeedEntry` und `createBlockedTaxonSeed
 
 **Getestete Funktionen:** `hasUsableCitation`, `validateTaxonSeedEntry`, `createBlockedTaxonSeedValidationResult`
 
-**Testumfang (13 Tests, alle bestanden):**
+**Testumfang (14 Tests, alle bestanden):**
 1. `hasUsableCitation` → true für nicht-leere reference
 2. `hasUsableCitation` → false für leere reference
 3. `hasUsableCitation` → false für whitespace-only reference
-4. `validateTaxonSeedEntry` → valid: true für Rothmaler, Citation, Deutschland-Relevanz, addedAt, reviewNote (alle 6 checks allowed), `checks.toHaveLength(6)`
+4. `validateTaxonSeedEntry` → valid: true für Rothmaler, Citation, Deutschland-Relevanz, addedAt, reviewNote (alle 7 checks allowed), `checks.toHaveLength(7)`
 5. `validateTaxonSeedEntry` → valid: true für Strasburger, Citation, Deutschland-Relevanz
 6. `validateTaxonSeedEntry` → blocked: source_not_allowed für extern_nicht_zugelassen
 7. `validateTaxonSeedEntry` → blocked: citation_required für leere reference
@@ -500,15 +503,16 @@ Testet `hasUsableCitation`, `validateTaxonSeedEntry` und `createBlockedTaxonSeed
 9. `validateTaxonSeedEntry` → blocked: germany_relevance_inconsistent wenn germanyRelevant der taxon.occursInGermany widerspricht
 10. `validateTaxonSeedEntry` → blocked: morphology_required wenn taxon.morphology leer ist
 11. `validateTaxonSeedEntry` → blocked: review_note_required wenn reviewNote leer ist
-12. `validateTaxonSeedEntry` → alle blocked reasons gleichzeitig bei mehreren Verstößen
-13. `createBlockedTaxonSeedValidationResult("manual_block")` → valid: false, checks: [], reason: "manual_block"
+12. `validateTaxonSeedEntry` → blocked: addedAt_required wenn addedAt leer ist
+13. `validateTaxonSeedEntry` → alle blocked reasons gleichzeitig bei mehreren Verstößen
+14. `createBlockedTaxonSeedValidationResult("manual_block")` → valid: false, checks: [], reason: "manual_block"
 
 **Testabdeckung der Domäne vollständig für alle 12 Module:**
 `morphologicalFeatureMatrix` · `featureScoring` · `taxonProfile` · `taxonComparison` · `plausibilityScoring` · `combinedAssessment` · `identificationResult` · `visualControl` · `identificationPipeline` · `domainQualityReport` · `taxonSeedPolicy` · `taxonSeedSchema`
 
 **Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
 
-**Gesamtstand Unit-Tests: 176/176 bestanden (12 Testdateien)**
+**Gesamtstand Unit-Tests: 180/180 bestanden (12 Testdateien)**
 
 #### Leere Seed-Daten-Struktur (taxonSeedData.ts)
 
@@ -542,7 +546,7 @@ Testet `PLANT_TAXON_SEED_DATA`, `getValidatedTaxonSeedData`, `getTaxonSeedDataCo
 
 **Noch nicht testabgedeckt:** keines – alle Domänenmodule sind testabgedeckt
 
-**Gesamtstand Unit-Tests: 186/186 bestanden (13 Testdateien)**
+**Gesamtstand Unit-Tests: 190/190 bestanden (13 Testdateien)**
 
 ---
 
@@ -559,6 +563,6 @@ Testet `PLANT_TAXON_SEED_DATA`, `getValidatedTaxonSeedData`, `getTaxonSeedDataCo
 
 ## Nächster Entwicklungsschritt
 
-Phase 2 (Audit-Metadaten) ist abgeschlossen. `TaxonSeedEntry` enthält jetzt die Pflichtfelder `addedAt: string` und `reviewNote: string`. `checkTaxonSeedReviewNote` ist in `taxonSeedPolicy.ts` implementiert und als 6. Check in `validateTaxonSeedEntry` integriert. `domainQualityReport.ts` und `domainQualityReport.test.ts` sind auf 186 Tests synchronisiert. Alle 13 Domänenmodule sind im Qualitätsreport mit `hasUnitTests: true` geführt. `tsc --strict --noEmit` ist erfolgreich. `npm test` bestätigt 186/186 Tests bestanden. `PLANT_TAXON_SEED_DATA` ist weiterhin `[]`. Es wurden keine Taxa, keine Seed-Daten, keine Bildanalyse, kein visueller Fotoabgleich und keine finale sichere Artbestimmung ergänzt.
+Phase 2.5 (addedAt-Härtung) ist abgeschlossen. `checkTaxonSeedAddedAt` ist in `taxonSeedPolicy.ts` implementiert und als 7. Check in `validateTaxonSeedEntry` integriert. `taxonSeedPolicy.test.ts` enthält jetzt 26 Tests. `taxonSeedSchema.test.ts` enthält jetzt 14 Tests. `domainQualityReport.ts` und `domainQualityReport.test.ts` sind auf 190 Tests synchronisiert. Alle 13 Domänenmodule sind im Qualitätsreport mit `hasUnitTests: true` geführt. `tsc --strict --noEmit` ist erfolgreich. `npm test` bestätigt 190/190 Tests bestanden. `PLANT_TAXON_SEED_DATA` ist weiterhin `[]`. Es wurden keine Taxa, keine Seed-Daten, keine Bildanalyse, kein visueller Fotoabgleich und keine finale sichere Artbestimmung ergänzt.
 
-Nächster Schritt: `HANDOFF.md` synchronisieren (Phase 2.4d) – Teststand auf 186 aktualisieren, Audit-Metadaten (`addedAt`, `reviewNote`, `checkTaxonSeedReviewNote`) dokumentieren. Danach Phase 3 oder fachliche Entscheidung über Aufbau erster Taxon-Seed-Daten.
+Nächster Schritt: `HANDOFF.md` synchronisieren (Phase 2.5g) – Teststand auf 190 aktualisieren, `checkTaxonSeedAddedAt` und 7. Check dokumentieren. Danach Phase 3 oder fachliche Entscheidung über Aufbau erster Taxon-Seed-Daten.
