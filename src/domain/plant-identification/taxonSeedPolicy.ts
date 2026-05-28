@@ -85,3 +85,10 @@ export function checkTaxonSeedAddedAt(addedAt: string): TaxonSeedPolicyCheck {
   }
   return { status: "blocked", reason: "addedAt_required" };
 }
+
+export function checkTaxonSeedAddedAtFormat(addedAt: string): TaxonSeedPolicyCheck {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(addedAt)) {
+    return { status: "allowed", reason: "addedAt_format_valid" };
+  }
+  return { status: "blocked", reason: "addedAt_format_invalid" };
+}
