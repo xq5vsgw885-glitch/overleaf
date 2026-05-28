@@ -95,7 +95,7 @@
           ${data.rows.map(row => `
             <div class="taxon${row.status === 'stub' ? ' taxon-stub' : ''}" onclick="loadTaxon('${row.taxon_id}')">
               <strong>${escapeHtml(row.scientific_name || "")}</strong><br>
-              <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · ${row.status === 'stub' ? 'vorläufig' : escapeHtml(row.status || '')} · ${escapeHtml(row.taxon_id || "")}</span>
+              <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · ${row.status === 'stub' ? 'vorläufig' : escapeHtml(row.status || '')}${(l => l ? ` · Quelle: ${escapeHtml(l)}` : "")(sourceLabel(row.source_pdf))} · ${escapeHtml(row.taxon_id || "")}</span>
             </div>
           `).join("")}
         `;
@@ -179,6 +179,17 @@
       } catch {
         box.textContent = "Foto-Merkmale konnten nicht geladen werden.";
       }
+    }
+
+    function sourceLabel(value) {
+      if (!value) return "";
+      const v = value.toLowerCase();
+      const hasRoth = v.includes("rothmaler");
+      const hasStr  = v.includes("strasburger");
+      if (hasRoth && hasStr) return "Rothmaler + Strasburger";
+      if (hasRoth) return "Rothmaler";
+      if (hasStr)  return "Strasburger";
+      return value;
     }
 
     function escapeHtml(s) {
