@@ -38,8 +38,7 @@ Eine sichere finale Artbestimmung ist aktuell nicht implementiert.
 
 - TypeScript strict check: erfolgreich
 - Testframework: Vitest
-- npm test: 182/182 Tests bestanden
-- Testdateien: 13
+- npm test: 186/186 Tests bestanden
 
 ## Aktuelle Domänenmodule
 
@@ -96,13 +95,13 @@ In domainQualityReport.ts müssen diese Sicherungen false bleiben:
 - imageAnalysisImplemented: false
 - realTaxaImplemented: false
 
-## Synchronisierungsstand (nach Phase 1)
+## Synchronisierungsstand (nach Phase 2)
 
-Folgende Dateien sind nach morphologischer Mindestbindung vollständig synchronisiert:
+Folgende Dateien sind nach Audit-Metadaten-Härtung vollständig synchronisiert:
 
-- domainQualityReport.ts: passingUnitTests: 182, 13 Module, alle hasUnitTests: true
-- domainQualityReport.test.ts: passingUnitTests === 182, openNextSteps synchronisiert
-- README.md: 182/182 Tests dokumentiert, morphologische Mindestbindung vollständig dokumentiert
+- domainQualityReport.ts: passingUnitTests: 186, 13 Module, alle hasUnitTests: true
+- domainQualityReport.test.ts: passingUnitTests === 186, openNextSteps synchronisiert
+- README.md: 186/186 Tests dokumentiert, Phase 2 (Audit-Metadaten) vollständig dokumentiert
 
 Technische Härtung Phase 0 – checkTaxonSeedGermanyConsistency:
 - taxonSeedPolicy.ts: checkTaxonSeedGermanyConsistency als 4. Policy-Check (blocked wenn germanyRelevant und taxon.germanyRelevance.occursInGermany nicht übereinstimmen)
@@ -110,9 +109,16 @@ Technische Härtung Phase 0 – checkTaxonSeedGermanyConsistency:
 
 Technische Härtung Phase 1 – morphologische Mindestbindung:
 - taxonSeedPolicy.ts: checkTaxonSeedMorphologyPresent als 5. Policy-Check ergänzt (blocked: morphology_required wenn taxon.morphology leer)
-- taxonSeedSchema.ts: validateTaxonSeedEntry führt jetzt fünf Checks durch; Einträge mit leerer taxon.morphology werden geblockt
-- taxonSeedPolicy.test.ts: 20 Tests (3 neue Tests für checkTaxonSeedMorphologyPresent)
-- taxonSeedSchema.test.ts: 12 Tests (1 neuer Test für morphology_required, toHaveLength(4)→5)
+- taxonSeedSchema.ts: validateTaxonSeedEntry führte nach Phase 1 fünf Checks durch
+- taxonSeedPolicy.test.ts: 20 Tests nach Phase 1
+- taxonSeedSchema.test.ts: 12 Tests nach Phase 1
+
+Technische Härtung Phase 2 – Audit-Metadaten (addedAt, reviewNote):
+- taxonSeedSchema.ts: TaxonSeedEntry um addedAt: string und reviewNote: string erweitert
+- taxonSeedPolicy.ts: checkTaxonSeedReviewNote als 6. Policy-Check ergänzt (blocked: review_note_required wenn reviewNote leer oder whitespace)
+- taxonSeedSchema.ts: validateTaxonSeedEntry führt jetzt sechs Checks durch
+- taxonSeedPolicy.test.ts: 23 Tests (3 neue Tests für checkTaxonSeedReviewNote)
+- taxonSeedSchema.test.ts: 13 Tests (1 neuer Test für review_note_required, toHaveLength(5)→6, alle Fixtures um addedAt/reviewNote ergänzt)
 
 ## Taxon-Seed-Regeln
 
@@ -124,6 +130,8 @@ Spätere Taxon-Seed-Daten dürfen nur ergänzt werden, wenn sie:
 - eine Quellenangabe besitzen
 - Deutschland-Relevanz besitzen
 - mindestens ein morphologisches Merkmal in taxon.morphology besitzen
+- ein nicht-leeres addedAt-Datum besitzen
+- eine nicht-leere reviewNote besitzen
 - nicht rein bildbasiert begründet sind
 - keine finale sichere Artbestimmung allein erzeugen
 
@@ -134,13 +142,13 @@ Zugelassene Quellen sind aktuell nur:
 
 ## Aktueller nächster fachlicher Entscheidungspunkt
 
-Phase 1 (morphologische Mindestbindung) ist abgeschlossen.
-182/182 Tests bestanden. Alle Synchronisierungsdateien aktuell.
+Phase 2 (Audit-Metadaten) ist abgeschlossen.
+186/186 Tests bestanden. Alle Synchronisierungsdateien aktuell.
 
 Vor dem Aufbau echter Taxon-Seed-Daten muss fachlich entschieden werden:
 
-1. Soll mit Phase 2 (Audit-Metadaten: addedAt, reviewNote) begonnen werden?
-2. Oder soll direkt mit ersten fachlich kontrollierten Taxon-Seed-Daten (Phase 3) begonnen werden?
+1. Soll direkt mit ersten fachlich kontrollierten Taxon-Seed-Daten (Phase 3) begonnen werden?
+2. Oder soll zunächst weitere technische Härtung erfolgen?
 
 Wenn Taxon-Seed-Daten ergänzt werden, dann nur:
 - quellenbasiert (Rothmaler oder Strasburger)
@@ -162,4 +170,5 @@ Vor jeder Änderung:
 Erwartung nach Umsetzung:
 
 - tsc --strict --noEmit erfolgreich
-- npm test: 182/182 Tests bestanden
+- npm test: 186/186 Tests bestanden
+- Testdateien: 13
