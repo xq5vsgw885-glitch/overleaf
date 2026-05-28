@@ -6,6 +6,7 @@ import {
   checkTaxonSeedCitation,
   checkTaxonSeedGermanyRelevance,
   checkTaxonSeedGermanyConsistency,
+  checkTaxonSeedMorphologyPresent,
 } from "./taxonSeedPolicy.js";
 
 describe("PLANT_TAXON_SEED_POLICY", () => {
@@ -113,5 +114,25 @@ describe("checkTaxonSeedGermanyConsistency", () => {
     const result = checkTaxonSeedGermanyConsistency(false, true);
     expect(result.status).toBe("blocked");
     expect(result.reason).toBe("germany_relevance_inconsistent");
+  });
+});
+
+describe("checkTaxonSeedMorphologyPresent", () => {
+  it("allows when morphologyCount is greater than zero", () => {
+    const result = checkTaxonSeedMorphologyPresent(1);
+    expect(result.status).toBe("allowed");
+    expect(result.reason).toBe("morphology_present");
+  });
+
+  it("allows when morphologyCount is greater than one", () => {
+    const result = checkTaxonSeedMorphologyPresent(3);
+    expect(result.status).toBe("allowed");
+    expect(result.reason).toBe("morphology_present");
+  });
+
+  it("blocks when morphologyCount is zero", () => {
+    const result = checkTaxonSeedMorphologyPresent(0);
+    expect(result.status).toBe("blocked");
+    expect(result.reason).toBe("morphology_required");
   });
 });

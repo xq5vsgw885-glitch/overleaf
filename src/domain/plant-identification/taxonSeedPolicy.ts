@@ -64,3 +64,10 @@ export function checkTaxonSeedGermanyConsistency(
   }
   return { status: "blocked", reason: "germany_relevance_inconsistent" };
 }
+
+export function checkTaxonSeedMorphologyPresent(morphologyCount: number): TaxonSeedPolicyCheck {
+  if (morphologyCount > 0) {
+    return { status: "allowed", reason: "morphology_present" };
+  }
+  return { status: "blocked", reason: "morphology_required" };
+}
