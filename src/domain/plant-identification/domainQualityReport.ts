@@ -31,7 +31,7 @@ export const PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT: DomainQualityReport = {
   imageAnalysisImplemented: false,
   realTaxaImplemented: false,
   testFramework: "vitest",
-  passingUnitTests: 190,
+  passingUnitTests: 197,
   modules: [
     {
       moduleName: "morphologicalFeatureMatrix",
@@ -116,7 +116,7 @@ export const PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT: DomainQualityReport = {
     },
     {
       moduleName: "taxonSeedPolicy",
-      purpose: "Regelwerk für quellenbasierte Taxon-Seed-Daten inkl. checkTaxonSeedMorphologyPresent, checkTaxonSeedReviewNote und checkTaxonSeedAddedAt (Audit-Metadaten)",
+      purpose: "Regelwerk für quellenbasierte Taxon-Seed-Daten inkl. checkTaxonSeedMorphologyPresent, checkTaxonSeedReviewNote, checkTaxonSeedAddedAt und checkTaxonSeedAddedAtFormat (Audit-Metadaten)",
       implemented: true,
       hasUnitTests: true,
       createsFinalIdentification: false,
@@ -125,7 +125,7 @@ export const PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT: DomainQualityReport = {
     },
     {
       moduleName: "taxonSeedSchema",
-      purpose: "Schema mit Pflichtfeldern addedAt/reviewNote; validateTaxonSeedEntry führt 7 Checks durch inkl. Morphologie-, Review- und addedAt-Pflichtprüfung",
+      purpose: "Schema mit Pflichtfeldern addedAt/reviewNote; validateTaxonSeedEntry führt 8 Checks durch inkl. Morphologie-, Review-, addedAt-Pflicht- und addedAt-Format-Prüfung",
       implemented: true,
       hasUnitTests: true,
       createsFinalIdentification: false,
@@ -143,9 +143,9 @@ export const PLANT_IDENTIFICATION_DOMAIN_QUALITY_REPORT: DomainQualityReport = {
     },
   ],
   openNextSteps: [
-    "domainQualityReport.test.ts nach Phase 2.5c auf 190 Tests synchronisieren",
-    "README.md nach Phase 2.5 (checkTaxonSeedAddedAt) synchronisieren",
-    "HANDOFF.md auf 190 Tests und checkTaxonSeedAddedAt aktualisieren",
+    "domainQualityReport.test.ts nach Phase 2.6c auf 197 Tests synchronisieren",
+    "README.md nach Phase 2.6 (checkTaxonSeedAddedAtFormat) synchronisieren",
+    "HANDOFF.md auf 197 Tests und checkTaxonSeedAddedAtFormat aktualisieren",
     "Entscheidung über Aufbau erster fachlich kontrollierter Taxon-Seed-Daten treffen",
     "Taxon-Seed-Daten nur quellenbasiert und schrittweise ergänzen",
     "Taxon-Seed-Daten nur nach taxonSeedPolicy, taxonSeedSchema und taxonSeedData ergänzen",
