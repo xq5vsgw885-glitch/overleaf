@@ -64,8 +64,8 @@ app.get("/api/botanik/taxa", (req, res) => {
   const includeStubs = String(req.query.include_stubs || "") === "1";
 
   const statusFilter = includeStubs
-    ? `COALESCE(status, "") NOT IN (?, ?)`
-    : `COALESCE(status, "") NOT IN (?, ?, ?)`;
+    ? `COALESCE(status, "") NOT IN (?, ?, ?)`
+    : `COALESCE(status, "") NOT IN (?, ?, ?, ?)`;
 
   const baseFilter = `
     ${statusFilter}
@@ -82,8 +82,8 @@ app.get("/api/botanik/taxa", (req, res) => {
        LIMIT 50`;
 
   const statusParams = includeStubs
-    ? ["deprecated", "reference_only"]
-    : ["deprecated", "reference_only", "stub"];
+    ? ["deprecated", "reference_only", "critical"]
+    : ["deprecated", "reference_only", "critical", "stub"];
 
   const params = q
     ? [...statusParams, "exclude_from_identification", `%${q}%`, `%${q}%`, `%${q}%`]
