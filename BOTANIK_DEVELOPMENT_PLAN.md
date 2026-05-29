@@ -256,6 +256,24 @@ Issue nur nach Freigabe schließen.
 
 ---
 
+## Worklog and handoff synchronization
+
+Nach jedem P-Punkt oder Verifikationsblock soll Claude Code aktualisieren:
+
+- `BOTANIK_WORKLOG.md` mit chronologischen Details
+- `BOTANIK_HANDOFF.md` mit dem aktuellen kompakten Stand
+
+Diese Dateien dürfen zusammen mit dem jeweiligen P-Punkt committed werden, wenn:
+
+- sie nur die aktuelle Arbeit beschreiben
+- WORKLOG keine spekulative Planung enthält
+- HANDOFF kompakt bleibt
+- AGENTS.md nicht geändert wird
+
+Issue-Kommentare und Issue-Schließungen bleiben immer freigabepflichtig.
+
+---
+
 ## Erweiterter teilautonomer Gate-Modus
 
 Claude Code darf für den jeweils aktuellen P-Punkt automatisch arbeiten bis einschließlich:
