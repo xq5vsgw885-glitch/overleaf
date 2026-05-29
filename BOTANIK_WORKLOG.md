@@ -97,7 +97,7 @@ Chronologisches technisches Arbeitsprotokoll.
 
 **Status:** Abgeschlossen.
 
-**Commit:** `<hash>` — `feat(botanik): translate taxon status labels`
+**Commit:** `0509ca9` — `feat(botanik): translate taxon status labels`
 **Push:** origin/TU ✓
 **Jam:** Optional; empfohlen bei visueller Abnahme.
 

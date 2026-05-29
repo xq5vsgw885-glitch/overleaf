@@ -32,7 +32,7 @@ Kompakter Synchronisationsstand für Übergaben zwischen Claude Code, ChatGPT-Re
 | P1.3 Sichere Taxon-Auswahl | `28ec2fa` | `23d49de8` ✓ | #5 geschlossen |
 | P1.4 API-Check robuster | `dd4ae15` | — (kein UI) | — |
 | P2.1 Modusindikator für #results | `ea5fa6e` | ausstehend | — |
-| P2.2 Statuslabels übersetzen | `<hash>` | optional | — |
+| P2.2 Statuslabels übersetzen | `0509ca9` | optional | — |
 
 ## Current open point
 
