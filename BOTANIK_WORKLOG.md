@@ -93,6 +93,24 @@ Chronologisches technisches Arbeitsprotokoll.
 
 ---
 
-## Nächster offener Punkt: P2.2 — Statuslabels übersetzen
+## P2.2 — Statuslabels übersetzen
+
+**Status:** Abgeschlossen.
+
+**Commit:** `<hash>` — `feat(botanik): translate taxon status labels`
+**Push:** origin/TU ✓
+**Jam:** Optional; empfohlen bei visueller Abnahme.
+
+**Beobachtung:** Neue Funktion `statusLabel(status)` in `botanik.html` eingeführt. Mapping: `active→geprüft`, `stub→vorläufig`, `context→Kontext`, `structured_paraphrase→strukturierte Paraphrase`. Fallback: `escapeHtml(String(status || ""))`. Inline-Ternary `row.status === 'stub' ? 'vorläufig' : escapeHtml(row.status || '')` durch `statusLabel(row.status)` ersetzt. `.taxon-stub`-CSS-Logik (separate branch) erhalten. Quellenlabel und Event-Binding unverändert.
+
+**Tests:**
+- pytest tests/test_frontend_workflow.py: 15/15 passed.
+- pytest tests/ --ignore=tests/test_analyze.py: 15/15 passed.
+
+**Unsicherheiten:** Jam-Verifikation optional, noch nicht durchgeführt.
+
+---
+
+## Nächster offener Punkt: P2.3 — Hinweis bei LIMIT-Erreichen
 
 Bereit zur Implementierung im erweiterten teilautonomen Gate-Modus.

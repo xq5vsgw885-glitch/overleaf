@@ -24,29 +24,32 @@ Kompakter Synchronisationsstand für Übergaben zwischen Claude Code, ChatGPT-Re
 | P1.4 API-Check robuster | `dd4ae15` | — (kein UI) | — |
 | P2.1 Modusindikator für #results | `ea5fa6e` | ausstehend | — |
 
+## Last completed points
+
+| Punkt | Commit | Jam | Issue |
+|-------|--------|-----|-------|
+| P1.2 Quellenanzeige in Suchergebnissen | `6ff39d6` | `68cb929f` ✓ | #4 geschlossen |
+| P1.3 Sichere Taxon-Auswahl | `28ec2fa` | `23d49de8` ✓ | #5 geschlossen |
+| P1.4 API-Check robuster | `dd4ae15` | — (kein UI) | — |
+| P2.1 Modusindikator für #results | `ea5fa6e` | ausstehend | — |
+| P2.2 Statuslabels übersetzen | `<hash>` | optional | — |
+
 ## Current open point
 
-**P2.2 — Statuslabels übersetzen**
+**P2.3 — Hinweis bei LIMIT-Erreichen**
 
-Ziel: `statusLabel(status)`-Funktion in `botanik.html` einführen. Mapping:
-
-- `active` → `geprüft`
-- `stub` → `vorläufig`
-- `context` → `Kontext`
-- `structured_paraphrase` → `strukturierte Paraphrase`
+Ziel: Bei 50 Treffern Hinweis anzeigen „Es werden maximal 50 Treffer angezeigt. Bitte Suche verfeinern." Änderungen in `server.js` (`limit`, `maybe_truncated`) und `botanik.html`.
 
 ## Pending verification
 
-1. Live-API-Verifikation für P1.4 ausführen oder bestätigen:
+1. Live-API-Verifikation für P1.4:
    ```bash
    ./scripts/check_botanik_api.sh https://overleaf-tdkd.onrender.com
    ```
 
-2. Jam-Verifikation für P2.1:
-   - Suche auslösen → Überschrift „Suchergebnisse" prüfen.
-   - „Foto-Merkmale anzeigen" → Überschrift „Foto-diagnostische Merkmale" prüfen.
+2. Jam-Verifikation für P2.1 (Überschriften) und optional P2.2 (Statuslabels).
 
-Diese beiden Punkte blockieren P2.2 nicht, müssen aber im Worklog nachgetragen werden, sobald sie erledigt sind.
+Diese Punkte blockieren P2.3 nicht.
 
 ## Next safe Claude Code command
 
@@ -61,9 +64,10 @@ Lies danach:
 - BOTANIK_WORKLOG.md
 - BOTANIK_HANDOFF.md
 
-Starte P2.2 — Statuslabels übersetzen — nach BOTANIK_DEVELOPMENT_PLAN.md im erweiterten teilautonomen Gate-Modus.
+Starte P2.3 — Hinweis bei LIMIT-Erreichen — nach BOTANIK_DEVELOPMENT_PLAN.md im erweiterten teilautonomen Gate-Modus.
 
-Erlaubte Code-Datei:
+Erlaubte Code-Dateien:
+- server.js
 - botanik.html
 
 Zusätzlich zu aktualisieren:
@@ -71,8 +75,6 @@ Zusätzlich zu aktualisieren:
 - BOTANIK_HANDOFF.md
 
 Nicht erlaubt:
-- server.js
-- scripts/check_botanik_api.sh
 - database/
 - package.json / package-lock.json / requirements.txt
 - AGENTS.md
@@ -81,31 +83,23 @@ Nicht erlaubt:
 - Issue-Kommentar oder Issue-Schließung
 
 Ziel:
-- statusLabel(status) in botanik.html einführen.
-- Statusanzeige in Suchtreffern über statusLabel(...) rendern.
-- active → geprüft
-- stub → vorläufig
-- context → Kontext
-- structured_paraphrase → strukturierte Paraphrase
-- unbekannte Statuswerte sicher escaped anzeigen.
-- .taxon-stub bleibt erhalten.
-- Quellenlabel bleibt erhalten.
-- Event-Binding aus P1.3 bleibt erhalten.
+- server.js: limit: 50 und maybe_truncated: rows.length === 50 im /api/botanik/taxa Response ergänzen.
+- botanik.html: bei maybe_truncated Hinweis anzeigen.
+- Keine Pagination, keine DB-Änderung.
 
 Tests:
-- python3.13 -m pytest tests/test_frontend_workflow.py -v
+- node --check server.js
 - python3.13 -m pytest tests/ --ignore=tests/test_analyze.py -v
 
 Wenn alle Auto-Gates erfüllt sind:
-- Commit automatisch mit: feat(botanik): translate taxon status labels
+- Commit automatisch mit: feat(botanik): warn when search results may be truncated
 - Push automatisch auf origin TU
-- BOTANIK_WORKLOG.md und BOTANIK_HANDOFF.md im selben Commit aktualisieren, sofern sie nur den aktuellen P2.2-Stand beschreiben.
+- BOTANIK_WORKLOG.md und BOTANIK_HANDOFF.md im selben Commit aktualisieren.
 
 Stoppe nur bei:
 - Testfehlern
-- unklarer Statuslogik
+- unklarem API-Verhalten
 - notwendiger Änderung außerhalb des erlaubten Scopes
-- fachlicher botanischer Entscheidung
 - Issue-Kommentar oder Issue-Schließung
 ```
 

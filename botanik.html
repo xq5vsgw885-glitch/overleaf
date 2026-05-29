@@ -96,7 +96,7 @@
           ${data.rows.map(row => `
             <div class="taxon${row.status === 'stub' ? ' taxon-stub' : ''}" data-taxon-id="${escapeHtml(row.taxon_id || "")}">
               <strong>${escapeHtml(row.scientific_name || "")}</strong><br>
-              <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · ${row.status === 'stub' ? 'vorläufig' : escapeHtml(row.status || '')}${(l => l ? ` · Quelle: ${escapeHtml(l)}` : "")(sourceLabel(row.source_pdf))} · ${escapeHtml(row.taxon_id || "")}</span>
+              <span class="muted">${escapeHtml(row.german_name || "")} · ${escapeHtml(row.rank || "")} · ${statusLabel(row.status)}${(l => l ? ` · Quelle: ${escapeHtml(l)}` : "")(sourceLabel(row.source_pdf))} · ${escapeHtml(row.taxon_id || "")}</span>
             </div>
           `).join("")}
         `;
@@ -187,6 +187,11 @@
       } catch {
         box.textContent = "Foto-Merkmale konnten nicht geladen werden.";
       }
+    }
+
+    function statusLabel(status) {
+      const map = { active: "geprüft", stub: "vorläufig", context: "Kontext", structured_paraphrase: "strukturierte Paraphrase" };
+      return map[status] !== undefined ? map[status] : escapeHtml(String(status || ""));
     }
 
     function sourceLabel(value) {
