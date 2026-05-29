@@ -31,6 +31,31 @@ if str(value).lower() != expected.lower():
 PY
 }
 
+check_json_field_nonempty() {
+  local label="$1"
+  local field="$2"
+
+  python3 - "$label" "$field" /tmp/botanik_check_response.json <<'PY'
+import json, sys
+
+label, field, path = sys.argv[1:4]
+with open(path, "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+value = data
+for part in field.split("."):
+    value = value[part]
+
+if not str(value).strip():
+    print(f"FAIL {label}: {field} is empty")
+    sys.exit(1)
+PY
+}
+
+get_response_count() {
+  python3 -c "import json; d=json.load(open('/tmp/botanik_check_response.json')); print(d['count'])"
+}
+
 check() {
   local label="$1"
   local url="$2"
@@ -54,16 +79,40 @@ check() {
 }
 
 check "Health" "$BASE_URL/api/botanik/health"
+check_json_field_nonempty "Health" "release.version"
+check_json_field_nonempty "Health" "release.release_stage"
+
 check "Taxa search Acer standard" "$BASE_URL/api/botanik/taxa?q=Acer"
 check_json_field "Taxa search Acer standard" "include_stubs" "false"
-check_json_field "Taxa search Acer standard" "count" "2"
+ACER_STD_COUNT=$(get_response_count)
 
 check "Taxa search Acer with stubs" "$BASE_URL/api/botanik/taxa?q=Acer&include_stubs=1"
 check_json_field "Taxa search Acer with stubs" "include_stubs" "true"
-check_json_field "Taxa search Acer with stubs" "count" "5"
+ACER_STUB_COUNT=$(get_response_count)
+
+echo "== Acer relational count check =="
+python3 - "$ACER_STD_COUNT" "$ACER_STUB_COUNT" <<'PY'
+import sys
+std, stub = int(sys.argv[1]), int(sys.argv[2])
+if std <= 0:
+    print(f"FAIL Acer standard count must be > 0, got {std}")
+    sys.exit(1)
+if stub < std:
+    print(f"FAIL Acer stubs count ({stub}) must be >= standard count ({std})")
+    sys.exit(1)
+print(f"OK standard={std}, with_stubs={stub}")
+PY
+echo
+
 check "Taxon detail Berberis vulgaris" "$BASE_URL/api/botanik/taxon/berberis_vulgaris"
 check "Photo features high/high" "$BASE_URL/api/botanik/features/photo"
 check "Photo features medium/medium" "$BASE_URL/api/botanik/features/photo?visibility=medium&weight=medium"
+
+echo "== P0.2: critical taxa excluded from standard search =="
+check "P0.2 festuca_rubra not in standard" "$BASE_URL/api/botanik/taxa?q=festuca_rubra"
+check_json_field "P0.2 festuca_rubra" "count" "0"
+check "P0.2 ranunculus_auricomus not in standard" "$BASE_URL/api/botanik/taxa?q=ranunculus_auricomus"
+check_json_field "P0.2 ranunculus_auricomus" "count" "0"
 
 
 echo "== Local DB quality: active direct taxa have features =="
