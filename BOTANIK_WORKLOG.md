@@ -115,7 +115,7 @@ Chronologisches technisches Arbeitsprotokoll.
 
 **Status:** Abgeschlossen.
 
-**Commit:** `<hash>` — `feat(botanik): warn when search results may be truncated`
+**Commit:** `05cbffa` — `feat(botanik): warn when search results may be truncated`
 **Push:** origin/TU ✓
 **Jam:** erforderlich (UI-Hinweis sichtbar prüfen).
 

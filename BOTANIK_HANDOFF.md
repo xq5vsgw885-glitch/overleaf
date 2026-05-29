@@ -24,7 +24,7 @@ Kompakter Synchronisationsstand für Übergaben zwischen Claude Code, ChatGPT-Re
 | P1.4 API-Check robuster | `dd4ae15` | — (kein UI) | — |
 | P2.1 Modusindikator für #results | `ea5fa6e` | ausstehend | — |
 | P2.2 Statuslabels übersetzen | `0509ca9` | optional | — |
-| P2.3 Hinweis bei LIMIT-Erreichen | `<hash>` | ausstehend | — |
+| P2.3 Hinweis bei LIMIT-Erreichen | `05cbffa` | ausstehend | — |
 
 ## Current open point
 
