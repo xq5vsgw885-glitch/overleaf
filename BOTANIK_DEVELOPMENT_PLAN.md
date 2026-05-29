@@ -1,38 +1,72 @@
 # Botanik-App Development Plan
 
-## 1. Verbindliche Grundlage
+## 1. Zweck und Rollen
 
-- AGENTS.md ist verbindlich.
-- Branch TU ist der produktive Botanik-App-Zweig.
-- Render/Produktiv-Verifikation läuft über origin/TU.
-- Nicht auf claude/setup-project-infrastructure-JgYXS für Botanik-App-Patches arbeiten.
+Dieses Dokument ist die stabile Steuerungsdatei für die weitere Entwicklung der Botanik-App im Repository `overleaf`.
+
+Rollenmodell:
+
+- **ChatGPT** schreibt und aktualisiert Plan-, Handoff- und Review-Anweisungen auf GitHub.
+- **Claude Code** arbeitet lokal nach `AGENTS.md`, diesem Plan und `BOTANIK_HANDOFF.md`.
+- **Claude Code** führt Codeänderungen, Tests, Commits und Pushes aus, sofern die Auto-Gates erfüllt sind.
+- **Der Nutzer** wird nur bei wichtigen Entscheidungen, Risiken, fachlichen Fragen oder Issue-Abschluss einbezogen.
+
+GitHub dient als Synchronisationsfläche zwischen ChatGPT, Claude Code und Nutzer.
+
+---
+
+## 2. Verbindliche Grundlage
+
+- `AGENTS.md` ist verbindlich.
+- Branch `TU` ist der produktive Botanik-App-Zweig.
+- Render-/Produktiv-Verifikation läuft über `origin/TU`.
+- Nicht auf `claude/setup-project-infrastructure-JgYXS` für Botanik-App-Patches arbeiten.
 - Keine fachlichen botanischen Inhalte ohne Quellenstatus ändern.
 - Keine Datenbankänderung ohne explizite separate Freigabe.
-- Kein Commit ohne Freigabe.
-- Kein Push ohne separate Freigabe.
-- Kein Issue-Kommentar und kein Issue-Schluss ohne Freigabe.
+- Keine Dependency-Änderung ohne explizite separate Freigabe.
+- Keine Branch-Wechsel, Merges oder Rebases ohne explizite Freigabe.
+- Issue-Kommentare und Issue-Schließungen bleiben immer freigabepflichtig.
 - Beobachtung, Interpretation, Unsicherheit und Empfehlung immer trennen.
 
 ---
 
-## 2. Bereits abgeschlossen
+## 3. Source-of-truth-Dateien
 
-- P0.2 critical-Status wird aus Standardsuche ausgeschlossen.
-- P0.1 fetch-Fehlerhandling ist produktiv aktiv.
-- P1.1 Stub-Taxa werden als „vorläufig" gekennzeichnet und Jam-verifiziert.
-- P1.2 Quellenlabels in Suchergebnissen:
-  - Commit 6ff39d6 ist auf origin/TU gepusht.
-  - Jam-/Produktiv-Verifikation steht noch aus.
+- `AGENTS.md` — allgemeine Arbeitsregeln.
+- `BOTANIK_DEVELOPMENT_PLAN.md` — stabile Roadmap, Gates und Autonomie-Regeln.
+- `BOTANIK_WORKLOG.md` — chronologisches Arbeitsprotokoll.
+- `BOTANIK_HANDOFF.md` — aktueller kompakter Übergabezustand und nächster ausführbarer Auftrag.
+
+Regel:
+
+- Planung gehört in `BOTANIK_DEVELOPMENT_PLAN.md`.
+- Historie gehört in `BOTANIK_WORKLOG.md`.
+- Nächste konkrete Aktion gehört in `BOTANIK_HANDOFF.md`.
 
 ---
 
-## 3. Globale Gates
+## 4. Abgeschlossene und laufende Punkte
+
+Details stehen in `BOTANIK_WORKLOG.md`.
+
+| Punkt | Status | Commit | Verifikation |
+|---|---|---:|---|
+| P1.2 Quellenanzeige in Suchergebnissen | abgeschlossen | `6ff39d6` | Jam `68cb929f`, Issue #4 geschlossen |
+| P1.3 Sichere Taxon-Auswahl ohne inline onclick | abgeschlossen | `28ec2fa` | Jam `23d49de8`, Issue #5 geschlossen |
+| P1.4 API-Check robuster machen | implementiert und gepusht | `dd4ae15` | Live-API-Verifikation empfohlen |
+| P2.1 Modusindikator für `#results` | implementiert und gepusht | `ea5fa6e` | Jam-Verifikation ausstehend |
+
+Aktueller offener Entwicklungsblock laut Handoff: **P2.2 — Statuslabels übersetzen**.
+
+---
+
+## 5. Gate-Modell
 
 ### Gate 0 — Umgebungskontrolle
 
 Vor jedem neuen Punkt:
 
-```
+```bash
 pwd
 git branch --show-current
 git status
@@ -44,14 +78,15 @@ git rev-parse origin/TU
 
 Erwartung:
 
-- Branch ist TU.
+- Branch ist `TU`.
 - Working tree ist clean.
-- AGENTS.md ist vorhanden.
-- HEAD ist identisch mit origin/TU oder Abweichung wird erklärt.
+- `AGENTS.md` ist vorhanden.
+- HEAD ist identisch mit `origin/TU` oder Abweichung wird erklärt.
 
-**Stop:** Wenn Branch nicht TU ist oder Working Tree nicht clean ist, nicht weiterarbeiten.
+Stop:
 
----
+- Wenn Branch nicht `TU` ist: stoppen.
+- Wenn Working tree nicht clean ist und die Änderungen nicht zum aktuellen Auftrag gehören: stoppen.
 
 ### Gate 1 — Diagnose
 
@@ -71,10 +106,6 @@ Output:
 - notwendige Tests
 - Jam nötig: ja/nein
 
-Danach stoppen und Freigabe abwarten.
-
----
-
 ### Gate 2 — Patchplan
 
 Vor jedem Patch:
@@ -88,15 +119,11 @@ Vor jedem Patch:
 - Verifikation
 - Restrisiken
 
-Danach stoppen und Freigabe abwarten.
-
----
-
 ### Gate 3 — Patch
 
-Nach Freigabe:
+Nach erfülltem Gate 2:
 
-- nur freigegebene Dateien ändern
+- nur erlaubte Dateien ändern
 - keine zusätzlichen Dateien
 - keine Datenbankänderung
 - keine neue Dependency
@@ -105,94 +132,81 @@ Nach Freigabe:
 
 Danach:
 
-```
+```bash
 git diff -- <betroffene Dateien>
 git status
 ```
 
+Zusätzlich:
+
 - statische Checkliste gegen Patchziel
 - Tests ausführen
 - Patch-Protokoll ausgeben
-- auf Commit-Freigabe warten
-
----
 
 ### Gate 4 — Tests
 
 Standard nach Codeänderung:
 
-```
+```bash
 python3.13 -m pytest tests/ -v
 ```
 
-Bei server.js:
+Bei `server.js`:
 
-```
+```bash
 node --check server.js
 ```
 
-Bei botanik.html:
+Bei `botanik.html`:
 
-```
+```bash
 python3.13 -m pytest tests/test_frontend_workflow.py -v
 ```
 
 Bei API-relevanten Änderungen nach Deploy:
 
-```
+```bash
 ./scripts/check_botanik_api.sh https://overleaf-tdkd.onrender.com
 ```
 
 Wenn ein Test nicht läuft:
-- Testname nennen
-- Fehler nennen
-- erklären, ob patchbezogen oder umgebungsbedingt
-- Ersatzprüfung nennen
 
----
+- Testname nennen.
+- Fehler nennen.
+- erklären, ob patchbezogen oder umgebungsbedingt.
+- Ersatzprüfung nennen.
 
 ### Gate 5 — Commit
 
 Vor Commit:
 
-```
+```bash
 git diff -- <betroffene Dateien>
 git status
 ```
 
-- alle Akzeptanzkriterien explizit prüfen
-- nur erlaubte Dateien geändert
+Prüfen:
 
-Im Standardmodus: Commit nur nach Freigabe.
+- alle Akzeptanzkriterien erfüllt.
+- nur erlaubte Dateien geändert.
+- Tests bestanden oder nicht ausführbare Tests sind sauber begründet und nicht patchbezogen.
 
-Im erweiterten teilautonomen Modus: Commit automatisch erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind. Andernfalls stoppen.
-
-Output:
-
-- Commit-Hash
-- geänderte Dateien
-- Tests vor Commit
-- Kurzbegründung
-- nächster Schritt: Push (automatisch oder nach Freigabe)
-
----
+Im erweiterten teilautonomen Modus ist Commit automatisch erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind.
 
 ### Gate 6 — Push
 
-Im Standardmodus: Push nur nach separater Freigabe.
-
-Im erweiterten teilautonomen Modus: Push automatisch erlaubt, wenn alle Auto-Push-Bedingungen erfüllt sind. Andernfalls stoppen.
+Im erweiterten teilautonomen Modus ist Push automatisch erlaubt, wenn alle Auto-Push-Bedingungen erfüllt sind.
 
 Vor Push:
 
-```
+```bash
 git status
 git branch --show-current
 ```
 
 Dann:
 
-```
+```bash
 git push origin TU
 ```
 
@@ -204,8 +218,6 @@ Output:
 - geänderte Dateien
 - Zweck
 - erwartete Produktiv-/Jam-Verifikation
-
----
 
 ### Gate 7 — Produktiv-/Jam-Verifikation
 
@@ -235,8 +247,6 @@ Jam-Verifikationsoutput:
 - Unsicherheiten
 - Freigabeempfehlung: bestanden / Nacharbeit nötig / unklar
 
----
-
 ### Gate 8 — Issue-Abschluss
 
 Issue-Kommentar nur nach Freigabe.
@@ -252,29 +262,11 @@ Kommentar enthält:
 
 Issue nur nach Freigabe schließen.
 
-**Hinweis:** Der erweiterte teilautonome Modus gilt ausdrücklich nicht für Issue-Kommentare oder Issue-Schließungen.
+Der erweiterte teilautonome Modus gilt ausdrücklich nicht für Issue-Kommentare oder Issue-Schließungen.
 
 ---
 
-## Worklog and handoff synchronization
-
-Nach jedem P-Punkt oder Verifikationsblock soll Claude Code aktualisieren:
-
-- `BOTANIK_WORKLOG.md` mit chronologischen Details
-- `BOTANIK_HANDOFF.md` mit dem aktuellen kompakten Stand
-
-Diese Dateien dürfen zusammen mit dem jeweiligen P-Punkt committed werden, wenn:
-
-- sie nur die aktuelle Arbeit beschreiben
-- WORKLOG keine spekulative Planung enthält
-- HANDOFF kompakt bleibt
-- AGENTS.md nicht geändert wird
-
-Issue-Kommentare und Issue-Schließungen bleiben immer freigabepflichtig.
-
----
-
-## Erweiterter teilautonomer Gate-Modus
+## 6. Erweiterter teilautonomer Gate-Modus
 
 Claude Code darf für den jeweils aktuellen P-Punkt automatisch arbeiten bis einschließlich:
 
@@ -284,18 +276,20 @@ Claude Code darf für den jeweils aktuellen P-Punkt automatisch arbeiten bis ein
 - Tests
 - Commit
 - Push
+- Worklog-/Handoff-Aktualisierung
 
-Aber nur, wenn alle Auto-Freigabebedingungen erfüllt sind.
+Das gilt nur, wenn alle Auto-Freigabebedingungen erfüllt sind.
 
 ### Auto-Freigabebedingungen für Commit
 
-- Branch ist TU.
+- Branch ist `TU`.
 - Working tree war vor Beginn clean.
 - Nur die für den aktuellen P-Punkt erlaubten Dateien sind geändert.
-- Keine Änderung an AGENTS.md.
-- Keine Änderung an BOTANIK_DEVELOPMENT_PLAN.md, außer der aktuelle Auftrag ist ausdrücklich Dokumentation.
-- Keine Änderung an database/.
-- Keine Änderung an package.json, package-lock.json, requirements.txt oder Dependency-Dateien.
+- Keine Änderung an `AGENTS.md`.
+- Keine Änderung an `BOTANIK_DEVELOPMENT_PLAN.md`, außer der aktuelle Auftrag ist ausdrücklich Dokumentation.
+- `BOTANIK_WORKLOG.md` und `BOTANIK_HANDOFF.md` dürfen aktualisiert werden, wenn sie nur die aktuelle Arbeit dokumentieren.
+- Keine Änderung an `database/`.
+- Keine Änderung an `package.json`, `package-lock.json`, `requirements.txt` oder anderen Dependency-Dateien.
 - Keine fachlichen botanischen Daten geändert.
 - Kein Refactoring außerhalb des Patchziels.
 - Alle vorgesehenen Tests sind bestanden.
@@ -303,362 +297,267 @@ Aber nur, wenn alle Auto-Freigabebedingungen erfüllt sind.
   - Fehler exakt protokollieren.
   - Begründung muss eindeutig umgebungsbedingt sein.
   - Der Test darf keinen direkten Bezug zum aktuellen Patch haben.
-- git diff entspricht exakt dem Patchziel.
-- Commit-Message entspricht BOTANIK_DEVELOPMENT_PLAN.md oder dem aktuellen Auftrag.
+- `git diff` entspricht exakt dem Patchziel.
+- Commit-Message entspricht diesem Plan oder dem aktuellen Auftrag.
 
 ### Auto-Freigabebedingungen für Push
 
 - Commit wurde gerade für den aktuellen P-Punkt erstellt.
-- Branch ist weiterhin TU.
-- git status ist clean.
-- origin/TU ist erreichbar.
+- Branch ist weiterhin `TU`.
+- `git status` ist clean.
+- `origin/TU` ist erreichbar.
 - Es gibt keinen ungeprüften zweiten Commit.
 - Kein Merge/Rebase nötig.
-- Push ist ein normaler Fast-Forward-Push auf origin TU.
+- Push ist ein normaler Fast-Forward-Push auf `origin TU`.
 
 ### Harte Stopppunkte
 
-Claude Code muss weiterhin stoppen und Freigabe einholen vor:
+Claude Code muss stoppen und die Lage in `BOTANIK_WORKLOG.md` und `BOTANIK_HANDOFF.md` dokumentieren, wenn einer dieser Fälle eintritt:
 
-- Issue-Kommentar
-- Issue-Schließung
-- Branch-Wechsel
-- Merge/Rebase
-- Datenbankänderung
-- Dependency-Änderung
-- Änderung an AGENTS.md
-- Änderung an BOTANIK_DEVELOPMENT_PLAN.md, außer ausdrücklich beauftragt
-- fachlicher Änderung botanischer Inhalte
-- größerem Refactoring
-- unklarem Testergebnis
-- fehlenden oder widersprüchlichen API-/Jam-Daten
-- Änderung außerhalb des aktuellen P-Punkts
+- Issue-Kommentar nötig
+- Issue-Schließung nötig
+- Branch-Wechsel nötig
+- Merge/Rebase nötig
+- Datenbankänderung nötig
+- Dependency-Änderung nötig
+- Änderung an `AGENTS.md` nötig
+- Änderung an `BOTANIK_DEVELOPMENT_PLAN.md` nötig, außer ausdrücklich beauftragt
+- fachliche Änderung botanischer Inhalte nötig
+- größere UI-/Architekturentscheidung nötig
+- unklare oder rote Tests
+- fehlende oder widersprüchliche API-/Jam-Daten
+- Änderung außerhalb des aktuellen P-Punkts nötig
 
----
+Bei Stopppunkt:
 
-## 4. Restlicher Entwicklungsplan
-
-### P1.2 — Quellenanzeige in Suchergebnissen
-
-**Status:**
-- Implementiert und gepusht: 6ff39d6.
-- Nächster Schritt: Jam-Verifikation.
-
-**Erwartung:**
-- Produktivseite: https://overleaf-tdkd.onrender.com/botanik.html
-- Suche „Chelidonium" zeigt Quellenlabel.
-- Suche „Acer" ohne Stubs zeigt 2 Treffer mit Quellenlabel.
-- Suche „Acer" mit Stub-Toggle zeigt 5 Treffer.
-- Stub-Taxa zeigen weiterhin „vorläufig".
-- Quellenwerte sind normalisiert:
-  - Rothmaler
-  - Strasburger
-  - Rothmaler + Strasburger
-- source_note erscheint nicht in der Trefferliste.
-- Kein doppeltes Trennzeichen.
-
-Wenn bestanden:
-- Issue-Kommentar entwerfen.
-- Freigabe abwarten.
-- Issue schließen erst nach Freigabe.
+- nicht raten.
+- keine riskante Ersatzhandlung ausführen.
+- Beobachtung, Unsicherheit und benötigte Entscheidung dokumentieren.
+- nächsten sicheren Vorschlag in `BOTANIK_HANDOFF.md` eintragen.
 
 ---
 
-### P1.3 — Sichere Taxon-Auswahl ohne inline onclick
+## 7. ChatGPT-Handoff-Regel
 
-**Ziel:**
-`onclick="loadTaxon('${row.taxon_id}')"` aus Suchergebnissen entfernen.
+ChatGPT darf auf GitHub nur Steuerungs- und Dokumentationsdateien aktualisieren:
 
-**Diagnose:**
-- botanik.html lesen.
-- Vorkommen von `onclick="loadTaxon"` suchen.
-- Vorkommen von taxon_id in HTML-Attributen prüfen.
-- bestehende Stub- und Quellenlabel-Logik prüfen.
+- `BOTANIK_DEVELOPMENT_PLAN.md`
+- `BOTANIK_WORKLOG.md`
+- `BOTANIK_HANDOFF.md`
 
-**Empfohlene Patchrichtung:**
-- Nur botanik.html ändern.
-- `data-taxon-id` verwenden.
-- inline onclick entfernen.
-- nach Rendern Event Listener binden.
-- `loadTaxon(id)` bleibt bestehen.
-- Stub-Kennzeichnung und Quellenlabel bleiben erhalten.
+ChatGPT schreibt keine App-Code-Patches direkt nach GitHub.
 
-**Tests:**
-```
-python3.13 -m pytest tests/ -v
-python3.13 -m pytest tests/test_frontend_workflow.py -v
+Regelablauf:
+
+1. ChatGPT aktualisiert `BOTANIK_HANDOFF.md` mit dem nächsten geprüften Auftrag.
+2. Claude Code führt lokal aus:
+
+```bash
+git pull origin TU
+cat BOTANIK_HANDOFF.md
 ```
 
-**Jam:** Ja.
+3. Claude Code bearbeitet den Auftrag nach `AGENTS.md` und diesem Plan.
+4. Claude Code aktualisiert Worklog und Handoff.
+5. Claude Code committet und pusht automatisch, wenn Auto-Gates erfüllt sind.
+6. Bei Stopppunkten dokumentiert Claude Code die Lage und wartet.
 
-Jam-Ablauf:
-- Suche Acer.
-- Klicke aktives Taxon.
-- Details laden.
-- Stub-Toggle aktivieren.
-- Suche Acer.
-- Klicke Stub-Taxon.
-- Details laden.
-
-**Commit-Message:**
-```
-fix(botanik): replace inline taxon click handler with event binding
-```
+Der Nutzer wird nur bei Design-, Fach-, Risiko- oder Issue-Entscheidungen einbezogen.
 
 ---
 
-### P1.4 — API-Check robuster machen
+## 8. Worklog- und Handoff-Synchronisation
 
-**Ziel:**
-`scripts/check_botanik_api.sh` soll robuste Relationen statt fragiler fester Counts prüfen.
+Nach jedem P-Punkt oder Verifikationsblock aktualisiert Claude Code:
 
-**Diagnose:**
-- `scripts/check_botanik_api.sh` lesen.
-- hart codierte Counts identifizieren.
-- stabile Health-Checks identifizieren.
-- Checks für critical-Taxa prüfen.
+- `BOTANIK_WORKLOG.md` mit chronologischen Details.
+- `BOTANIK_HANDOFF.md` mit dem aktuellen kompakten Stand.
 
-**Empfohlene Patchrichtung:**
-- Nur `scripts/check_botanik_api.sh` ändern.
-- Starre Acer-Counts durch relationale Checks ersetzen:
-  - Standard-Acer-Count > 0
-  - include_stubs_count >= standard_count
-  - falls Stubs vorhanden: include_stubs_count > standard_count
-- P0.2-Checks ergänzen:
-  - Festuca rubra erscheint nicht in Standardsuche
-  - ranunculus_auricomus erscheint nicht in Standardsuche
-- Health muss version/release_stage prüfen.
+Diese Dateien dürfen zusammen mit dem jeweiligen P-Punkt committed werden, wenn:
 
-**Tests:**
-```
-bash -n scripts/check_botanik_api.sh
-./scripts/check_botanik_api.sh https://overleaf-tdkd.onrender.com
-python3.13 -m pytest tests/ -v
-```
+- sie nur die aktuelle Arbeit beschreiben.
+- `BOTANIK_WORKLOG.md` keine spekulative Planung enthält.
+- `BOTANIK_HANDOFF.md` kompakt bleibt.
+- `AGENTS.md` nicht geändert wird.
 
-**Jam:** Nein.
-
-**Commit-Message:**
-```
-test(botanik): make API check resilient to data changes
-```
+Issue-Kommentare und Issue-Schließungen bleiben immer freigabepflichtig.
 
 ---
 
-### P2.1 — Modusindikator für #results
-
-**Ziel:**
-Nutzer sollen erkennen, ob #results Suchtreffer oder Foto-Merkmale zeigt.
-
-**Diagnose:**
-- botanik.html lesen.
-- Funktionen identifizieren, die #results beschreiben.
-- prüfen, ob Zustände einander überschreiben.
-
-**Empfohlene Patchrichtung:**
-- Nur botanik.html ändern.
-- `searchTaxa` rendert Überschrift „Suchergebnisse".
-- `loadPhotoFeatures` rendert Überschrift „Foto-diagnostische Merkmale".
-- Leer- und Fehlerzustände bleiben sinnvoll.
-- Keine neuen Container.
-- Kein Refactoring.
-
-**Tests:**
-```
-python3.13 -m pytest tests/ -v
-```
-
-Statisch prüfen:
-- „Suchergebnisse" in searchTaxa
-- „Foto-diagnostische Merkmale" in loadPhotoFeatures
-- Fehlertexte erhalten
-
-**Jam:** Ja.
-
-**Commit-Message:**
-```
-feat(botanik): add result mode headings
-```
-
-**Auto-Commit/Auto-Push:**
-- erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind
-- Jam-Verifikation bleibt danach separat erforderlich, falls im Punkt als nötig markiert
-
----
+## 9. Aktive Roadmap
 
 ### P2.2 — Statuslabels übersetzen
 
-**Ziel:**
+Ziel:
 Technische Statuswerte nutzerverständlich machen.
 
-**Diagnose:**
+Diagnose:
+
 - Statuswerte aus SQLite ermitteln.
 - Statuswerte in Standardsuche prüfen.
-- Anzeige in botanik.html prüfen.
-- stub-Sonderlogik prüfen.
+- Anzeige in `botanik.html` prüfen.
+- bestehende `stub`-Sonderlogik prüfen.
 
-**Empfohlene Patchrichtung:**
-- Nur botanik.html ändern.
+Empfohlene Patchrichtung:
+
+- Nur `botanik.html` ändern.
 - Funktion `statusLabel(status)` einführen.
 - Mapping:
-  - active → geprüft
-  - stub → vorläufig
-  - context → Kontext
-  - structured_paraphrase → strukturierte Paraphrase
+  - `active` → `geprüft`
+  - `stub` → `vorläufig`
+  - `context` → `Kontext`
+  - `structured_paraphrase` → `strukturierte Paraphrase`
 - Unbekannte Statuswerte escaped als Rohwert anzeigen.
 - `.taxon-stub`-Logik erhalten.
 - Keine Daten ändern.
 - Keine Backend-Änderung.
 
-**Tests:**
-```
-python3.13 -m pytest tests/ -v
+Tests:
+
+```bash
+python3.13 -m pytest tests/test_frontend_workflow.py -v
+python3.13 -m pytest tests/ --ignore=tests/test_analyze.py -v
 ```
 
-Statisch:
-- `statusLabel` existiert
-- bekannte Statuswerte gemappt
-- Fallback escaped
-- Stub-Kennzeichnung erhalten
+Jam:
+Optional; empfohlen, wenn die visuelle Statusdarstellung unklar ist.
 
-**Jam:** Optional, bei sichtbarer UI-Abnahme empfohlen.
+Commit-Message:
 
-**Commit-Message:**
-```
+```text
 feat(botanik): translate taxon status labels
 ```
 
-**Auto-Commit/Auto-Push:**
-- erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind
-- Jam-Verifikation bleibt danach separat erforderlich, falls im Punkt als nötig markiert
-
----
+Auto-Commit/Auto-Push:
+Erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind.
 
 ### P2.3 — Hinweis bei LIMIT-Erreichen
 
-**Ziel:**
+Ziel:
 Bei potenziell abgeschnittenen Suchergebnissen Hinweis anzeigen.
 
-**Diagnose:**
-- server.js LIMIT 50 prüfen.
+Diagnose:
+
+- `server.js` LIMIT 50 prüfen.
 - API-Response von `/api/botanik/taxa` prüfen.
-- botanik.html Darstellung von data.count/data.rows prüfen.
+- `botanik.html` Darstellung von `data.count` / `data.rows` prüfen.
 - Suchbegriffe mit 50 Treffern identifizieren.
 
-**Empfohlene Patchrichtung:**
-- server.js:
-  - `limit: 50` im Response ergänzen
-  - `maybe_truncated: rows.length === 50` ergänzen
-- botanik.html:
+Empfohlene Patchrichtung:
+
+- `server.js`:
+  - `limit: 50` im Response ergänzen.
+  - `maybe_truncated: rows.length === 50` ergänzen.
+- `botanik.html`:
   - bei `maybe_truncated` Hinweis anzeigen:
-    „Es werden maximal 50 Treffer angezeigt. Bitte Suche verfeinern."
+    „Es werden maximal 50 Treffer angezeigt. Bitte Suche verfeinern.“
 - Keine Pagination.
 - Keine DB-Änderung.
 
-**Tests:**
-```
-node --check server.js
-python3.13 -m pytest tests/ -v
-```
+Tests:
 
-Nach Deploy:
-```
+```bash
+node --check server.js
+python3.13 -m pytest tests/ --ignore=tests/test_analyze.py -v
 ./scripts/check_botanik_api.sh https://overleaf-tdkd.onrender.com
 ```
 
-**Jam:** Ja.
+Jam:
+Ja, weil UI-Hinweis sichtbar geprüft werden muss.
 
-**Commit-Message:**
-```
+Commit-Message:
+
+```text
 feat(botanik): warn when search results may be truncated
 ```
 
-**Auto-Commit/Auto-Push:**
-- erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind
-- Jam-Verifikation bleibt danach separat erforderlich, falls im Punkt als nötig markiert
-
----
+Auto-Commit/Auto-Push:
+Erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind. Jam-Verifikation bleibt danach separat erforderlich.
 
 ### P2.4 — API_BASE konfigurierbar machen
 
-**Ziel:**
+Ziel:
 Lokale Entwicklung soll gegen lokale API laufen können.
 
-**Diagnose:**
-- API_BASE in botanik.html prüfen.
+Diagnose:
+
+- `API_BASE` in `botanik.html` prüfen.
 - prüfen, ob `window.location.origin` als Default möglich ist.
 - prüfen, ob URL-Parameter `api_base` sinnvoll ist.
 
-**Empfohlene Patchrichtung:**
-- Nur botanik.html ändern.
+Empfohlene Patchrichtung:
+
+- Nur `botanik.html` ändern.
 - Default `API_BASE = window.location.origin`.
-- Optionaler Override per `?api_base=http(s)://...`
+- Optionaler Override per `?api_base=http(s)://...`.
 - Ungültige Werte fallback auf `window.location.origin`.
 - Keine Backend-Änderung.
 
-**Tests:**
-```
-python3.13 -m pytest tests/ -v
-```
+Tests:
 
-Statisch:
-- kein hardcoded Production-Default
-- `window.location.origin` Default
-- Override validiert
+```bash
+python3.13 -m pytest tests/test_frontend_workflow.py -v
+python3.13 -m pytest tests/ --ignore=tests/test_analyze.py -v
+```
 
 Produktiv:
-- Suche funktioniert weiterhin.
+Suche muss weiterhin funktionieren.
 
-**Jam:** Optional, empfohlen bei lokaler Prüfung.
+Jam:
+Optional, empfohlen bei lokaler Prüfung.
 
-**Commit-Message:**
-```
+Commit-Message:
+
+```text
 chore(botanik): make API base configurable
 ```
 
-**Auto-Commit/Auto-Push:**
-- erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind
-- Jam-Verifikation bleibt danach separat erforderlich, falls im Punkt als nötig markiert
+Auto-Commit/Auto-Push:
+Erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind.
 
 ---
 
-## 5. P3-Strategiepunkte
+## 10. P3-Strategiepunkte
 
-### P3.1 — botanik_vocabulary prüfen
+P3-Punkte sind zunächst Diagnose-/Strategiepunkte. Auto-Commit/Auto-Push ist nicht automatisch erlaubt, außer der Auftrag ist ausdrücklich Dokumentation.
 
-**Ziel:**
-Klären, ob botanik_vocabulary produktiv genutzt wird.
+### P3.1 — `botanik_vocabulary` prüfen
+
+Ziel:
+Klären, ob `botanik_vocabulary` produktiv genutzt wird.
 
 Nur Diagnose:
+
 - SQLite-Schema lesen.
 - Zeilenzahl prüfen.
 - Beispielzeilen anzeigen.
 - Code-Nutzung via grep prüfen.
 - Keine DB-Änderung.
 
-Output: Strategieprotokoll mit Empfehlung:
+Output:
+Strategieprotokoll mit Empfehlung:
+
 - ungenutzt lassen
 - Migration planen
 - entfernen
 
 Kein Patch ohne neue Freigabe.
 
-**Auto-Commit/Auto-Push:** Nicht erlaubt. Strategie-/Diagnosepunkt. Dokumentationsänderungen nur nach explizitem Auftrag.
+### P3.2 — `app_scope`-Normalisierung planen
 
----
-
-### P3.2 — app_scope-Normalisierung planen
-
-**Ziel:**
+Ziel:
 Pipe-separierte Mehrfachwerte langfristig in sauberes Datenmodell überführen.
 
 Nur Diagnose:
-- app_scope-Werte in botanik_taxa prüfen.
-- app_scope-Werte in botanik_features prüfen.
-- Pipe-getrennte Mehrfachwerte prüfen.
-- Nutzung in server.js prüfen.
 
-Output: Migrationsplan in Phasen:
+- `app_scope`-Werte in `botanik_taxa` prüfen.
+- `app_scope`-Werte in `botanik_features` prüfen.
+- Pipe-getrennte Mehrfachwerte prüfen.
+- Nutzung in `server.js` prüfen.
+
+Output:
+Migrationsplan in Phasen:
+
 - Ist-Zustand
 - Risiko
 - Zielmodell
@@ -666,61 +565,56 @@ Output: Migrationsplan in Phasen:
 - Tests
 - nicht jetzt patchen
 
-**Auto-Commit/Auto-Push:** Nicht erlaubt. Strategie-/Diagnosepunkt. Dokumentationsänderungen nur nach explizitem Auftrag.
-
----
-
 ### P3.3 — Florenliste Deutschland konzeptionell einordnen
 
-**Ziel:**
+Ziel:
 Florenliste Deutschland als Plausibilitätsquelle planen, ohne Rothmaler/Strasburger zu ersetzen.
 
 Nur Konzeptdiagnose:
-- AGENTS.md lesen.
+
+- `AGENTS.md` lesen.
 - Quellenregeln prüfen.
-- Vorkommen von „Florenliste" im Repo suchen.
+- Vorkommen von „Florenliste“ im Repo suchen.
 - Keine Webabfrage ohne Freigabe.
 
 Florenliste darf:
+
 - Deutschland-Plausibilität prüfen.
-- Taxonomischen Status/Vorkommen plausibilisieren.
-- Als separate Quellenebene markiert werden.
+- taxonomischen Status/Vorkommen plausibilisieren.
+- als separate Quellenebene markiert werden.
 
 Florenliste darf nicht:
+
 - morphologische Merkmale aus Rothmaler/Strasburger ersetzen.
 - neue Bestimmungsmerkmale unbelegt erzeugen.
 - Quellenstatus vermischen.
 
-**Auto-Commit/Auto-Push:** Nicht erlaubt. Strategie-/Diagnosepunkt. Dokumentationsänderungen nur nach explizitem Auftrag.
-
----
-
 ### P3.4 — E2E-Teststrategie
 
-**Ziel:**
+Ziel:
 Entscheiden, ob Jam als manuelle visuelle Verifikation reicht oder Playwright/Puppeteer eingeführt werden soll.
 
 Nur Diagnose:
-- package.json lesen.
+
+- `package.json` lesen.
 - vorhandene Tests prüfen.
 - Playwright/Puppeteer-Verfügbarkeit prüfen.
 - lokale Server-Startbarkeit prüfen.
 - bisherige Jam-Fälle dokumentieren.
 
 Optionen:
+
 - A Playwright
 - B Jam als manuelle E2E-Verifikation
 - C jsdom/minimal
 
 Keine Dependency ohne separate Freigabe.
 
-**Auto-Commit/Auto-Push:** Nicht erlaubt. Strategie-/Diagnosepunkt. Dokumentationsänderungen nur nach explizitem Auftrag.
-
 ---
 
-## 6. Abschnittsabschluss
+## 11. Abschnittsabschluss
 
-Wenn alle Punkte P1.2 bis P3.4 erledigt oder bewusst vertagt sind:
+Wenn alle Punkte P2.2 bis P3.4 erledigt oder bewusst vertagt sind:
 
 Abschlussprotokoll erstellen:
 
@@ -731,6 +625,6 @@ Abschlussprotokoll erstellen:
 - offene Risiken
 - bewusst vertagte P3-Themen
 - empfohlene nächste Release-Version
-- ob AGENTS.md oder BOTANIK_DEVELOPMENT_PLAN.md aktualisiert werden sollte
+- ob `AGENTS.md` aktualisiert werden sollte
 
 Keine Datei ändern, außer Dokumentation wird separat freigegeben.
