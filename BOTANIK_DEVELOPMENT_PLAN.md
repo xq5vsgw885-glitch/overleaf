@@ -161,9 +161,11 @@ git status
 ```
 
 - alle Akzeptanzkriterien explizit prüfen
-- nur freigegebene Dateien geändert
+- nur erlaubte Dateien geändert
 
-Dann nur nach Freigabe committen.
+Im Standardmodus: Commit nur nach Freigabe.
+
+Im erweiterten teilautonomen Modus: Commit automatisch erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind. Andernfalls stoppen.
 
 Output:
 
@@ -171,15 +173,15 @@ Output:
 - geänderte Dateien
 - Tests vor Commit
 - Kurzbegründung
-- nächster Schritt: Push-Freigabe erforderlich
-
-Kein Push.
+- nächster Schritt: Push (automatisch oder nach Freigabe)
 
 ---
 
 ### Gate 6 — Push
 
-Push nur nach separater Freigabe.
+Im Standardmodus: Push nur nach separater Freigabe.
+
+Im erweiterten teilautonomen Modus: Push automatisch erlaubt, wenn alle Auto-Push-Bedingungen erfüllt sind. Andernfalls stoppen.
 
 Vor Push:
 
@@ -249,6 +251,70 @@ Kommentar enthält:
 - Statusvorschlag
 
 Issue nur nach Freigabe schließen.
+
+**Hinweis:** Der erweiterte teilautonome Modus gilt ausdrücklich nicht für Issue-Kommentare oder Issue-Schließungen.
+
+---
+
+## Erweiterter teilautonomer Gate-Modus
+
+Claude Code darf für den jeweils aktuellen P-Punkt automatisch arbeiten bis einschließlich:
+
+- Diagnose
+- Patchplan
+- Patch
+- Tests
+- Commit
+- Push
+
+Aber nur, wenn alle Auto-Freigabebedingungen erfüllt sind.
+
+### Auto-Freigabebedingungen für Commit
+
+- Branch ist TU.
+- Working tree war vor Beginn clean.
+- Nur die für den aktuellen P-Punkt erlaubten Dateien sind geändert.
+- Keine Änderung an AGENTS.md.
+- Keine Änderung an BOTANIK_DEVELOPMENT_PLAN.md, außer der aktuelle Auftrag ist ausdrücklich Dokumentation.
+- Keine Änderung an database/.
+- Keine Änderung an package.json, package-lock.json, requirements.txt oder Dependency-Dateien.
+- Keine fachlichen botanischen Daten geändert.
+- Kein Refactoring außerhalb des Patchziels.
+- Alle vorgesehenen Tests sind bestanden.
+- Falls ein Test nicht ausführbar ist:
+  - Fehler exakt protokollieren.
+  - Begründung muss eindeutig umgebungsbedingt sein.
+  - Der Test darf keinen direkten Bezug zum aktuellen Patch haben.
+- git diff entspricht exakt dem Patchziel.
+- Commit-Message entspricht BOTANIK_DEVELOPMENT_PLAN.md oder dem aktuellen Auftrag.
+
+### Auto-Freigabebedingungen für Push
+
+- Commit wurde gerade für den aktuellen P-Punkt erstellt.
+- Branch ist weiterhin TU.
+- git status ist clean.
+- origin/TU ist erreichbar.
+- Es gibt keinen ungeprüften zweiten Commit.
+- Kein Merge/Rebase nötig.
+- Push ist ein normaler Fast-Forward-Push auf origin TU.
+
+### Harte Stopppunkte
+
+Claude Code muss weiterhin stoppen und Freigabe einholen vor:
+
+- Issue-Kommentar
+- Issue-Schließung
+- Branch-Wechsel
+- Merge/Rebase
+- Datenbankänderung
+- Dependency-Änderung
+- Änderung an AGENTS.md
+- Änderung an BOTANIK_DEVELOPMENT_PLAN.md, außer ausdrücklich beauftragt
+- fachlicher Änderung botanischer Inhalte
+- größerem Refactoring
+- unklarem Testergebnis
+- fehlenden oder widersprüchlichen API-/Jam-Daten
+- Änderung außerhalb des aktuellen P-Punkts
 
 ---
 
@@ -396,6 +462,10 @@ Statisch prüfen:
 feat(botanik): add result mode headings
 ```
 
+**Auto-Commit/Auto-Push:**
+- erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind
+- Jam-Verifikation bleibt danach separat erforderlich, falls im Punkt als nötig markiert
+
 ---
 
 ### P2.2 — Statuslabels übersetzen
@@ -440,6 +510,10 @@ Statisch:
 feat(botanik): translate taxon status labels
 ```
 
+**Auto-Commit/Auto-Push:**
+- erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind
+- Jam-Verifikation bleibt danach separat erforderlich, falls im Punkt als nötig markiert
+
 ---
 
 ### P2.3 — Hinweis bei LIMIT-Erreichen
@@ -481,6 +555,10 @@ Nach Deploy:
 feat(botanik): warn when search results may be truncated
 ```
 
+**Auto-Commit/Auto-Push:**
+- erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind
+- Jam-Verifikation bleibt danach separat erforderlich, falls im Punkt als nötig markiert
+
 ---
 
 ### P2.4 — API_BASE konfigurierbar machen
@@ -520,6 +598,10 @@ Produktiv:
 chore(botanik): make API base configurable
 ```
 
+**Auto-Commit/Auto-Push:**
+- erlaubt, wenn alle Auto-Freigabebedingungen erfüllt sind
+- Jam-Verifikation bleibt danach separat erforderlich, falls im Punkt als nötig markiert
+
 ---
 
 ## 5. P3-Strategiepunkte
@@ -543,6 +625,8 @@ Output: Strategieprotokoll mit Empfehlung:
 
 Kein Patch ohne neue Freigabe.
 
+**Auto-Commit/Auto-Push:** Nicht erlaubt. Strategie-/Diagnosepunkt. Dokumentationsänderungen nur nach explizitem Auftrag.
+
 ---
 
 ### P3.2 — app_scope-Normalisierung planen
@@ -563,6 +647,8 @@ Output: Migrationsplan in Phasen:
 - Migrationsschritte
 - Tests
 - nicht jetzt patchen
+
+**Auto-Commit/Auto-Push:** Nicht erlaubt. Strategie-/Diagnosepunkt. Dokumentationsänderungen nur nach explizitem Auftrag.
 
 ---
 
@@ -587,6 +673,8 @@ Florenliste darf nicht:
 - neue Bestimmungsmerkmale unbelegt erzeugen.
 - Quellenstatus vermischen.
 
+**Auto-Commit/Auto-Push:** Nicht erlaubt. Strategie-/Diagnosepunkt. Dokumentationsänderungen nur nach explizitem Auftrag.
+
 ---
 
 ### P3.4 — E2E-Teststrategie
@@ -607,6 +695,8 @@ Optionen:
 - C jsdom/minimal
 
 Keine Dependency ohne separate Freigabe.
+
+**Auto-Commit/Auto-Push:** Nicht erlaubt. Strategie-/Diagnosepunkt. Dokumentationsänderungen nur nach explizitem Auftrag.
 
 ---
 
