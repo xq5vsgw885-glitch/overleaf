@@ -111,6 +111,25 @@ Chronologisches technisches Arbeitsprotokoll.
 
 ---
 
-## Nächster offener Punkt: P2.3 — Hinweis bei LIMIT-Erreichen
+## P2.3 — Hinweis bei LIMIT-Erreichen
+
+**Status:** Abgeschlossen.
+
+**Commit:** `<hash>` — `feat(botanik): warn when search results may be truncated`
+**Push:** origin/TU ✓
+**Jam:** erforderlich (UI-Hinweis sichtbar prüfen).
+
+**Beobachtung:** `server.js` ergänzt: `limit: 50` und `maybe_truncated: rows.length === 50` im `/api/botanik/taxa` Response. `botanik.html` `searchTaxa()`: Bei `data.maybe_truncated` erscheint `<p class="muted">Es werden maximal 50 Treffer angezeigt. Bitte Suche verfeinern.</p>`. Bestehende Logik (Stub, Quellen, Status, Event-Binding) unverändert.
+
+**Tests:**
+- `node --check server.js`: OK.
+- pytest 15/15 passed.
+- Live-API (`https://overleaf-tdkd.onrender.com`): **nicht ausführbar** — Host nicht in Allowlist (Umgebungsrestriktion, kein Bezug zum Patch).
+
+**Unsicherheiten:** Jam-Verifikation des Hinweistexts ausstehend. Live-API-Check nach Render-Deploy empfohlen.
+
+---
+
+## Nächster offener Punkt: P2.4 — API_BASE konfigurierbar machen
 
 Bereit zur Implementierung im erweiterten teilautonomen Gate-Modus.

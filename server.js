@@ -91,7 +91,7 @@ app.get("/api/botanik/taxa", (req, res) => {
 
   botanikDb.all(sql, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ count: rows.length, include_stubs: includeStubs, rows });
+    res.json({ count: rows.length, limit: 50, maybe_truncated: rows.length === 50, include_stubs: includeStubs, rows });
   });
 });
 

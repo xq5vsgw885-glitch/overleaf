@@ -93,6 +93,7 @@
         box.innerHTML = `
           <h3>Suchergebnisse</h3>
           <p class="muted">Treffer: ${data.count} · vorbereitete Taxa: ${data.include_stubs ? "ein" : "aus"}</p>
+          ${data.maybe_truncated ? `<p class="muted">Es werden maximal 50 Treffer angezeigt. Bitte Suche verfeinern.</p>` : ""}
           ${data.rows.map(row => `
             <div class="taxon${row.status === 'stub' ? ' taxon-stub' : ''}" data-taxon-id="${escapeHtml(row.taxon_id || "")}">
               <strong>${escapeHtml(row.scientific_name || "")}</strong><br>
