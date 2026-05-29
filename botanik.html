@@ -91,6 +91,7 @@
         }
 
         box.innerHTML = `
+          <h3>Suchergebnisse</h3>
           <p class="muted">Treffer: ${data.count} · vorbereitete Taxa: ${data.include_stubs ? "ein" : "aus"}</p>
           ${data.rows.map(row => `
             <div class="taxon${row.status === 'stub' ? ' taxon-stub' : ''}" data-taxon-id="${escapeHtml(row.taxon_id || "")}">
@@ -170,6 +171,7 @@
         }
 
         box.innerHTML = `
+          <h3>Foto-diagnostische Merkmale</h3>
           <p class="muted">Filter: visibility=${escapeHtml(data.filters.visibility)}, weight=${escapeHtml(data.filters.weight)} · Treffer: ${rows.length} von ${data.count}</p>
           ${rows.map(f => `
             <div class="feature" data-taxon-id="${escapeHtml(f.taxon_id || "")}">
