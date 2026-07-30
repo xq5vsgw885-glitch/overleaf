@@ -9,3 +9,5 @@ anthropic
 python-dotenv
 pytest
 pydantic
+httpx
+langgraph
