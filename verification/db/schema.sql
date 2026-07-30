@@ -1,0 +1,21 @@
+-- Human-readable pointer, not applied directly.
+--
+-- The applied schema lives in migrations/*.sql and is executed in filename
+-- order by verification.db.repository.apply_migrations(), tracked in the
+-- bookkeeping table `schema_migrations` (version TEXT PRIMARY KEY,
+-- applied_at TEXT NOT NULL), which the repository creates itself.
+--
+-- Current cumulative schema: migrations/0001_init.sql
+--   claims              -- extracted claims, keyed by cache_key for reuse
+--   sources             -- bibliographic sources, deduplicated by locator
+--   verification_runs   -- one row per verification attempt of a claim
+--   run_sources         -- validated sources attached to a run (n:m)
+--   search_attempts     -- one row per provider query within a run
+--   attempt_sources     -- sources returned by a given attempt (n:m)
+--   validations         -- per-source validation outcome within a run
+--   risk_assessments    -- 1:1 risk assessment per run
+--   review_decisions    -- review outcomes (auto or human) per run
+--
+-- To add a change: create migrations/000N_<slug>.sql with the DDL delta,
+-- then update the summary above. Do not edit 0001_init.sql after it has
+-- been applied anywhere.
