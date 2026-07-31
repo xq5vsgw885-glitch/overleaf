@@ -24,7 +24,7 @@ from policy import ErrorClass, Scope, Status
 
 #: Version des Audit-Ereignisschemas. Producer und Writer muessen
 #: uebereinstimmen; Abweichung ist §9.5 und fuehrt zu BLOCKED.
-AUDIT_SCHEMA_VERSION = "2.0.0"
+AUDIT_SCHEMA_VERSION = "2.1.0"
 
 
 # ---------------------------------------------------------------------------
@@ -331,6 +331,56 @@ class ActionEvent(AuditEvent):
     phase: Literal["retrieval", "tool_use", "transcript_scan"] = "tool_use"
 
 
+class EvidenceRegisteredEvent(AuditEvent):
+    """KANAL B — ein ausgelieferter Retrieval-Beleg (§7).
+
+    Dies ist der Ereignistyp, der die Evidenzregistry eines Laufs fuellt.
+    Ohne ihn kann ein Agent keinen `ev:`-Schluessel belegen: Der Locator-
+    Header zeigt ihm den Schluessel zwar an, aber erst die Registrierung
+    macht daraus einen protokollierten physischen Zugriff.
+
+    Der Unterschied zu `ActionEvent` ist die Aufloesung. Ein `ActionEvent`
+    sagt 'diese Quelle wurde beruehrt'; ein `EvidenceRegisteredEvent` sagt
+    'genau dieser Textausschnitt aus genau dieser Dokumentfassung wurde zu
+    genau diesem Zeitpunkt ausgeliefert'. Der Writer erzeugt aus diesem
+    einen Ereignis beide Projektionen, damit Kanal B eine einzige
+    Zugriffswahrheit bleibt.
+
+    `chunk_text_sha256` ist der Hash des tatsaechlich ausgelieferten
+    Textes. Er ist die Sperre gegen die stille Umdeutung eines Belegs:
+    Derselbe `evidence_key` mit anderem Inhalt ist eine Kollision und
+    damit ein Hard Fail.
+    """
+
+    event_type: Literal["evidence_registered"] = "evidence_registered"
+    run_id: str = Field(min_length=1)
+    agent_id: str = ""
+    #: fassungsfreie Evidenzidentitaet, `identity.make_evidence_key`
+    evidence_key: str = Field(min_length=1)
+    #: Vergleichsschluessel fuer den Kanal-A-Abgleich (`audit_db.source_key`)
+    source_key: str = Field(min_length=1)
+    #: Dokumentidentitaet
+    source_id: str = Field(min_length=1)
+    document_version_id: str = Field(min_length=1)
+    unit_id: str = Field(min_length=1)
+    chunk_id: Optional[str] = None
+    #: Fundstelle
+    structure_anchor: str = Field(min_length=1)
+    label: str = ""
+    locator_json: Optional[str] = None
+    anchor_is_fallback: bool = False
+    #: Inhaltsidentitaet
+    content_sha256: str = Field(min_length=64, max_length=64)
+    chunk_text_sha256: str = Field(min_length=64, max_length=64)
+    #: Herkunft der Auslieferung
+    retrieval_run_id: Optional[str] = None
+    parser_name: str = ""
+    parser_version: str = ""
+    chunker_name: str = ""
+    chunker_version: str = ""
+    retrieved_at: UtcTimestamp = Field(default_factory=utc_now)
+
+
 class AssertionEvent(AuditEvent):
     """KANAL A — Behauptung des Agenten, unveraendert protokolliert."""
 
@@ -370,6 +420,11 @@ class RepairAttemptEvent(AuditEvent):
     agent_id: str = ""
     target_id: str = Field(min_length=1)     # claim_id oder Objektbezeichner
     attempt: RepairAttempt
+    #: Was in der verworfenen Ausgabe nachweislich stand (aus
+    #: `repair.baseline_of`). Der naechste Durchgang prueft die neue
+    #: Ausgabe dagegen — ohne diese Mitschrift waeren die Verbote aus §8
+    #: auf dem Hook-Pfad nicht pruefbar.
+    baseline: Optional[Dict[str, Any]] = None
 
 
 class HardFailEvent(AuditEvent):
@@ -445,6 +500,7 @@ EVENT_MODELS: Dict[str, type] = {
     "run_started": RunStartEvent,
     "agent_registered": AgentRegisteredEvent,
     "action_recorded": ActionEvent,
+    "evidence_registered": EvidenceRegisteredEvent,
     "assertion_declared": AssertionEvent,
     "claim_status": ClaimStatusEvent,
     "repair_attempt": RepairAttemptEvent,
@@ -456,14 +512,15 @@ EVENT_MODELS: Dict[str, type] = {
 }
 
 AnyEvent = Union[
-    RunStartEvent, AgentRegisteredEvent, ActionEvent, AssertionEvent,
+    RunStartEvent, AgentRegisteredEvent, ActionEvent, EvidenceRegisteredEvent,
+    AssertionEvent,
     ClaimStatusEvent, RepairAttemptEvent, HardFailEvent, RunFinishEvent,
     RunAttemptEvent, PhaseMetricsEvent, WriterShutdownEvent,
 ]
 
 #: Ereignisse, die den Kanal-B-Bestand veraendern. Waehrend einer
 #: Format-Reparatur sind sie verboten (§8).
-CHANNEL_B_EVENT_TYPES = frozenset({"action_recorded"})
+CHANNEL_B_EVENT_TYPES = frozenset({"action_recorded", "evidence_registered"})
 
 
 # ---------------------------------------------------------------------------

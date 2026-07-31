@@ -24,10 +24,12 @@ import renderer
 import repair
 from audit_models import (AUDIT_SCHEMA_VERSION, ActionEvent, AgentResult,
                           AssertionEvent, Claim, ClaimStatusEvent,
-                          EvidenceReference, EventEnvelope, HardFailEvent,
-                          MetricPhase, PhaseMetricsEvent, RepairAttempt,
-                          RepairKind, RunContext, RunFinishEvent,
-                          RunStartEvent, WriterShutdownEvent)
+                          EventEnvelope, EvidenceReference,
+                          EvidenceRegisteredEvent, HardFailEvent, MetricPhase,
+                          PhaseMetricsEvent, RepairAttempt, RepairKind,
+                          RunContext, RunFinishEvent, RunStartEvent,
+                          WriterShutdownEvent)
+from identity import sha256_text
 from audit_writer import AuditWriterHandle, WriterClosed
 from output_adapter import (HybridOutputAdapter, ScriptedNativeProvider,
                             ScriptedPromptProvider)
@@ -61,6 +63,34 @@ def claim(claim_id="c1", text="Aussage", sources=(), evidence_free=False,
 
 def result_with(*claims, run_id=RUN, agent_id=AGENT):
     return AgentResult(run_id=run_id, agent_id=agent_id, claims=list(claims))
+
+
+EV_KEY = "ev:" + "1" * 64
+
+
+def registry_record(source_ref="a/x.pdf", evidence_key=EV_KEY, run_id=RUN,
+                    agent_id=AGENT):
+    """Ein registrierter Beleg in Kanal B (Retrieval-Phase, §7)."""
+    return ChannelBRecord(run_id=run_id, agent_id=agent_id,
+                          source_key=audit_db.source_key(source_ref),
+                          evidence_key=evidence_key, phase="retrieval")
+
+
+def evidence_event(evidence_key=EV_KEY, source_ref="a/x.pdf",
+                   chunk_text="Der ausgelieferte Textausschnitt.",
+                   run_id=RUN, agent_id=AGENT, unit_id="u:1",
+                   anchor="nb-cell:abc"):
+    """Ein Registrierungsereignis der Retrieval-Phase."""
+    return EvidenceRegisteredEvent(
+        run_id=run_id, agent_id=agent_id, evidence_key=evidence_key,
+        source_key=audit_db.source_key(source_ref),
+        source_id="local:" + source_ref,
+        document_version_id="dv:" + "9" * 64, unit_id=unit_id,
+        chunk_id="chk:1", structure_anchor=anchor, label="Cell [01]",
+        content_sha256=sha256_text("einheit"),
+        chunk_text_sha256=sha256_text(chunk_text),
+        parser_name="ipynb", parser_version="2.1",
+        chunker_name="unit-window", chunker_version="1.1.0")
 
 
 def rows(con, sql, params=()):
@@ -370,6 +400,34 @@ def test_07_writer_crash_is_not_a_successful_run(audit_db_path, context):
 # §12.8 bis §12.10  Transportintegritaet
 # ---------------------------------------------------------------------------
 
+def test_07b_external_supervisor_can_record_writer_failure(audit_db_path,
+                                                           context):
+    """`record_writer_failure` ist der Weg fuer einen fremden Supervisor.
+
+    Die Funktion existiert fuer den Fall, dass ein Prozess ausserhalb des
+    Producers einen Writer-Ausfall bemerkt — sie schreibt nicht selbst,
+    sondern startet dafuer einen regulaeren Writer.
+    """
+    from audit_writer import record_writer_failure
+
+    handle = AuditWriterHandle(audit_db_path).start()
+    start_run(handle, context)
+    handle.shutdown(reason="test")
+
+    record_writer_failure(audit_db_path, [RUN], "Supervisor meldet Ausfall")
+
+    con = audit_db.connect_read(audit_db_path)
+    try:
+        fails = rows(con, "SELECT error_class, scope, cause FROM hard_fails")
+        assert fails[0]["error_class"] == ErrorClass.WRITER_FAILURE.value
+        assert fails[0]["scope"] == Scope.WRITER.value
+        assert "Supervisor" in fails[0]["cause"]
+        # Der Lauf gilt danach nicht mehr als erfolgreich.
+        assert rows(con, "SELECT status FROM runs")[0]["status"] == "blocked"
+    finally:
+        con.close()
+
+
 def test_08_duplicate_delivery_is_idempotent(writer, read_con, context):
     start_run(writer, context)
     event = ActionEvent(run_id=RUN, agent_id=AGENT, raw_ref="a/x.pdf",
@@ -500,6 +558,212 @@ def test_11c_registered_evidence_id_is_accepted():
                               source_key="path:a/x.pdf", evidence_key=key)]
     verdict = reconcile(result, records, run_id=RUN).verdicts[0]
     assert verdict.status is Status.VERIFIED
+
+
+# ---------------------------------------------------------------------------
+# Evidenzregistry und Retrieval-Phase (§7)
+# ---------------------------------------------------------------------------
+
+def test_registry_valid_key_is_verified(writer, read_con, context):
+    """Registrierter Beleg: der Weg zu VERIFIED."""
+    start_run(writer, context)
+    writer.send(evidence_event())
+    writer.shutdown(reason="test")
+
+    con = read_con()
+    entry = rows(con, "SELECT * FROM evidence_registry")[0]
+    assert entry["evidence_key"] == EV_KEY
+    assert entry["source_key"] == "path:a/x.pdf"
+    assert entry["unit_id"] == "u:1"
+    assert entry["parser_version"] == "2.1"
+    # Ein Ereignis, zwei Projektionen: Registry UND Kanal-B-Zugriff.
+    action = rows(con, "SELECT * FROM actions")[0]
+    assert action["phase"] == "retrieval"
+    assert action["evidence_key"] == EV_KEY
+    assert action["prev_hash"] == entry["prev_hash"]
+    assert audit_db.verify_chain(con)["ok"]
+
+    result = result_with(claim("c1", "A", sources=["a/x.pdf"],
+                               evidence_ids=[EV_KEY]))
+    verdict = reconcile(result, reconciler.channel_b_from_db(con),
+                        run_id=RUN).verdicts[0]
+    assert verdict.status is Status.VERIFIED
+    assert verdict.confirmed_evidence == [EV_KEY]
+
+
+def test_registry_unknown_key_is_blocked(writer, read_con, context):
+    start_run(writer, context)
+    writer.send(evidence_event())
+    writer.shutdown(reason="test")
+
+    con = read_con()
+    result = result_with(claim("c1", "A", sources=["a/x.pdf"],
+                               evidence_ids=["ev:" + "e" * 64]))
+    verdict = reconcile(result, reconciler.channel_b_from_db(con),
+                        run_id=RUN).verdicts[0]
+    assert verdict.status is Status.BLOCKED
+    assert verdict.error_class is ErrorClass.UNKNOWN_EVIDENCE_ID
+    assert "nicht registriert" in verdict.reason
+
+
+def test_registry_foreign_run_key_is_blocked(writer, read_con, context):
+    other_run, other_agent = "run:test-2", "agent-2"
+    start_run(writer, context)
+    start_run(writer, context, run_id=other_run, agent_id=other_agent)
+    foreign_key = "ev:" + "7" * 64
+    writer.send(evidence_event(evidence_key=foreign_key, run_id=other_run,
+                               agent_id=other_agent))
+    writer.shutdown(reason="test")
+
+    con = read_con()
+    result = result_with(claim("c1", "A", sources=["a/x.pdf"],
+                               evidence_ids=[foreign_key]))
+    verdict = reconcile(result, reconciler.channel_b_from_db(con),
+                        run_id=RUN).verdicts[0]
+    assert verdict.status is Status.BLOCKED
+    assert verdict.error_class is ErrorClass.UNKNOWN_EVIDENCE_ID
+    assert "fremden Run" in verdict.reason
+
+
+def test_registry_key_collision_is_hard_fail(writer, read_con, context):
+    """Gleicher Schluessel, anderer Inhalt — die Registry wird unbrauchbar."""
+    start_run(writer, context)
+    writer.send(evidence_event(chunk_text="Erster Ausschnitt"))
+    writer.send(evidence_event(chunk_text="GANZ anderer Ausschnitt"))
+    writer.shutdown(reason="test")
+
+    con = read_con()
+    fails = rows(con, "SELECT error_class, scope FROM hard_fails")
+    assert fails[0]["error_class"] == ErrorClass.EVIDENCE_KEY_COLLISION.value
+    assert fails[0]["scope"] == Scope.RUN.value
+    assert rows(con, "SELECT status FROM runs")[0]["status"] == "blocked"
+    # Der zuerst registrierte Beleg bleibt unveraendert stehen.
+    entries = rows(con, "SELECT chunk_text_sha256 FROM evidence_registry")
+    assert len(entries) == 1
+    assert entries[0]["chunk_text_sha256"] == sha256_text("Erster Ausschnitt")
+
+
+def test_registry_duplicate_registration_is_idempotent(writer, read_con,
+                                                       context):
+    start_run(writer, context)
+    event = evidence_event()
+    writer.send(event)
+    writer.send(event)                       # dieselbe event_id
+    writer.send(evidence_event())            # neue event_id, gleicher Inhalt
+    writer.shutdown(reason="test")
+
+    con = read_con()
+    assert rows(con, "SELECT COUNT(*) AS n FROM evidence_registry")[0]["n"] == 1
+    assert rows(con, "SELECT COUNT(*) AS n FROM actions")[0]["n"] == 1
+    assert rows(con, "SELECT COUNT(*) AS n FROM hard_fails")[0]["n"] == 0
+    assert audit_db.verify_chain(con)["ok"]
+
+
+def test_registry_is_append_only(writer, audit_db_path, context):
+    start_run(writer, context)
+    writer.send(evidence_event())
+    writer.shutdown(reason="test")
+    con = sqlite3.connect(audit_db_path)
+    try:
+        for statement in ("UPDATE evidence_registry SET chunk_text_sha256 = 'x'",
+                          "DELETE FROM evidence_registry"):
+            with pytest.raises(sqlite3.IntegrityError):
+                con.execute(statement)
+    finally:
+        con.close()
+
+
+def test_registry_action_foreign_key_holds(writer, audit_db_path, context):
+    """Ein Zugriff darf sich nur auf einen registrierten Beleg berufen."""
+    start_run(writer, context)
+    writer.send(evidence_event())
+    writer.shutdown(reason="test")
+    con = audit_db.connect_read(audit_db_path)
+    try:
+        assert migrations.integrity_report(con)["foreign_key_violations"] == []
+        fks = {(r[2], r[3]) for r in con.execute(
+            "PRAGMA foreign_key_list(actions)")}
+        assert ("evidence_registry", "run_id") in fks
+        assert ("evidence_registry", "evidence_key") in fks
+    finally:
+        con.close()
+
+
+def test_fallback_without_registry_is_never_verified():
+    """§7: Der source_ref-Uebergangspfad kann nie VERIFIED ergeben."""
+    result = result_with(claim("c1", "A", sources=["a/x.pdf"]))
+    records = [ChannelBRecord(run_id=RUN, agent_id=AGENT,
+                              source_key="path:a/x.pdf",
+                              phase="transcript_scan")]
+    outcome = reconcile(result, records, run_id=RUN)
+    verdict = outcome.verdicts[0]
+    assert outcome.registry_mode is False
+    assert verdict.status is Status.PARTIALLY_VERIFIED
+    assert verdict.error_class is ErrorClass.EVIDENCE_UNREGISTERED
+    assert verdict.confirmed_evidence == ["e1"]
+    # Im Produktionsmodus faellt er weiter auf UNVERIFIED.
+    assert reconcile(result, records, run_id=RUN,
+                     production=True).verdicts[0].status is Status.UNVERIFIED
+
+
+def test_fallback_is_disabled_once_registry_exists():
+    """Sobald ein Beleg registriert ist, zaehlt nur noch die Registry."""
+    result = result_with(claim("c1", "A", sources=["b/andere.pdf"]))
+    records = [registry_record(),
+               ChannelBRecord(run_id=RUN, agent_id=AGENT,
+                              source_key="path:b/andere.pdf",
+                              phase="transcript_scan")]
+    outcome = reconcile(result, records, run_id=RUN)
+    assert outcome.registry_mode is True
+    assert outcome.verdicts[0].status is Status.UNVERIFIED
+    assert outcome.verdicts[0].missing_evidence == ["e1"]
+
+
+def test_record_retrieval_registers_every_segment(audit_db_path, env_context):
+    """Die Producer-API auf der echten Chunkstruktur des Chunkers."""
+    import audit_client
+    from chunker import chunk_units
+    from identity import make_evidence_key
+
+    units = []
+    for index in range(2):
+        content = f"Absatz {index} mit ausreichend Text fuer einen Chunk. " * 4
+        locator = {
+            "source_id": "local:doc/a.ipynb",
+            "document_version_id": "dv:" + "3" * 64,
+            "unit_id": f"u:{index}",
+            "evidence_key": make_evidence_key("local:doc/a.ipynb",
+                                              f"nb-cell:{index}",
+                                              sha256_text(content)),
+            "structure_anchor": f"nb-cell:{index}", "label": f"Cell [0{index}]",
+            "content_sha256": sha256_text(content), "anchor_is_fallback": False,
+            "kind": "cell", "warnings": [],
+        }
+        units.append({"content_text": content, "rendered_text": content,
+                      "locator": locator})
+    chunks = chunk_units(units)
+
+    session = audit_client.open_session("agent-retrieval", "session-retrieval")
+    with session:
+        session.start_run(parent_session_id="session-retrieval",
+                          agent_type="rag-verifier")
+        ids = session.record_retrieval(chunks, retrieval_run_id="rr:1")
+    assert len(ids) == sum(len(c["segments"]) for c in chunks)
+
+    con = audit_db.connect_read(audit_db_path)
+    try:
+        entries = rows(con, "SELECT * FROM evidence_registry ORDER BY id")
+        assert len(entries) == len(ids)
+        assert {e["evidence_key"] for e in entries} == {
+            u["locator"]["evidence_key"] for u in units}
+        assert all(e["retrieval_run_id"] == "rr:1" for e in entries)
+        assert all(e["chunker_version"] == "1.1.0" for e in entries)
+        # Die Dauer der Retrieval-Phase ist gemessen.
+        phases = rows(con, "SELECT phase FROM phase_metrics")
+        assert phases[0]["phase"] == "evidence_retrieval"
+        assert migrations.integrity_report(con)["ok"]
+    finally:
+        con.close()
 
 
 # ---------------------------------------------------------------------------
@@ -645,14 +909,14 @@ def test_14b_format_and_evidence_repair_are_separate_states(writer, read_con,
 
 def test_15_all_four_states_are_reproducible():
     result = result_with(
-        claim("c-verified", "A", sources=["a/x.pdf"]),
-        claim("c-partial", "B", sources=["a/x.pdf", "b/fehlt.pdf"]),
+        claim("c-verified", "A", sources=["a/x.pdf"], evidence_ids=[EV_KEY]),
+        claim("c-partial", "B", sources=["a/x.pdf", "b/fehlt.pdf"],
+              evidence_ids=[EV_KEY, "e2"]),
         claim("c-unverified", "C", sources=["c/nie.pdf"]),
         claim("c-blocked", "D", sources=["a/x.pdf"],
               evidence_ids=["ev:" + "f" * 64]),
     )
-    records = [ChannelBRecord(run_id=RUN, agent_id=AGENT,
-                              source_key="path:a/x.pdf")]
+    records = [registry_record()]
     first = reconcile(result, records, run_id=RUN)
     second = reconcile(result, records, run_id=RUN)
 
@@ -674,9 +938,9 @@ def test_15b_partially_verified_is_not_allowed_in_production():
 
 
 def test_15c_agent_scope_is_enforced():
-    result = result_with(claim("c1", "A", sources=["a/x.pdf"]))
-    records = [ChannelBRecord(run_id=RUN, agent_id="agent-anders",
-                              source_key="path:a/x.pdf")]
+    result = result_with(claim("c1", "A", sources=["a/x.pdf"],
+                               evidence_ids=[EV_KEY]))
+    records = [registry_record(agent_id="agent-anders")]
     assert reconcile(result, records, run_id=RUN).verdicts[0].status \
         is Status.VERIFIED
     assert reconcile(result, records, run_id=RUN,
@@ -842,16 +1106,15 @@ def test_19d_injection_is_detected(context):
 
 def _four_verdicts():
     result = result_with(
-        claim("c-verified", "Verifizierter Fachtext", sources=["a/x.pdf"]),
+        claim("c-verified", "Verifizierter Fachtext", sources=["a/x.pdf"],
+              evidence_ids=[EV_KEY]),
         claim("c-partial", "Teilweise belegter Fachtext",
-              sources=["a/x.pdf", "b/fehlt.pdf"]),
+              sources=["a/x.pdf", "b/fehlt.pdf"], evidence_ids=[EV_KEY, "e2"]),
         claim("c-unverified", "Unbelegter Fachtext", sources=["c/nie.pdf"]),
         claim("c-blocked", "Geheimer Fachtext", sources=["a/x.pdf"],
               evidence_ids=["ev:" + "f" * 64]),
     )
-    records = [ChannelBRecord(run_id=RUN, agent_id=AGENT,
-                              source_key="path:a/x.pdf")]
-    return reconcile(result, records, run_id=RUN).verdicts
+    return reconcile(result, [registry_record()], run_id=RUN).verdicts
 
 
 def test_20_evaluation_export_marks_failures():
@@ -950,7 +1213,8 @@ def test_23_migration_is_repeatable_and_lossless(tmp_path):
     _make_v1_database(path)
 
     first = migrations.migrate_audit(path)
-    assert first["version_before"] == 1 and first["version_after"] == 2
+    assert first["version_before"] == 1
+    assert first["version_after"] == migrations.AUDIT_SCHEMA_VERSION == 3
     assert first["legacy_stamped"] is True
     assert first["counts_before"]["assertions"] == 1
     assert first["counts_after"]["assertions"] == 1
@@ -960,7 +1224,7 @@ def test_23_migration_is_repeatable_and_lossless(tmp_path):
     second = migrations.migrate_audit(path)
     assert second["applied"] == []
     assert second["backup_path"] is None
-    assert second["version_after"] == 2
+    assert second["version_after"] == 3
 
     con = sqlite3.connect(path)
     con.row_factory = sqlite3.Row
@@ -1176,8 +1440,9 @@ def test_reconciliation_is_recomputable_from_database(audit_db_path, context):
     start_run(handle, context)
     handle.send(ActionEvent(run_id=RUN, agent_id=AGENT, raw_ref="a/x.pdf",
                             source_key=audit_db.source_key("a/x.pdf")))
+    handle.send(evidence_event())
     handle.send(AssertionEvent(run_id=RUN, agent_id=AGENT, claim_id="c1",
-                               claim="Belegte Aussage", evidence_id="e1",
+                               claim="Belegte Aussage", evidence_id=EV_KEY,
                                raw_source_ref="a/x.pdf",
                                source_key=audit_db.source_key("a/x.pdf")))
     handle.send(AssertionEvent(run_id=RUN, agent_id=AGENT, claim_id="c2",

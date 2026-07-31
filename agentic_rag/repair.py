@@ -159,6 +159,51 @@ def baseline_of(raw: str) -> dict:
             "claims": dict(_CLAIM_RE.findall(raw or ""))}
 
 
+def check_repair_guards(baseline: dict, repaired_output: str) -> Optional[tuple]:
+    """Die Verbote aus §8 gegen eine Baseline pruefen.
+
+    Gibt `(ErrorClass, Begruendung)` zurueck oder `None`, wenn die
+    Wiederholung zulaessig ist.
+
+    EINE Implementierung fuer beide Reparaturpfade: die Engine in
+    `repair_format()` und den Hook-Pfad in `rag_stop.py`, wo der Subagent
+    nach einem SubagentStop-Block eine neue Antwort erzeugt. Ohne diese
+    gemeinsame Pruefung galten die Verbote nur dort, wo eine
+    Reparaturfunktion aufgerufen wurde — also gerade nicht im realen
+    Betrieb.
+    """
+    if isinstance(repaired_output, dict):
+        # Der Aufrufer hat bereits geparst (Hook-Pfad: der Output-Adapter
+        # hat den Evidenzblock aus dem Freitext geloest).
+        observed = {"evidence": _evidence_ids(repaired_output),
+                    "claims": _claim_texts(repaired_output)}
+    else:
+        # Dieselbe tolerante Extraktion wie fuer die Baseline: Sie
+        # funktioniert auch dann, wenn die Wiederholung erneut nicht
+        # parsebar ist — und genau dann wird sie gebraucht.
+        observed = baseline_of(repaired_output)
+
+    allowed = set(baseline.get("evidence") or ())
+    claim_baseline = dict(baseline.get("claims") or {})
+
+    introduced = set(observed["evidence"]) - allowed
+    if introduced:
+        return (ErrorClass.EVIDENCE_INTRODUCED_BY_REPAIR,
+                "Reparatur fuehrt neue Evidenzreferenzen ein: "
+                + ", ".join(sorted(introduced)))
+
+    texts = observed["claims"]
+    mutated = [cid for cid, text in texts.items()
+               if cid in claim_baseline and text != claim_baseline[cid]]
+    added = ([cid for cid in texts if cid not in claim_baseline]
+             if baseline.get("parseable") else [])
+    if mutated or added:
+        return (ErrorClass.CLAIM_MUTATED_BY_REPAIR,
+                "Reparatur veraendert oder ergaenzt fachliche Aussagen: "
+                + ", ".join(sorted(set(mutated) | set(added))))
+    return None
+
+
 def repair_format(raw_output: str, repair_fn: RepairFn,
                   allowed_evidence_ids: Set[str] = None,
                   max_attempts: int = MAX_FORMAT_REPAIRS,
@@ -201,7 +246,6 @@ def repair_format(raw_output: str, repair_fn: RepairFn,
             attempt=attempt_no,
         )
         repaired = repair_fn(context)
-        repaired_data = _safe_load(repaired)
 
         attempt = RepairAttempt(
             attempt=attempt_no, kind=RepairKind.FORMAT,
@@ -209,40 +253,23 @@ def repair_format(raw_output: str, repair_fn: RepairFn,
             input_sha256=sha256_text(current),
             output_sha256=sha256_text(repaired), validated=False)
 
-        # --- Verbot 3: keine neue Quelle oder Evidence-ID ------------------
-        introduced = _evidence_ids(repaired_data) - allowed
-        if introduced:
-            attempt.error_class = ErrorClass.EVIDENCE_INTRODUCED_BY_REPAIR
-            attempt.validation_detail = (
-                "Reparatur fuehrt neue Evidenzreferenzen ein: "
-                + ", ".join(sorted(introduced)))
+        # --- Verbote 1 bis 3 ----------------------------------------------
+        # Sichtbare Claim-Texte muessen bytegleich bleiben, und keine neue
+        # Quelle darf auftauchen. Neue claim_ids sind nur zulaessig, wenn die
+        # Baseline nachweislich unvollstaendig war (abgeschnittene Ausgabe) —
+        # dann ist nicht entscheidbar, ob der Claim vorher schon dastand.
+        # Neue QUELLEN bleiben auch in diesem Fall ausgeschlossen; ein so
+        # ergaenzter Claim ist ohne Evidenz und wird vom Reconciler ohnehin
+        # UNVERIFIED (§6).
+        violation = check_repair_guards(
+            {"parseable": baseline["parseable"], "evidence": allowed,
+             "claims": claim_baseline}, repaired)
+        if violation is not None:
+            attempt.error_class, attempt.validation_detail = violation
             outcome.attempts.append(attempt)
             outcome.status = Status.BLOCKED
-            outcome.error_class = ErrorClass.EVIDENCE_INTRODUCED_BY_REPAIR
-            outcome.reason = attempt.validation_detail
-            outcome.final_output = repaired
-            return outcome
-
-        # --- Verbote 1 und 2: keine fachliche Aenderung --------------------
-        # Sichtbare Claim-Texte muessen bytegleich bleiben. Neue claim_ids
-        # sind nur zulaessig, wenn die Baseline nachweislich unvollstaendig
-        # war (abgeschnittene Ausgabe) — dann ist nicht entscheidbar, ob der
-        # Claim vorher schon dastand. Neue QUELLEN bleiben auch in diesem
-        # Fall ausgeschlossen; ein so ergaenzter Claim ist ohne Evidenz und
-        # wird vom Reconciler ohnehin UNVERIFIED (§6).
-        mutated = [cid for cid, text in _claim_texts(repaired_data).items()
-                   if cid in claim_baseline and text != claim_baseline[cid]]
-        added = ([cid for cid in _claim_texts(repaired_data)
-                  if cid not in claim_baseline] if baseline["parseable"] else [])
-        if mutated or added:
-            attempt.error_class = ErrorClass.CLAIM_MUTATED_BY_REPAIR
-            attempt.validation_detail = (
-                "Reparatur veraendert oder ergaenzt fachliche Aussagen: "
-                + ", ".join(sorted(set(mutated) | set(added))))
-            outcome.attempts.append(attempt)
-            outcome.status = Status.BLOCKED
-            outcome.error_class = ErrorClass.CLAIM_MUTATED_BY_REPAIR
-            outcome.reason = attempt.validation_detail
+            outcome.error_class = violation[0]
+            outcome.reason = violation[1]
             outcome.final_output = repaired
             return outcome
 

@@ -23,17 +23,18 @@ auswertbaren Lauf gehoeren.
 
 import os
 import time
-from typing import Iterable, List, Optional
+from typing import Iterable, List
 
 import audit_db
-from audit_models import (AgentRegisteredEvent, AgentResult, ActionEvent,
-                          AssertionEvent, ClaimStatusEvent, HardFailEvent,
-                          MetricPhase, PhaseMetricsEvent, RepairAttempt,
-                          RepairAttemptEvent, RunAttemptEvent, RunContext,
-                          RunFinishEvent, RunStartEvent, Stance)
+from audit_models import (ActionEvent, AgentRegisteredEvent, AgentResult,
+                          AssertionEvent, ClaimStatusEvent,
+                          EvidenceRegisteredEvent, HardFailEvent, MetricPhase,
+                          PhaseMetricsEvent, RepairAttempt, RepairAttemptEvent,
+                          RunAttemptEvent, RunContext, RunFinishEvent,
+                          RunStartEvent)
 from audit_writer import AuditWriterHandle
-from identity import sha256_text
-from policy import ErrorClass, HardFail, Scope, Status, scope_of
+from identity import canonical_json, sha256_text
+from policy import ErrorClass, HardFail, Scope, scope_of
 
 #: Umgebungsvariablen der Kontrollvariablen. Sie stehen in der
 #: Experimentkonfiguration, nicht im Modellkontext — ein Agent kann seine
@@ -82,6 +83,15 @@ def context_from_env(env: dict = None) -> RunContext:
     except Exception as exc:
         raise HardFail(ErrorClass.INVALID_RUN_CONTEXT,
                        f"RunContext ungueltig: {exc}")
+
+
+def _jsonable(baseline):
+    """`repair.baseline_of` liefert Mengen; JSON kennt nur Listen."""
+    if baseline is None:
+        return None
+    return {"parseable": bool(baseline.get("parseable")),
+            "evidence": sorted(baseline.get("evidence") or ()),
+            "claims": dict(baseline.get("claims") or {})}
 
 
 class AuditSession:
@@ -149,6 +159,94 @@ class AuditSession:
         return [self.record_action(ref, tool_name=tool_name, phase=phase)
                 for ref in refs]
 
+    # -- Retrieval-Phase (§7) ---------------------------------------------
+    def register_evidence(self, *, evidence_key: str, source_id: str,
+                          document_version_id: str, unit_id: str,
+                          structure_anchor: str, content_sha256: str,
+                          chunk_text: str = None, chunk_text_sha256: str = None,
+                          chunk_id: str = None, label: str = "",
+                          locator: dict = None, anchor_is_fallback: bool = False,
+                          source_ref: str = None, retrieval_run_id: str = None,
+                          parser_name: str = "", parser_version: str = "",
+                          chunker_name: str = "", chunker_version: str = "",
+                          agent_id: str = None) -> str:
+        """Einen ausgelieferten Beleg als Kanal-B-Ereignis registrieren.
+
+        Erst diese Registrierung macht einen `ev:`-Schluessel zitierfaehig.
+        Der Locator-Header zeigt dem Agenten den Schluessel an; ohne
+        Registrierung ist er per Definition unbekannt und fuehrt nach §9.6
+        zu BLOCKED.
+
+        `chunk_text_sha256` beschreibt den TATSAECHLICH ausgelieferten Text.
+        Wird stattdessen `chunk_text` uebergeben, wird der Hash hier
+        gebildet — nie geraten.
+        """
+        if chunk_text_sha256 is None:
+            if chunk_text is None:
+                raise ValueError(
+                    "chunk_text oder chunk_text_sha256 ist erforderlich: der "
+                    "Hash des ausgelieferten Textes wird nicht geraten.")
+            chunk_text_sha256 = sha256_text(chunk_text)
+        return self.handle.send(EvidenceRegisteredEvent(
+            run_id=self.run_id, agent_id=agent_id or self.agent_id,
+            evidence_key=evidence_key,
+            source_key=audit_db.source_key(source_ref or source_id),
+            source_id=source_id, document_version_id=document_version_id,
+            unit_id=unit_id, chunk_id=chunk_id,
+            structure_anchor=structure_anchor, label=label,
+            locator_json=canonical_json(locator) if locator else None,
+            anchor_is_fallback=anchor_is_fallback,
+            content_sha256=content_sha256,
+            chunk_text_sha256=chunk_text_sha256,
+            retrieval_run_id=retrieval_run_id, parser_name=parser_name,
+            parser_version=parser_version, chunker_name=chunker_name,
+            chunker_version=chunker_version))
+
+    def record_retrieval(self, chunks: Iterable[dict],
+                         retrieval_run_id: str = None,
+                         agent_id: str = None) -> List[str]:
+        """Eine ganze Retrieval-Auslieferung protokollieren.
+
+        Erwartet die Chunkstruktur aus `chunker.chunk_units()`: `segments`
+        mit Offsets und `_units` mit den Locator-Angaben. Registriert wird
+        pro SEGMENT, nicht pro Chunk — die Provenienzeinheit ist das
+        Segment (siehe `schema_provenance.sql`), und ein zusammengesetzter
+        Chunk stuetzt in der Regel nur teilweise.
+
+        Die Dauer wird als Phase `evidence_retrieval` gemessen.
+        """
+        event_ids: List[str] = []
+        with self.phase_timer(MetricPhase.EVIDENCE_RETRIEVAL,
+                              agent_id=agent_id) as timer:
+            for chunk in chunks:
+                units = {u["locator"]["unit_id"]: u for u in chunk.get("_units", [])}
+                for segment in chunk.get("segments", []):
+                    unit = units.get(segment["unit_id"])
+                    if unit is None:
+                        raise ValueError(
+                            f"Segment verweist auf unbekannte unit_id "
+                            f"{segment['unit_id']!r}; die Auslieferung ist "
+                            f"nicht provenienzfaehig.")
+                    loc = unit["locator"]
+                    delivered = chunk["text"][segment["chunk_char_start"]:
+                                              segment["chunk_char_end"]]
+                    event_ids.append(self.register_evidence(
+                        evidence_key=loc["evidence_key"],
+                        source_id=loc["source_id"],
+                        document_version_id=loc["document_version_id"],
+                        unit_id=loc["unit_id"], chunk_id=chunk.get("chunk_id"),
+                        structure_anchor=loc["structure_anchor"],
+                        label=loc.get("label", ""), locator=loc,
+                        anchor_is_fallback=bool(loc.get("anchor_is_fallback")),
+                        content_sha256=loc["content_sha256"],
+                        chunk_text=delivered,
+                        retrieval_run_id=retrieval_run_id,
+                        chunker_name=chunk.get("chunker_name", ""),
+                        chunker_version=chunk.get("chunker_version", ""),
+                        agent_id=agent_id))
+            timer.record(detail=f"{len(event_ids)} Segmente registriert")
+        return event_ids
+
     def declare_result(self, result: AgentResult) -> List[str]:
         """KANAL A. Jede Evidenzreferenz wird als eigene Assertion
         protokolliert; ein Claim ohne Evidenz erhaelt eine Assertion ohne
@@ -186,10 +284,11 @@ class AuditSession:
             claim_text=verdict.claim_text))
 
     def record_repair(self, target_id: str, attempt: RepairAttempt,
-                      agent_id: str = None) -> str:
+                      agent_id: str = None, baseline: dict = None) -> str:
         return self.handle.send(RepairAttemptEvent(
             run_id=self.run_id, agent_id=agent_id or self.agent_id,
-            target_id=target_id, attempt=attempt))
+            target_id=target_id, attempt=attempt,
+            baseline=_jsonable(baseline)))
 
     def hard_fail(self, error_class, cause: str, claim_id: str = None,
                   raw: str = None, scope: Scope = None) -> str:

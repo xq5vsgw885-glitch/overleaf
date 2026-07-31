@@ -42,7 +42,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 AUDIT_BASELINE_SQL = os.path.join(HERE, "schema.sql")
 PROVENANCE_BASELINE_SQL = os.path.join(HERE, "schema_provenance.sql")
 
-AUDIT_SCHEMA_VERSION = 2
+AUDIT_SCHEMA_VERSION = 3
 PROVENANCE_SCHEMA_VERSION = 2
 
 
@@ -534,6 +534,188 @@ CREATE INDEX IF NOT EXISTS idx_ae_run ON assertion_evidence(run_id);
 """
 
 
+AUDIT_V3_SQL = """
+-- ===========================================================================
+-- Audit-Schema v3 — Evidenzregistry (§7)
+--
+-- Bis v2 gab es keinen Ort, an dem ein AUSGELIEFERTER Beleg protokolliert
+-- wurde. `actions` haelt fest, dass eine Quelle beruehrt wurde; welcher
+-- Textausschnitt welcher Dokumentfassung dem Agenten tatsaechlich vorlag,
+-- stand nirgends. Der Locator-Header zeigt dem Agenten aber einen
+-- `evidence_key` — zitierte er ihn, war er per Definition unbekannt, weil
+-- die Registry leer war. Ein korrekt belegtes Zitat wurde damit BLOCKED.
+--
+-- `evidence_registry` schliesst diese Luecke. Sie ist Kanal B: append-only,
+-- Teil der Hash-Kette, und der einzige Weg, wie ein `ev:`-Schluessel
+-- gueltig werden kann.
+-- ===========================================================================
+
+CREATE TABLE evidence_registry (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id            TEXT NOT NULL UNIQUE,
+    run_id              TEXT NOT NULL REFERENCES runs(run_id),
+    agent_id            TEXT,
+    -- fassungsfreie Evidenzidentitaet (identity.make_evidence_key)
+    evidence_key        TEXT NOT NULL,
+    -- Vergleichsschluessel fuer den Kanal-A-Abgleich (audit_db.source_key)
+    source_key          TEXT NOT NULL,
+    -- Dokumentidentitaet
+    source_id           TEXT NOT NULL,
+    document_version_id TEXT NOT NULL,
+    unit_id             TEXT NOT NULL,
+    chunk_id            TEXT,
+    -- Fundstelle
+    structure_anchor    TEXT NOT NULL,
+    label               TEXT,
+    locator_json        TEXT,
+    anchor_is_fallback  INTEGER NOT NULL DEFAULT 0,
+    -- Inhaltsidentitaet: content_sha256 ist die Einheit, chunk_text_sha256
+    -- der tatsaechlich ausgelieferte Text. Derselbe evidence_key mit
+    -- abweichendem chunk_text_sha256 ist eine Kollision (Hard Fail).
+    content_sha256      TEXT NOT NULL,
+    chunk_text_sha256   TEXT NOT NULL,
+    -- Herkunft der Auslieferung
+    retrieval_run_id    TEXT,
+    parser_name         TEXT,
+    parser_version      TEXT,
+    chunker_name        TEXT,
+    chunker_version     TEXT,
+    retrieved_at        TEXT NOT NULL,
+    recorded_at         TEXT NOT NULL,
+    prev_hash           TEXT,
+    row_hash            TEXT,
+    -- Traegt die zusammengesetzte Fremdschluesselbeziehung aus `actions`.
+    UNIQUE (run_id, evidence_key)
+);
+
+CREATE INDEX idx_evreg_run    ON evidence_registry(run_id);
+CREATE INDEX idx_evreg_key    ON evidence_registry(evidence_key);
+CREATE INDEX idx_evreg_srckey ON evidence_registry(run_id, source_key);
+CREATE INDEX idx_evreg_unit   ON evidence_registry(unit_id);
+CREATE INDEX idx_evreg_chunk  ON evidence_registry(chunk_id);
+
+CREATE TRIGGER trg_evreg_no_update BEFORE UPDATE ON evidence_registry
+BEGIN
+    SELECT RAISE(ABORT, 'CHANNEL_B_MUTATION: evidence_registry ist append-only');
+END;
+CREATE TRIGGER trg_evreg_no_delete BEFORE DELETE ON evidence_registry
+BEGIN
+    SELECT RAISE(ABORT, 'CHANNEL_B_MUTATION: evidence_registry ist append-only');
+END;
+
+-- --- `actions` neu aufbauen -----------------------------------------------
+-- Zweck: die zusammengesetzte Fremdschluesselbeziehung
+--   (run_id, evidence_key) -> evidence_registry(run_id, evidence_key)
+-- Ein Kanal-B-Zugriff darf sich nur auf einen Beleg berufen, der im selben
+-- Lauf registriert ist. Bestandszeilen tragen evidence_key IS NULL und
+-- bleiben gueltig (NULL erfuellt jede Fremdschluesselbedingung).
+-- Der Neuaufbau ist noetig, weil SQLite keinen nachtraeglichen
+-- Fremdschluessel per ALTER TABLE kennt.
+-- Beide Sichten muessen vor dem Neuaufbau weichen: SQLite prueft
+-- abhaengige Sichten beim DROP TABLE und bricht sonst ab.
+-- `channel_reconciliation` wird unveraendert wiederhergestellt,
+-- `run_overview` um `evidence_count` erweitert.
+DROP VIEW channel_reconciliation;
+DROP VIEW run_overview;
+
+CREATE TABLE actions_v3 (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id        TEXT UNIQUE,
+    run_id          TEXT NOT NULL REFERENCES runs(run_id),
+    agent_id        TEXT,
+    tool_name       TEXT,
+    source_id       TEXT NOT NULL,
+    source_key      TEXT,
+    raw_ref         TEXT,
+    evidence_key    TEXT,
+    phase           TEXT NOT NULL DEFAULT 'tool_use',
+    recorded_at     TEXT NOT NULL,
+    prev_hash       TEXT,
+    row_hash        TEXT,
+    FOREIGN KEY (run_id, evidence_key)
+        REFERENCES evidence_registry(run_id, evidence_key)
+);
+
+INSERT INTO actions_v3 (id, event_id, run_id, agent_id, tool_name, source_id,
+                        source_key, raw_ref, evidence_key, phase, recorded_at,
+                        prev_hash, row_hash)
+SELECT id, event_id, run_id, agent_id, tool_name, source_id, source_key,
+       raw_ref, evidence_key, phase, recorded_at, prev_hash, row_hash
+FROM actions;
+
+DROP TRIGGER trg_actions_no_update;
+DROP TRIGGER trg_actions_no_delete;
+DROP TABLE actions;
+ALTER TABLE actions_v3 RENAME TO actions;
+
+CREATE INDEX idx_action_run    ON actions(run_id);
+CREATE INDEX idx_action_agent  ON actions(agent_id);
+CREATE INDEX idx_action_src    ON actions(run_id, source_id);
+CREATE INDEX idx_action_key    ON actions(run_id, source_key);
+CREATE INDEX idx_action_evkey  ON actions(run_id, evidence_key);
+
+CREATE TRIGGER trg_actions_no_update BEFORE UPDATE ON actions
+BEGIN
+    SELECT RAISE(ABORT, 'CHANNEL_B_MUTATION: actions ist append-only');
+END;
+CREATE TRIGGER trg_actions_no_delete BEFORE DELETE ON actions
+BEGIN
+    SELECT RAISE(ABORT, 'CHANNEL_B_MUTATION: actions ist append-only');
+END;
+
+CREATE VIEW channel_reconciliation AS
+SELECT a.run_id, a.agent_id, a.claim_id, a.id AS assertion_id,
+       a.claim, a.evidence_id, a.source_key, a.source_id, a.required,
+       b.id AS action_id, b.phase AS action_phase,
+       CASE WHEN b.id IS NULL THEN 'unconfirmed' ELSE 'confirmed' END
+       AS evidence_state
+FROM assertions a
+LEFT JOIN actions b
+       ON b.run_id = a.run_id
+      AND b.source_key IS NOT NULL
+      AND b.source_key = a.source_key;
+
+-- --- Reparaturbaseline ----------------------------------------------------
+-- Haelt fest, was in der verworfenen Ausgabe nachweislich stand. Ohne
+-- diese Spalte kann der Hook-Reparaturpfad die Verbote aus §8 nicht
+-- pruefen: Er sieht nur die neue Ausgabe, nicht die alte.
+ALTER TABLE repairs ADD COLUMN baseline_json TEXT;
+
+-- --- Sichten neu ----------------------------------------------------------
+CREATE VIEW run_overview AS
+SELECT r.run_id, r.experiment_id, r.task_id, r.replicate, r.seed,
+       r.batch_id, r.workflow_condition, r.domain,
+       r.provider, r.model_version, r.output_enforcement, r.status,
+       r.context_state, r.is_legacy, r.legacy_status_v1,
+       r.started_at, r.finished_at,
+       (SELECT COUNT(*) FROM claims c WHERE c.run_id = r.run_id) AS claim_count,
+       (SELECT COUNT(*) FROM claims c WHERE c.run_id = r.run_id
+         AND c.status = 'VERIFIED') AS verified_count,
+       (SELECT COUNT(*) FROM claims c WHERE c.run_id = r.run_id
+         AND c.status = 'BLOCKED') AS blocked_count,
+       (SELECT COUNT(*) FROM actions a WHERE a.run_id = r.run_id) AS action_count,
+       (SELECT COUNT(*) FROM evidence_registry e WHERE e.run_id = r.run_id)
+         AS evidence_count,
+       (SELECT COUNT(*) FROM hard_fails h WHERE h.run_id = r.run_id) AS hard_fail_count
+FROM runs r;
+
+-- Registry und zugehoeriger Zugriff in einer Zeile. Basis fuer die
+-- Auswertung 'welcher Beleg lag vor und wurde er zitiert?'.
+CREATE VIEW registered_evidence AS
+SELECT e.run_id, e.agent_id, e.evidence_key, e.source_key, e.source_id,
+       e.document_version_id, e.unit_id, e.chunk_id, e.structure_anchor,
+       e.label, e.anchor_is_fallback, e.content_sha256, e.chunk_text_sha256,
+       e.retrieval_run_id, e.retrieved_at,
+       a.id AS action_id, a.phase AS action_phase,
+       (SELECT COUNT(*) FROM assertions s
+         WHERE s.run_id = e.run_id AND s.evidence_id = e.evidence_key)
+        AS cited_count
+FROM evidence_registry e
+LEFT JOIN actions a
+       ON a.run_id = e.run_id AND a.evidence_key = e.evidence_key;
+"""
+
+
 def _audit_v1() -> str:
     return _read(AUDIT_BASELINE_SQL)
 
@@ -546,6 +728,7 @@ def _provenance_v1() -> str:
 AUDIT_MIGRATIONS = [
     (1, "audit baseline v1.0 (runs/assertions/actions/chain_head)", _audit_v1),
     (2, "audit v2.0 run-centric, append-only, writer sessions", AUDIT_V2_SQL),
+    (3, "audit v3 evidence registry, action FK, repair baseline", AUDIT_V3_SQL),
 ]
 
 PROVENANCE_MIGRATIONS = [

@@ -1,8 +1,14 @@
 # Agentic RAG — Ingestion, Provenienz und Audit
 
 > **Audit-Architektur (Phase 1 und 2):** siehe `AUDIT_ARCHITEKTUR.md` —
-> Single Audit Writer, laufzentriertes Schema v2, Channel Reconciler,
-> Repair Engine, Hard-Fail-Policy und dualer Export.
+> Single Audit Writer, laufzentriertes Schema v3 mit Evidenzregistry,
+> Channel Reconciler, Repair Engine, Hard-Fail-Policy und dualer Export.
+>
+> **Retrieval-Phase:** Wer dem Agenten Chunks ausliefert, registriert sie
+> mit `audit_client.record_retrieval(chunks)`. Nur registrierte Belege
+> koennen `VERIFIED` werden; die Bestaetigung ueber blosse Quellenangaben
+> ist ein markierter Uebergangspfad und ergibt hoechstens
+> `PARTIALLY_VERIFIED`.
 > Schnellstart: `python3 audit_ctl.py init`, dann
 > `python3 audit_ctl.py selftest`. Tests: `python3 -m pytest`.
 >

@@ -68,6 +68,13 @@ class RunReconciliation:
     channel_b_keys: List[str]
     agent_scoped: bool
     production: bool
+    #: Registrierte Evidenzschluessel dieses Laufs. Ist die Liste leer,
+    #: laeuft der Abgleich im Uebergangsmodus (siehe `_verdict`).
+    registry_keys: List[str] = field(default_factory=list)
+
+    @property
+    def registry_mode(self) -> bool:
+        return bool(self.registry_keys)
 
     def by_status(self, status: Status) -> List[ClaimVerdict]:
         return [v for v in self.verdicts if v.status is status]
@@ -82,7 +89,7 @@ class RunReconciliation:
 def _index(records: Iterable[ChannelBRecord], run_id: str, agent_scoped: bool):
     """Kanal B nach Laufzugehoerigkeit indizieren."""
     by_key: Dict[str, Set[Optional[str]]] = {}
-    evidence_keys: Set[str] = set()
+    evidence_keys: Dict[str, Set[Optional[str]]] = {}
     foreign_evidence: Set[str] = set()
     for rec in records:
         if rec.run_id != run_id:
@@ -94,8 +101,8 @@ def _index(records: Iterable[ChannelBRecord], run_id: str, agent_scoped: bool):
             continue
         by_key.setdefault(rec.source_key, set()).add(rec.agent_id)
         if rec.evidence_key:
-            evidence_keys.add(rec.evidence_key)
-    return by_key, evidence_keys, foreign_evidence - evidence_keys
+            evidence_keys.setdefault(rec.evidence_key, set()).add(rec.agent_id)
+    return by_key, evidence_keys, foreign_evidence - set(evidence_keys)
 
 
 def reconcile(result: AgentResult, channel_b: Sequence[ChannelBRecord],
@@ -120,13 +127,19 @@ def reconcile(result: AgentResult, channel_b: Sequence[ChannelBRecord],
                                  repair_counts.get(claim.claim_id, 0)))
     return RunReconciliation(run_id=run_id, verdicts=verdicts,
                              channel_b_keys=sorted(by_key),
-                             agent_scoped=agent_scoped, production=production)
+                             agent_scoped=agent_scoped, production=production,
+                             registry_keys=sorted(evidence_keys))
 
 
 def _verdict(claim: Claim, agent_id: str, by_key, evidence_keys,
              foreign_evidence, agent_scoped: bool, production: bool,
              repair_count: int) -> ClaimVerdict:
-    confirmed, missing = [], []
+    confirmed, missing, unregistered = [], [], []
+    #: Sobald der Lauf ueberhaupt eine Registry hat, ist sie die Wahrheit:
+    #: der source_ref-Uebergangspfad wird dann abgeschaltet. Andernfalls
+    #: koennte ein Agent die Registrierung umgehen, indem er statt des
+    #: `ev:`-Schluessels einfach den Dateinamen nennt.
+    registry_mode = bool(evidence_keys)
 
     # (1) Referenzielle Validierung VOR dem Abgleich. Eine unbekannte oder
     #     runfremde Evidence-ID ist ein Hard Fail und keine fehlende Quelle
@@ -165,6 +178,22 @@ def _verdict(claim: Claim, agent_id: str, by_key, evidence_keys,
 
     # (3) Physischer Abgleich.
     for ref in required:
+        if _is_registry_id(ref.evidence_id):
+            # Registrierter Beleg — oben bereits gegen die Registry geprueft.
+            agents = evidence_keys.get(ref.evidence_id, set())
+            if agent_scoped and agent_id not in agents:
+                missing.append(ref.evidence_id)
+            else:
+                confirmed.append(ref.evidence_id)
+            continue
+
+        # UEBERGANGSPFAD: Bestaetigung ueber die Quellenangabe statt ueber
+        # die Registry. Zulaessig, solange der Lauf keine Registry hat —
+        # aber nie ausreichend fuer VERIFIED, weil dabei offenbleibt,
+        # WELCHER Ausschnitt welcher Fassung dem Agenten vorlag.
+        if registry_mode:
+            missing.append(ref.evidence_id)
+            continue
         key = audit_db.source_key(ref.source_ref)
         agents = by_key.get(key)
         if agents is None:
@@ -174,12 +203,31 @@ def _verdict(claim: Claim, agent_id: str, by_key, evidence_keys,
             missing.append(ref.evidence_id)
             continue
         confirmed.append(ref.evidence_id)
+        unregistered.append(ref.evidence_id)
 
-    if not missing:
+    if not missing and not unregistered:
         return ClaimVerdict(
             claim_id=claim.claim_id, claim_text=claim.text,
             status=Status.VERIFIED,
-            reason="alle erforderlichen Quellen in Kanal B desselben Runs belegt",
+            reason="alle erforderlichen Belege sind in der Evidenzregistry "
+                   "desselben Runs protokolliert",
+            repair_count=repair_count, evidence_free=claim.evidence_free,
+            confirmed_evidence=confirmed)
+
+    if not missing:
+        # Vollstaendig bestaetigt, aber mindestens einmal nur ueber den
+        # Uebergangspfad. §7: der Fallback kann nie VERIFIED ergeben.
+        status = Status.PARTIALLY_VERIFIED
+        reason = ("Belege nur ueber die Quellenangabe bestaetigt, nicht ueber "
+                  "die Evidenzregistry (" + ", ".join(sorted(unregistered))
+                  + ") — als Uebergangspfad zulaessig, aber nicht ausreichend "
+                  "fuer VERIFIED")
+        if production:
+            status = Status.UNVERIFIED
+            reason += " — im Produktionsmodus unzulaessig, auf UNVERIFIED abgestuft"
+        return ClaimVerdict(
+            claim_id=claim.claim_id, claim_text=claim.text, status=status,
+            reason=reason, error_class=ErrorClass.EVIDENCE_UNREGISTERED,
             repair_count=repair_count, evidence_free=claim.evidence_free,
             confirmed_evidence=confirmed)
 

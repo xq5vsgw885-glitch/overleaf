@@ -17,7 +17,7 @@ der nachtraeglich verbindlichen Zusatzvorgaben.
 | `audit_writer.py` | Single Audit Writer: Queue-Empfang, Revalidierung, Idempotenz, Hash-Kette, Hard-Fail-Protokoll, geordneter Shutdown, Writer-Lock |
 | `audit_client.py` | Producer-Fassade: Kontext aus Umgebung, deterministische `run_id`, Event-Erzeugung, Phasen-Timer, Reparaturfenster |
 | `output_adapter.py` | Hybrider Output-Adapter (`native` / `prompt`), Injektionserkennung, deterministische Test-Provider |
-| `reconciler.py` | Channel Reconciler, Statusregeln, Neuberechnung aus der Datenbank |
+| `reconciler.py` | Channel Reconciler, Registry-Statusregel, Neuberechnung aus der Datenbank |
 | `repair.py` | Repair Engine mit den vier Verboten aus §8 |
 | `renderer.py` | Dualer Export mit maschinenlesbarer Beilage |
 | `audit_ctl.py` | CLI: `init`, `status`, `verify`, `recompute`, `export`, `metrics`, `dump-schema`, `selftest` |
@@ -32,6 +32,7 @@ der nachtraeglich verbindlichen Zusatzvorgaben.
 | Datei | Aenderung |
 |---|---|
 | `audit_db.py` | Schreibsperre ausserhalb des Writers, echte Read-only-Verbindungen, Authorizer als Append-only-Schutz, `source_key()`, Kettenpruefung, Pfadfehler behoben |
+| `repair.py` | `check_repair_guards()` — eine Implementierung der §8-Verbote fuer Engine und Hook-Pfad |
 | `rag_start.py` | Kein Direktschreiben mehr; `RunStartEvent` ueber den Writer, vollstaendiger `RunContext`, modusabhaengiger Vertrag |
 | `rag_stop.py` | Kanal B vor Abgleich, Output-Adapter, getrennte Format- und Evidenzreparatur, Hard Fails ohne Reparatur, Statuspersistenz |
 | `protect_audit_db.py` | Verbotsliste durch Erlaubnisliste ersetzt, `provenance.db` mitgeschuetzt, Verweigerung wird protokolliert |
@@ -97,7 +98,7 @@ derselben Migrationsregistry versioniert.
 
 | Datenbank | Version | Inhalt |
 |---|---|---|
-| `audit_trail.db` | **2** | `runs` (laufzentriert, Kontrollvariablen als Spalten), `run_agents`, `assertions`, `actions`, `audit_events`, `claims`, `repairs`, `hard_fails`, `phase_metrics`, `writer_sessions`, `chain_head`, `schema_migrations` |
+| `audit_trail.db` | **3** | `runs` (laufzentriert, Kontrollvariablen als Spalten), `run_agents`, `assertions`, `actions`, `evidence_registry`, `audit_events`, `claims`, `repairs`, `hard_fails`, `phase_metrics`, `writer_sessions`, `chain_head`, `schema_migrations` |
 | `provenance.db` | **2** | Baseline v1.1 plus `run_id` in `retrieval_runs` und `assertion_evidence` |
 
 ### Migrationsverfahren
@@ -112,6 +113,17 @@ derselben Migrationsregistry versioniert.
 4. Danach `PRAGMA foreign_key_check` und `PRAGMA integrity_check`; schlaegt
    eines fehl, bricht die Migration mit `MigrationError` ab.
 5. Wiederholter Aufruf ist folgenlos (`applied == []`, keine neue Sicherung).
+
+### Migration 3 — Evidenzregistry
+
+* `evidence_registry` (append-only, Teil der Hash-Kette) mit
+  `UNIQUE (run_id, evidence_key)`.
+* `actions` neu aufgebaut, um die zusammengesetzte Fremdschluesselbeziehung
+  `(run_id, evidence_key)` → `evidence_registry(run_id, evidence_key)` zu
+  ergaenzen. Bestandszeilen tragen `evidence_key IS NULL` und bleiben gueltig.
+* `repairs.baseline_json` fuer die §8-Pruefung auf dem Hook-Pfad.
+* Sichten: `run_overview` um `evidence_count` erweitert, `registered_evidence`
+  neu.
 
 ### Behandlung der Altdaten
 
@@ -136,9 +148,12 @@ Ein Trigger verhindert dauerhaft, dass ein Legacy-Lauf den Status
 ### Ereignisse
 
 `run_started`, `agent_registered`, `action_recorded` (Kanal B),
-`assertion_declared` (Kanal A), `claim_status`, `repair_attempt`,
-`hard_fail`, `run_attempt`, `phase_metrics`, `run_finished`,
-`writer_shutdown` (typisiertes Sentinel).
+`evidence_registered` (Kanal B, Retrieval-Phase), `assertion_declared`
+(Kanal A), `claim_status`, `repair_attempt`, `hard_fail`, `run_attempt`,
+`phase_metrics`, `run_finished`, `writer_shutdown` (typisiertes Sentinel).
+
+Ereignisschemaversion: **2.1.0**. Der Writer prueft auf Gleichheit; ein
+Producer mit abweichender Version loest §9.5 aus.
 
 ### Fehlerklassen und Eskalation
 
@@ -159,12 +174,86 @@ Ein Trigger verhindert dauerhaft, dass ein Legacy-Lauf den Status
 | `OUTPUT_ENFORCEMENT_SWITCH` | 13 | run | Run BLOCKED |
 | `WRITER_FAILURE` | 14 | writer | Run BLOCKED, Recovery-Writer protokolliert |
 | `UNKNOWN_EVIDENCE_ID` | 6 (spez.) | claim | Claim BLOCKED |
+| `EVIDENCE_KEY_COLLISION` | 7 (spez.) | run | Registry des Laufs unbrauchbar, Run BLOCKED |
 | `EVIDENCE_INTRODUCED_BY_REPAIR` | 1 (spez.) | claim | Claim BLOCKED |
 | `CLAIM_MUTATED_BY_REPAIR` | 1 (spez.) | claim | Claim BLOCKED |
 | `CHANNEL_B_WRITE_DURING_REPAIR` | — | run | Senden schlaegt fehl |
 | `FORMAT_VALIDATION_EXHAUSTED` | **kein** Hard Fail | claim/run | UNVERIFIED |
 | `EVIDENCE_INCOMPLETE` | **kein** Hard Fail | claim | PARTIALLY_VERIFIED / UNVERIFIED |
 | `NO_REQUIRED_EVIDENCE` | **kein** Hard Fail | claim | UNVERIFIED |
+| `EVIDENCE_UNREGISTERED` | **kein** Hard Fail | claim | PARTIALLY_VERIFIED (Uebergangspfad) |
+
+---
+
+## 4a. Evidenzregistry und Statusregel (§7)
+
+Bis Schema v2 gab es keinen Ort, an dem ein AUSGELIEFERTER Beleg
+protokolliert wurde. `actions` hielt fest, dass eine Quelle beruehrt
+wurde; welcher Textausschnitt welcher Dokumentfassung dem Agenten vorlag,
+stand nirgends. Gleichzeitig zeigt der Locator-Header dem Agenten einen
+`evidence_key` — zitierte er ihn, war er per Definition unbekannt, weil
+die Registry leer war. Ein korrekt belegtes Zitat wurde damit BLOCKED.
+
+### Die Retrieval-Phase
+
+`audit_client.record_retrieval(chunks)` bildet die Chunkstruktur des
+Chunkers auf je ein `evidence_registered`-Ereignis **pro Segment** ab
+(die Provenienzeinheit ist das Segment, nicht der Chunk). Jedes Ereignis
+traegt `evidence_key`, `run_id`, Dokumentidentitaet
+(`source_id`/`document_version_id`/`unit_id`/`chunk_id`), Locator
+(`structure_anchor`, `label`, `locator_json`), `content_sha256` der
+Einheit, `chunk_text_sha256` des tatsaechlich ausgelieferten Textes,
+Retrieval-Zeitpunkt sowie Parser- und Chunker-Version.
+
+Der Writer erzeugt daraus **zwei Projektionen in einer Transaktion und mit
+demselben Kettenglied**: den Registryeintrag und die zugehoerige
+`actions`-Zeile (`phase='retrieval'`). Kanal B bleibt damit eine einzige
+Zugriffswahrheit; jede vorhandene Abfrage sieht den Retrieval-Zugriff,
+ohne die Registry kennen zu muessen.
+
+### Idempotenz und Kollision
+
+| Fall | Verhalten |
+|---|---|
+| gleiche `event_id`, gleicher Payload | bestehende Deduplizierung |
+| gleicher `(run_id, evidence_key)`, gleicher `chunk_text_sha256` | idempotent, keine zweite Zeile |
+| gleicher `(run_id, evidence_key)`, **anderer** `chunk_text_sha256` | `EVIDENCE_KEY_COLLISION`, Scope `run`, Hard Fail |
+
+Die Kollision ist laufweit, nicht claimweit: Steht derselbe Schluessel fuer
+zwei Inhalte, ist die Evidenzidentitaet des ganzen Laufs nicht mehr
+eindeutig.
+
+### Statusregel
+
+```
+registry      = registrierte evidence_keys dieses Runs
+registry_mode = registry ist nicht leer
+
+ev:-ID  → in registry          : bestaetigt (Registry)
+        → in fremder registry  : BLOCKED / UNKNOWN_EVIDENCE_ID (fremder Run)
+        → sonst                : BLOCKED / UNKNOWN_EVIDENCE_ID
+lokales Label
+        → registry_mode        : NICHT bestaetigt (Uebergangspfad abgeschaltet)
+        → sonst                : source_key-Treffer = Uebergangsbestaetigung
+```
+
+| Lage | Status |
+|---|---|
+| alle erforderlichen Belege ueber die Registry bestaetigt | `VERIFIED` |
+| vollstaendig bestaetigt, mindestens einer nur ueber den Uebergangspfad | `PARTIALLY_VERIFIED` |
+| teils bestaetigt, teils fehlend | `PARTIALLY_VERIFIED` |
+| nichts bestaetigt / leere Liste / evidenzfrei | `UNVERIFIED` |
+
+Der `source_ref`-Uebergangspfad ist im Code als solcher markiert und kann
+**nie** `VERIFIED` ergeben (`EVIDENCE_UNREGISTERED`). Sobald ein Lauf auch
+nur einen registrierten Beleg hat, ist der Pfad abgeschaltet — sonst
+koennte ein Agent die Registrierung umgehen, indem er statt des
+Schluessels den Dateinamen nennt.
+
+**Wirkung:** Laeufe, deren Kanal B ausschliesslich aus dem Transkript-Scan
+stammt, erreichen hoechstens `PARTIALLY_VERIFIED` und den Laufstatus
+`degraded`; ihr Produktionsexport ist leer. Das ist beabsichtigt — die
+Registrierung ist der einzige Weg zu einer produktionsfaehigen Aussage.
 
 ---
 
@@ -202,15 +291,20 @@ Ein Trigger verhindert dauerhaft, dass ein Legacy-Lauf den Status
 | Z3 | Legacy nie verifiziert | Trigger | `test_23c` |
 | Z4 | Sicherung vor Migration pruefbar | `backup_database` | `test_23b` |
 | Z5 | Quellenidentitaet kollisionsfrei | `source_key` | `test_source_key_*` |
+| Z6 | Registrierter Beleg → VERIFIED | `evidence_registry` | `test_registry_valid_key_*` |
+| Z7 | Unbekannter/fremder/kollidierender Key | Writer + Reconciler | `test_registry_*` |
+| Z8 | Uebergangspfad nie VERIFIED | `_verdict` | `test_fallback_*` |
+| Z9 | §8-Verbote auch im Hook-Retry | `check_repair_guards` | `test_repair_*_via_hook` |
+| Z10 | Metriken im Betrieb erfasst | `rag_stop`, `record_retrieval` | `test_hook_records_phase_metrics` |
 
 ---
 
 ## 6. Testergebnisse
 
 ```
-python3 -m pytest                     85 passed
-  test_audit.py                       60 passed
-  test_hooks.py                       23 passed
+python3 -m pytest                    101 passed
+  test_audit.py                       71 passed
+  test_hooks.py                       28 passed
   test_legacy_suites.py                2 passed
 
 python3 test_chunker.py               20 Pruefungen, 0 Fehler
@@ -246,6 +340,22 @@ Der Writer hat bewusst kein `start`/`stop`: Er haengt an einer
 ihn erzeugt. Die Hooks starten ihn je Aufruf und beenden ihn geordnet;
 `<db>.writer.lock` stellt sicher, dass nie zwei Writer gleichzeitig
 schreiben.
+
+### Retrieval-Phase
+
+Damit ein Zitat `VERIFIED` werden kann, muss die Komponente, die dem
+Agenten Chunks ausliefert, sie registrieren:
+
+```python
+import audit_client
+session = audit_client.open_session(agent_id, parent_session_id)
+with session:
+    session.record_retrieval(chunks, retrieval_run_id="rr:…")
+```
+
+`chunks` ist die Ausgabe von `chunker.chunk_units()`. Ohne diesen Aufruf
+bleibt der Lauf im Uebergangsmodus und erreicht hoechstens
+`PARTIALLY_VERIFIED`.
 
 ### Export
 
@@ -338,10 +448,17 @@ Baseline nachweislich vollstaendig war.
    serialisieren sich die Writer. Das ist korrekt, aber es ist eine
    Wartezeit; das Lock-Timeout (60 s) ist bei extremer Parallelitaet
    anzuheben.
-5. **Metriken werden nicht selbst erhoben.** `phase_metrics` nimmt
-   gemessene Werte entgegen. Der Aufrufer muss Tokens und Kosten aus der
-   Provider-Antwort liefern; geschaetzt wird nichts.
-6. **`agent_scoped` ist standardmaessig aus.** Evidenz gilt runweit. Wer
+5. **Token- und Kostenmetrik fehlt im Hook-Pfad.** Dauern werden aus
+   persistierten Zeitstempeln gemessen (`initial_generation`,
+   `format_repair`, `evidence_retrieval`, `total`). Tokens und Kosten
+   bleiben `NULL`, weil der Hook-Kontrakt sie nicht liefert — geschaetzte
+   Werte waeren im Ergebnisbericht von gemessenen nicht unterscheidbar.
+6. **Die Retrieval-Komponente muss `record_retrieval()` aufrufen.** Die
+   API existiert und ist getestet, aber sie ruft sich nicht selbst auf. Wer
+   sie vergisst, bekommt keinen Fehler — sondern einen Lauf, der im
+   Uebergangsmodus bleibt und nie `VERIFIED` erreicht. Der leere
+   Produktionsexport ist das Signal dafuer.
+7. **`agent_scoped` ist standardmaessig aus.** Evidenz gilt runweit. Wer
    agentweise getrennte Evidenzraeume braucht, setzt
    `reconcile(agent_scoped=True)` — die Pruefung ist implementiert und
    getestet, aber nicht der Standard.
@@ -350,6 +467,12 @@ Baseline nachweislich vollstaendig war.
 
 - **Kein dauerhafter Writer-Dienst.** Begruendung siehe K2 und §7.
 - **Keine Zusammenlegung der Datenbanken.** Begruendung siehe K1.
+- **Keine Zusammenlegung von Registry und `provenance.db`.** Die Registry
+  liegt im Audit, weil sie Kanal B ist und append-only sein muss;
+  `retrieval_run_id` verweist lediglich auf das Provenienzregister. Eine
+  dateiuebergreifende Fremdschluesselbeziehung ist in SQLite nicht
+  moeglich — eine nicht aufloesbare `retrieval_run_id` ist deshalb ein
+  Auditbefund und kein Konsistenzfehler.
 - **Keine Rueckrechnung der Altdaten** auf den neuen Quellenschluessel:
   `assertions.source_id` und `actions.source_id` aus v1.0 bleiben stehen.
   Eine Neuberechnung waere eine Umdeutung historischer Daten (§10). Alte

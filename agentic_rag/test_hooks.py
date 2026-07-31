@@ -140,7 +140,13 @@ def test_start_hook_without_control_variables_is_blocked(hook_env):
 # SubagentStop — regulaerer Pfad
 # ---------------------------------------------------------------------------
 
-def test_stop_hook_verified_claim(hook_env):
+def test_stop_hook_transcript_only_is_partially_verified(hook_env):
+    """Ohne Registry ist der Transkript-Scan ein Uebergangspfad (§7).
+
+    Er bestaetigt, dass die Datei beruehrt wurde — aber nicht, WELCHER
+    Ausschnitt welcher Fassung dem Agenten vorlag. Das reicht fuer
+    PARTIALLY_VERIFIED und nie fuer VERIFIED.
+    """
     run_hook("rag_start.py", start_payload(), hook_env)
     path = transcript(hook_env["tmp"], ["physik/messung.pdf"])
     message = audit_block([{
@@ -152,9 +158,10 @@ def test_stop_hook_verified_claim(hook_env):
     assert completed.stdout.strip() == ""      # kein Block
 
     db = hook_env["db"]
-    assert query(db, "SELECT status FROM runs")[0]["status"] == "verified"
+    assert query(db, "SELECT status FROM runs")[0]["status"] == "degraded"
     claim = query(db, "SELECT * FROM claims")[0]
-    assert claim["status"] == "VERIFIED"
+    assert claim["status"] == "PARTIALLY_VERIFIED"
+    assert claim["error_class"] == "EVIDENCE_UNREGISTERED"
     assert json.loads(claim["confirmed_evidence_json"]) == ["e1"]
     action = query(db, "SELECT * FROM actions")[0]
     assert action["raw_ref"] == "physik/messung.pdf"
@@ -167,6 +174,49 @@ def test_stop_hook_verified_claim(hook_env):
         assert audit_db.verify_chain(con)["ok"]
     finally:
         con.close()
+
+
+def test_stop_hook_registered_evidence_is_verified(hook_env):
+    """Der vollstaendige Weg: Retrieval registriert, Agent zitiert den Key."""
+    import audit_client
+    from identity import make_evidence_key, sha256_text
+
+    run_hook("rag_start.py", start_payload(), hook_env)
+    content = "Die Messreihe ergibt X."
+    evidence_key = make_evidence_key("local:physik/messung.pdf",
+                                     "pptx-slide:3", sha256_text(content))
+    session = audit_client.open_session(AGENT, SESSION)
+    with session:
+        session.register_evidence(
+            evidence_key=evidence_key, source_id="local:physik/messung.pdf",
+            source_ref="physik/messung.pdf",
+            document_version_id="dv:" + "4" * 64, unit_id="u:7",
+            structure_anchor="pptx-slide:3", content_sha256=sha256_text(content),
+            chunk_text=content, parser_name="pptx", parser_version="2.1")
+
+    path = transcript(hook_env["tmp"], ["physik/messung.pdf"])
+    message = audit_block([{
+        "claim_id": "c1", "text": "Die Messung zeigt X.", "stance": "supports",
+        "evidence": [{"evidence_id": evidence_key,
+                      "source_ref": "physik/messung.pdf",
+                      "locator": "Folie 3", "quote": "X"}]}])
+    run_hook("rag_stop.py", stop_payload(message, path), hook_env)
+
+    db = hook_env["db"]
+    claim = query(db, "SELECT * FROM claims")[0]
+    assert claim["status"] == "VERIFIED"
+    assert claim["error_class"] is None
+    assert query(db, "SELECT status FROM runs")[0]["status"] == "verified"
+
+    import renderer
+    from policy import ExportMode
+    con = audit_db.connect_read(db)
+    try:
+        production = renderer.render_run(con, run_id_of(),
+                                         mode=ExportMode.PRODUCTION)
+    finally:
+        con.close()
+    assert production.markdown.strip() == "Die Messung zeigt X."
 
 
 def test_stop_hook_blocks_unconfirmed_source(hook_env):
@@ -252,6 +302,107 @@ def test_stop_hook_empty_claim_list_is_unverified(hook_env):
     assert query(hook_env["db"], "SELECT status FROM runs")[0]["status"] \
         == "unverified"
     assert query(hook_env["db"], "SELECT COUNT(*) AS n FROM claims")[0]["n"] == 0
+
+
+# ---------------------------------------------------------------------------
+# §8 auf dem Hook-Reparaturpfad
+# ---------------------------------------------------------------------------
+
+def _broken_with_claim(claim_id="c1", text="Originalaussage",
+                       source_ref="physik/messung.pdf"):
+    """Formal ungueltige Ausgabe, deren Inhalt aber lesbar ist."""
+    return ('<<<AUDIT>>>\n{"schema_version": "2.0.0", "claims": ['
+            '{"claim_id": "%s", "text": "%s", "evidence": '
+            '[{"evidence_id": "e1", "source_ref": "%s"}]}'
+            % (claim_id, text, source_ref))
+
+
+def test_repair_may_not_introduce_evidence_via_hook(hook_env):
+    """Ein Format-Retry darf keine neue Quelle nachschieben (§8)."""
+    run_hook("rag_start.py", start_payload(), hook_env)
+    path = transcript(hook_env["tmp"], ["physik/messung.pdf"])
+    run_hook("rag_stop.py", stop_payload(_broken_with_claim(), path), hook_env)
+    assert query(hook_env["db"], "SELECT baseline_json FROM repairs"
+                 )[0]["baseline_json"]
+
+    smuggled = audit_block([{
+        "claim_id": "c1", "text": "Originalaussage",
+        "evidence": [{"evidence_id": "e1", "source_ref": "physik/messung.pdf"},
+                     {"evidence_id": "e2", "source_ref": "bio/neu.pdf"}]}])
+    completed = run_hook("rag_stop.py", stop_payload(smuggled, path), hook_env)
+    assert completed.stdout.strip() == ""      # kein weiterer Reparaturversuch
+
+    db = hook_env["db"]
+    fails = query(db, "SELECT error_class, scope FROM hard_fails")
+    assert fails[0]["error_class"] == "EVIDENCE_INTRODUCED_BY_REPAIR"
+    assert query(db, "SELECT status FROM runs")[0]["status"] == "blocked"
+
+
+def test_repair_may_not_change_claim_via_hook(hook_env):
+    run_hook("rag_start.py", start_payload(), hook_env)
+    path = transcript(hook_env["tmp"], ["physik/messung.pdf"])
+    run_hook("rag_stop.py", stop_payload(_broken_with_claim(), path), hook_env)
+
+    rewritten = audit_block([{
+        "claim_id": "c1", "text": "Etwas ganz anderes",
+        "evidence": [{"evidence_id": "e1",
+                      "source_ref": "physik/messung.pdf"}]}])
+    run_hook("rag_stop.py", stop_payload(rewritten, path), hook_env)
+
+    fails = query(hook_env["db"], "SELECT error_class FROM hard_fails")
+    assert fails[0]["error_class"] == "CLAIM_MUTATED_BY_REPAIR"
+    assert query(hook_env["db"], "SELECT status FROM runs")[0]["status"] \
+        == "blocked"
+
+
+def test_pure_format_repair_stays_allowed(hook_env):
+    """Dieselbe Aussage, dieselbe Quelle, nur korrekt formatiert."""
+    run_hook("rag_start.py", start_payload(), hook_env)
+    path = transcript(hook_env["tmp"], ["physik/messung.pdf"])
+    run_hook("rag_stop.py", stop_payload(_broken_with_claim(), path), hook_env)
+
+    fixed = audit_block([{
+        "claim_id": "c1", "text": "Originalaussage",
+        "evidence": [{"evidence_id": "e1",
+                      "source_ref": "physik/messung.pdf"}]}])
+    completed = run_hook("rag_stop.py", stop_payload(fixed, path), hook_env)
+    assert completed.stdout.strip() == ""
+
+    db = hook_env["db"]
+    assert query(db, "SELECT COUNT(*) AS n FROM hard_fails")[0]["n"] == 0
+    repairs = query(db, "SELECT attempt, validated FROM repairs "
+                        "WHERE kind='format' ORDER BY attempt")
+    assert repairs == [{"attempt": 1, "validated": 0},
+                       {"attempt": 2, "validated": 1}]
+    assert query(db, "SELECT status FROM claims")[0]["status"] \
+        == "PARTIALLY_VERIFIED"
+
+
+# ---------------------------------------------------------------------------
+# Metrikphasen im Betrieb
+# ---------------------------------------------------------------------------
+
+def test_hook_records_phase_metrics(hook_env):
+    run_hook("rag_start.py", start_payload(), hook_env)
+    path = transcript(hook_env["tmp"], ["physik/messung.pdf"])
+    # Erster Durchgang: Formfehler -> Block, danach korrekte Ausgabe.
+    run_hook("rag_stop.py", stop_payload("kaputt", path), hook_env)
+    good = audit_block([{"claim_id": "c1", "text": "Aussage.",
+                         "evidence_free": True, "evidence": []}])
+    run_hook("rag_stop.py", stop_payload(good, path), hook_env)
+
+    metrics = query(hook_env["db"],
+                    "SELECT phase, attempt, duration_ms, input_tokens, "
+                    "cost_usd FROM phase_metrics ORDER BY id")
+    phases = [m["phase"] for m in metrics]
+    assert "initial_generation" in phases
+    assert "format_repair" in phases
+    assert phases.count("total") >= 1
+    assert all(m["duration_ms"] is not None and m["duration_ms"] >= 0
+               for m in metrics)
+    # Tokens und Kosten werden NICHT geschaetzt.
+    assert all(m["input_tokens"] is None and m["cost_usd"] is None
+               for m in metrics)
 
 
 # ---------------------------------------------------------------------------
@@ -385,8 +536,12 @@ def test_export_modes_after_real_run(hook_env):
     finally:
         con.close()
 
+    # Ohne Registry ist auch die belegte Aussage nur PARTIALLY_VERIFIED —
+    # der Evaluationsexport zeigt beide Zustaende an.
     assert "Belegte Aussage." in evaluation.markdown
+    assert "> [!WARNING] PARTIALLY_VERIFIED" in evaluation.markdown
     assert "> [!DANGER] UNVERIFIED" in evaluation.markdown
     assert "Freie Aussage." in evaluation.markdown
-    assert production.markdown.strip() == "Belegte Aussage."
-    assert production.excluded_claim_ids == ["c2"]
+    # Der Produktionsexport ist leer: nichts ist registry-belegt.
+    assert production.markdown.strip() == ""
+    assert sorted(production.excluded_claim_ids) == ["c1", "c2"]

@@ -44,12 +44,13 @@ from typing import Iterable, List, Optional
 
 import audit_db
 import migrations
-from audit_models import (AUDIT_SCHEMA_VERSION, ActionEvent,
-                          AgentRegisteredEvent, AssertionEvent, AuditEvent,
-                          ClaimStatusEvent, EVENT_MODELS, EventEnvelope,
+from audit_models import (AUDIT_SCHEMA_VERSION, CHANNEL_B_EVENT_TYPES,
+                          EVENT_MODELS, ActionEvent, AgentRegisteredEvent,
+                          AssertionEvent, AuditEvent, ClaimStatusEvent,
+                          EventEnvelope, EvidenceRegisteredEvent,
                           HardFailEvent, RepairAttemptEvent, RunAttemptEvent,
                           RunFinishEvent, RunStartEvent, WriterShutdownEvent,
-                          new_id, payload_hash, utc_now_iso)
+                          new_id)
 from identity import canonical_json, sha256_text
 from policy import ErrorClass, RUN_STATUS_BLOCKED, Scope, Status, scope_of
 
@@ -354,6 +355,7 @@ class _Persister:
             "run_started": self._on_run_started,
             "agent_registered": self._on_agent_registered,
             "action_recorded": self._on_action,
+            "evidence_registered": self._on_evidence_registered,
             "assertion_declared": self._on_assertion,
             "claim_status": self._on_claim_status,
             "repair_attempt": self._on_repair,
@@ -470,6 +472,62 @@ class _Persister:
              event.occurred_at.isoformat(), prev, row_hash))
         return f"Kanal B: {event.source_key}"
 
+    def _on_evidence_registered(self, event: EvidenceRegisteredEvent) -> str:
+        """KANAL B — ein ausgelieferter Beleg (§7).
+
+        Aus EINEM Ereignis entstehen ZWEI Projektionen in derselben
+        Transaktion und mit demselben Kettenglied: der Registryeintrag und
+        die zugehoerige `actions`-Zeile. Damit bleibt Kanal B eine einzige
+        Zugriffswahrheit — jede vorhandene Abfrage ueber `actions` sieht
+        den Retrieval-Zugriff, ohne die Registry kennen zu muessen.
+        """
+        self._require_run(event.run_id, event.agent_id or None)
+
+        existing = self.con.execute(
+            "SELECT chunk_text_sha256, content_sha256, unit_id "
+            "FROM evidence_registry WHERE run_id = ? AND evidence_key = ?",
+            (event.run_id, event.evidence_key)).fetchone()
+        if existing is not None:
+            if existing["chunk_text_sha256"] == event.chunk_text_sha256:
+                # Derselbe Beleg erneut ausgeliefert: idempotent.
+                return f"evidence {event.evidence_key[:16]}… bereits registriert"
+            raise _Rejected(
+                ErrorClass.EVIDENCE_KEY_COLLISION,
+                f"evidence_key {event.evidence_key} steht in Run "
+                f"{event.run_id} bereits fuer einen anderen Inhalt "
+                f"(registriert={existing['chunk_text_sha256'][:16]}…, "
+                f"empfangen={event.chunk_text_sha256[:16]}…). Die "
+                f"Evidenzidentitaet dieses Laufs ist damit nicht eindeutig.",
+                run_id=event.run_id, agent_id=event.agent_id or None)
+
+        prev, row_hash = self._current_link
+        self.con.execute(
+            "INSERT INTO evidence_registry (event_id, run_id, agent_id, "
+            " evidence_key, source_key, source_id, document_version_id, "
+            " unit_id, chunk_id, structure_anchor, label, locator_json, "
+            " anchor_is_fallback, content_sha256, chunk_text_sha256, "
+            " retrieval_run_id, parser_name, parser_version, chunker_name, "
+            " chunker_version, retrieved_at, recorded_at, prev_hash, row_hash) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (event.event_id, event.run_id, event.agent_id or None,
+             event.evidence_key, event.source_key, event.source_id,
+             event.document_version_id, event.unit_id, event.chunk_id,
+             event.structure_anchor, event.label, event.locator_json,
+             int(event.anchor_is_fallback), event.content_sha256,
+             event.chunk_text_sha256, event.retrieval_run_id,
+             event.parser_name, event.parser_version, event.chunker_name,
+             event.chunker_version, event.retrieved_at.isoformat(),
+             audit_db.now(), prev, row_hash))
+        self.con.execute(
+            "INSERT INTO actions (event_id, run_id, agent_id, tool_name, "
+            " source_id, source_key, raw_ref, evidence_key, phase, "
+            " recorded_at, prev_hash, row_hash) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            (f"{event.event_id}:action", event.run_id, event.agent_id or None,
+             "retrieval", event.source_key, event.source_key, event.source_id,
+             event.evidence_key, "retrieval",
+             event.retrieved_at.isoformat(), prev, row_hash))
+        return f"Registry: {event.evidence_key[:16]}… ({event.source_key})"
+
     def _on_assertion(self, event: AssertionEvent) -> str:
         self._require_run(event.run_id, event.agent_id)
         prev, row_hash = self._current_link
@@ -516,13 +574,14 @@ class _Persister:
         self.con.execute(
             "INSERT INTO repairs (event_id, run_id, agent_id, target_id, "
             " attempt, kind, error_class, input_sha256, output_sha256, "
-            " validated, validation_detail, occurred_at) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            " validated, validation_detail, occurred_at, baseline_json) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (event.event_id, event.run_id, event.agent_id or None,
              event.target_id, attempt.attempt, attempt.kind.value,
              attempt.error_class.value, attempt.input_sha256,
              attempt.output_sha256, int(attempt.validated),
-             attempt.validation_detail, attempt.occurred_at.isoformat()))
+             attempt.validation_detail, attempt.occurred_at.isoformat(),
+             canonical_json(event.baseline) if event.baseline else None))
         self.con.execute(
             "UPDATE claims SET repair_count = ?, updated_at = ? "
             "WHERE run_id = ? AND claim_id = ?",
@@ -783,8 +842,7 @@ class AuditWriterHandle:
             event = model.model_validate(event)
         if not isinstance(event, AuditEvent):
             raise TypeError(f"kein AuditEvent: {type(event).__name__}")
-        if (self._channel_b_blocked
-                and event.event_type in ("action_recorded",)):
+        if self._channel_b_blocked and event.event_type in CHANNEL_B_EVENT_TYPES:
             raise WriterClosed(
                 "Format-Reparatur darf keinen Kanal-B-Datensatz erzeugen (§8).")
         envelope = EventEnvelope.wrap(event, producer_pid=os.getpid())

@@ -68,6 +68,10 @@ class ErrorClass(str, Enum):
     CLAIM_MUTATED_BY_REPAIR = "CLAIM_MUTATED_BY_REPAIR"
     # §8: Format-Reparatur hat einen Kanal-B-Datensatz erzeugen wollen.
     CHANNEL_B_WRITE_DURING_REPAIR = "CHANNEL_B_WRITE_DURING_REPAIR"
+    # §7: Derselbe evidence_key steht im selben Run fuer zwei verschiedene
+    # Inhalte. Damit ist die Evidenzidentitaet des Laufs nicht mehr
+    # eindeutig — jeder Beleg dieses Runs wird unbrauchbar.
+    EVIDENCE_KEY_COLLISION = "EVIDENCE_KEY_COLLISION"
 
     # --- ausdruecklich KEIN Hard Fail -------------------------------------
     # §8: zwei erfolglose reine Formatreparaturen -> UNVERIFIED.
@@ -76,6 +80,10 @@ class ErrorClass(str, Enum):
     EVIDENCE_INCOMPLETE = "EVIDENCE_INCOMPLETE"
     # §6/§12.16: Claim ohne erforderliche Evidenz -> UNVERIFIED.
     NO_REQUIRED_EVIDENCE = "NO_REQUIRED_EVIDENCE"
+    # §7: Der Beleg wurde ausschliesslich ueber den source_ref-Uebergangspfad
+    # bestaetigt, nicht ueber die Evidenzregistry. Zulaessig, aber nie
+    # ausreichend fuer VERIFIED.
+    EVIDENCE_UNREGISTERED = "EVIDENCE_UNREGISTERED"
 
 
 #: Fehlerklassen, die sofort und ohne Reparaturversuch zu BLOCKED fuehren.
@@ -98,6 +106,7 @@ HARD_FAIL_CLASSES = frozenset({
     ErrorClass.EVIDENCE_INTRODUCED_BY_REPAIR,
     ErrorClass.CLAIM_MUTATED_BY_REPAIR,
     ErrorClass.CHANNEL_B_WRITE_DURING_REPAIR,
+    ErrorClass.EVIDENCE_KEY_COLLISION,
 })
 
 #: Deterministische Eskalation (§9, letzter Absatz). Der Geltungsbereich
@@ -126,6 +135,9 @@ HARD_FAIL_SCOPE = {
     ErrorClass.EVIDENCE_INTRODUCED_BY_REPAIR: Scope.CLAIM,
     ErrorClass.CLAIM_MUTATED_BY_REPAIR: Scope.CLAIM,
     ErrorClass.CHANNEL_B_WRITE_DURING_REPAIR: Scope.RUN,
+    # Ein kollidierender evidence_key entwertet die gesamte Registry des
+    # Laufs, nicht nur den Claim, der ihn zitiert.
+    ErrorClass.EVIDENCE_KEY_COLLISION: Scope.RUN,
 }
 
 #: Reparaturversuche sind ausschliesslich fuer Syntax- und Formatfehler
