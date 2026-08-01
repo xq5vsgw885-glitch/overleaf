@@ -1,0 +1,55 @@
+{
+  "_dokumentation": {
+    "kontrollvariablen": [
+      "Die folgenden Umgebungsvariablen MUESSEN gesetzt sein, sonst ist der",
+      "Laufkontext unvollstaendig und der Lauf wird als BLOCKED protokolliert",
+      "(Spezifikation §9.3). Sie stehen bewusst in der Umgebung und nicht im",
+      "Modellkontext: ein Agent darf seine eigenen Kontrollvariablen nicht setzen.",
+      "AUDIT_EXPERIMENT_ID, AUDIT_WORKFLOW_CONDITION (A|B|C),",
+      "AUDIT_DOMAIN (physics|biology|chemistry), AUDIT_MODEL_VERSION,",
+      "AUDIT_OUTPUT_ENFORCEMENT (native|prompt), AUDIT_PROVIDER,",
+      "AUDIT_TASK_ID, AUDIT_REPLICATE (>=1).",
+      "Optional: AUDIT_SEED, AUDIT_BATCH_ID, AUDIT_RUN_ID, AUDIT_DB_PATH."
+    ],
+    "writer": [
+      "Die Hooks starten je Aufruf einen Audit Writer und beenden ihn geordnet.",
+      "Ein Dateilock auf <db>.writer.lock stellt sicher, dass zu jedem",
+      "Zeitpunkt hoechstens ein Prozess eine schreibende Verbindung haelt."
+    ]
+  },
+  "hooks": {
+    "SubagentStart": [
+      {
+        "matcher": "rag-verifier",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/rag_start.py"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "rag-verifier",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/rag_stop.py"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/protect_audit_db.py"
+          }
+        ]
+      }
+    ]
+  }
+}
